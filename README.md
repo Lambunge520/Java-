@@ -9,4 +9,5 @@
 注册好后右方列表出现刚才注册的Java，大功告成喵~<br>
 <img width="752" height="602" alt="image" src="https://github.com/user-attachments/assets/83398d68-0dca-4901-b8cf-a0e9d40aaa73" /><br>
 # 下载<br>
-<a href="https://github.com/Lambunge520/Java-/releases">release</a>
+前往
+<a href="https://github.com/Lambunge520/Java-/releases">release页面</a>下载本工具
