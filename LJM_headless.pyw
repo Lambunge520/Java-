@@ -1,4 +1,5 @@
 import argparse
+import importlib.machinery
 import importlib.util
 import json
 import os
@@ -24,7 +25,8 @@ DEFAULT_LOG_FILE = os.path.join(APP_DIR, "ljm_headless.log")
 
 
 def load_core():
-    spec = importlib.util.spec_from_file_location("ljm_desktop_core", CORE_PATH)
+    loader = importlib.machinery.SourceFileLoader("ljm_desktop_core", CORE_PATH)
+    spec = importlib.util.spec_from_file_location("ljm_desktop_core", CORE_PATH, loader=loader)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
