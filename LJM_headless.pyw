@@ -11,8 +11,14 @@ import traceback
 import zipfile
 
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-CORE_PATH = os.path.join(APP_DIR, "LJM.pyw")
+if getattr(sys, "frozen", False):
+    APP_DIR = os.path.dirname(os.path.abspath(sys.executable))
+    RESOURCE_DIR = getattr(sys, "_MEIPASS", APP_DIR)
+else:
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    RESOURCE_DIR = APP_DIR
+
+CORE_PATH = os.path.join(RESOURCE_DIR, "LJM.pyw")
 DEFAULT_RESULT_FILE = os.path.join(APP_DIR, "ljm_headless_result.json")
 DEFAULT_LOG_FILE = os.path.join(APP_DIR, "ljm_headless.log")
 

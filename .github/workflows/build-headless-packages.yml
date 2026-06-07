@@ -1,0 +1,66 @@
+name: Build LJM headless packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: python -m pip install --upgrade pip pyinstaller
+      - name: Build Windows exe
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\build_headless_windows.ps1
+      - name: Pack Windows artifact
+        shell: pwsh
+        run: Compress-Archive -Path dist\LJM-Java-Manager-headless.exe -DestinationPath LJM-Java-Manager-headless-windows.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LJM-Java-Manager-headless-windows
+          path: LJM-Java-Manager-headless-windows.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install system packages
+        run: sudo apt-get update && sudo apt-get install -y python3-tk
+      - name: Install build tools
+        run: python -m pip install --upgrade pip pyinstaller
+      - name: Build Linux binary
+        run: chmod +x ./build_headless_linux.sh && ./build_headless_linux.sh
+      - name: Pack Linux artifact
+        run: tar -czf LJM-Java-Manager-headless-linux.tar.gz -C dist LJM-Java-Manager-headless
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LJM-Java-Manager-headless-linux
+          path: LJM-Java-Manager-headless-linux.tar.gz
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: python -m pip install --upgrade pip pyinstaller
+      - name: Build macOS binary
+        run: chmod +x ./build_headless_macos.sh && ./build_headless_macos.sh
+      - name: Pack macOS artifact
+        run: ditto -c -k --sequesterRsrc --keepParent dist/LJM-Java-Manager-headless LJM-Java-Manager-headless-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LJM-Java-Manager-headless-macos
+          path: LJM-Java-Manager-headless-macos.zip
