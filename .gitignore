@@ -2,6 +2,8 @@
 *.log
 javamanager_config.json
 java_virtual_registry.json
+ljm_headless_result.json
+headless_test_result*.json
 
 # Python cache
 __pycache__/
