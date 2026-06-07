@@ -1,0 +1,11 @@
+* text=auto eol=lf
+
+deps/** -text
+*.ico binary
+*.icns binary
+*.png binary
+*.pyd binary
+*.so binary
+*.dylib binary
+*.dll binary
+*.exe binary

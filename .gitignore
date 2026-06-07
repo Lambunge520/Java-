@@ -1,0 +1,26 @@
+# Local runtime logs and config
+*.log
+javamanager_config.json
+java_virtual_registry.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller output
+build/
+dist/
+*.spec
+
+# Temporary files
+*.tmp
+*.new
+deps_wheels_tmp/
+
+# IDE/editor noise
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
