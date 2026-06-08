@@ -2907,12 +2907,15 @@ def materialize_embedded_java_icon():
 APP_EXECUTABLE_PATH = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__)
 APP_DIR = os.path.dirname(APP_EXECUTABLE_PATH)
 APP_RESOURCE_DIR = getattr(sys, "_MEIPASS", APP_DIR)
+APP_SOURCE_ROOT = os.path.dirname(APP_DIR) if not getattr(sys, "frozen", False) else APP_DIR
+APP_ASSETS_DIR = os.path.join(APP_SOURCE_ROOT, "assets")
 APP_EXT = os.path.splitext(APP_EXECUTABLE_PATH)[1].lower()
 if not APP_EXT and not getattr(sys, "frozen", False):
     APP_EXT = ".pyw"
 APP_ARCH = platform.machine().lower()
 BUNDLED_DEPS_DIR = os.path.join(APP_DIR, "deps")
 RESOURCE_DEPS_DIR = os.path.join(APP_RESOURCE_DIR, "deps")
+SOURCE_DEPS_DIR = os.path.join(APP_SOURCE_ROOT, "vendor", "deps") if not getattr(sys, "frozen", False) else ""
 PYPI_MIRRORS = (
     "https://pypi.tuna.tsinghua.edu.cn/simple",
     "https://mirrors.aliyun.com/pypi/simple",
@@ -2942,8 +2945,12 @@ def _dependency_platform_dirs():
         if arch and arch not in arch_candidates:
             arch_candidates.append(arch)
 
+    deps_root_candidates = [BUNDLED_DEPS_DIR, RESOURCE_DEPS_DIR]
+    if SOURCE_DEPS_DIR:
+        deps_root_candidates.insert(0, SOURCE_DEPS_DIR)
+
     deps_roots = []
-    for deps_root in (BUNDLED_DEPS_DIR, RESOURCE_DEPS_DIR):
+    for deps_root in deps_root_candidates:
         if deps_root and deps_root not in deps_roots:
             deps_roots.append(deps_root)
 
@@ -2968,11 +2975,11 @@ def load_bundled_dependencies():
 
 
 def current_dependency_dir():
-    fallback = BUNDLED_DEPS_DIR
+    fallback = SOURCE_DEPS_DIR or BUNDLED_DEPS_DIR
     for path in _dependency_platform_dirs():
         name = os.path.basename(path).lower()
         if name.startswith(("windows-", "linux-", "macos-")) or name.startswith(("windows_", "linux_", "macos_")):
-            if fallback == BUNDLED_DEPS_DIR:
+            if fallback in (BUNDLED_DEPS_DIR, SOURCE_DEPS_DIR):
                 fallback = path
             if os.path.isdir(path):
                 return path
@@ -2982,6 +2989,7 @@ def current_dependency_dir():
 def writable_dependency_dir():
     resource_deps_abs = os.path.abspath(RESOURCE_DEPS_DIR)
     bundled_deps_abs = os.path.abspath(BUNDLED_DEPS_DIR)
+    source_deps_abs = os.path.abspath(SOURCE_DEPS_DIR) if SOURCE_DEPS_DIR else ""
     for path in _dependency_platform_dirs():
         path_abs = os.path.abspath(path)
         if resource_deps_abs != bundled_deps_abs and path_abs.startswith(resource_deps_abs):
@@ -2989,7 +2997,7 @@ def writable_dependency_dir():
         name = os.path.basename(path).lower()
         if name.startswith(("windows-", "linux-", "macos-")) or name.startswith(("windows_", "linux_", "macos_")):
             return path
-    return BUNDLED_DEPS_DIR
+    return source_deps_abs or BUNDLED_DEPS_DIR
 
 
 def install_runtime_dependencies(packages):
@@ -3269,7 +3277,7 @@ I18N_ZH_CN = {
     "startup_tray": "启动与托盘",
     "autostart": "开机自启",
     "start_minimized": "启动后直接进入托盘状态",
-    "startup_desc": "Windows 使用当前用户注册表启动项；Linux 使用 XDG autostart；macOS 使用 LaunchAgents。Windows 托盘为内置原生实现；Linux/macOS 托盘依赖会优先从 deps 平台目录加载，缺失时自动下载。",
+    "startup_desc": "Windows 使用当前用户注册表启动项；Linux 使用 XDG autostart；macOS 使用 LaunchAgents。Windows 托盘为内置原生实现；Linux/macOS 托盘依赖会优先从 vendor/deps 或打包内置 deps 平台目录加载，缺失时自动下载。",
     "network_proxy": "网络与代理设置",
     "auto_direct": "自动识别代理/VPN 环境并切换直连",
     "direct_mode": "直连模式（仅在关闭自动识别时生效）",
@@ -3421,7 +3429,7 @@ I18N_EN_US = {
     "startup_tray": "Startup and Tray",
     "autostart": "Start with system",
     "start_minimized": "Start minimized to tray",
-    "startup_desc": "Windows uses the current-user Run registry key; Linux uses XDG autostart; macOS uses LaunchAgents. Windows tray is native; Linux/macOS tray dependencies are loaded from deps first and downloaded if missing.",
+    "startup_desc": "Windows uses the current-user Run registry key; Linux uses XDG autostart; macOS uses LaunchAgents. Windows tray is native; Linux/macOS tray dependencies are loaded from vendor/deps or bundled deps first and downloaded if missing.",
     "network_proxy": "Network and Proxy",
     "auto_direct": "Auto-detect proxy/VPN and switch direct mode",
     "direct_mode": "Direct mode (only when auto-detect is off)",
@@ -4679,7 +4687,9 @@ class WindowsTrayIcon:
             [
                 self.icon_path,
                 os.path.join(os.getcwd(), "java.ico"),
+                os.path.join(APP_ASSETS_DIR, "java.ico"),
                 os.path.join(APP_DIR, "java.ico"),
+                os.path.join(APP_RESOURCE_DIR, "java.ico"),
             ]
         )
         for path in icon_candidates:
@@ -6406,6 +6416,7 @@ class JavaManagerApp:
     def _tray_icon_path(self):
         for path in (
             os.path.join(os.getcwd(), "java.ico"),
+            os.path.join(APP_ASSETS_DIR, "java.ico"),
             os.path.join(APP_DIR, "java.ico"),
             os.path.join(APP_RESOURCE_DIR, "java.ico"),
             materialize_embedded_java_icon(),
@@ -6699,7 +6710,7 @@ class JavaManagerApp:
         register_wrap(
             tk.Label(
                 lf_startup,
-                text="Windows 使用注册表启动项；Linux 使用 XDG autostart；macOS 使用 LaunchAgents。Linux/macOS 托盘依赖会优先从 deps 平台目录加载，缺失时会自动下载到当前平台目录。",
+                text="Windows 使用注册表启动项；Linux 使用 XDG autostart；macOS 使用 LaunchAgents。Linux/macOS 托盘依赖会优先从 vendor/deps 或打包内置 deps 平台目录加载，缺失时会自动下载到当前平台目录。",
                 font=("", 9),
                 justify="left",
                 anchor="w",
@@ -8183,5 +8194,3 @@ if __name__ == "__main__":
         root.after(50, win_show)
     logging.info("主窗口已显示")
     root.mainloop()
-
-

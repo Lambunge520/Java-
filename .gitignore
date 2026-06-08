@@ -11,7 +11,7 @@ __pycache__/
 *$py.class
 
 # Bundled dependency binaries are release inputs, not cache.
-!deps/**/*.pyd
+!vendor/deps/**/*.pyd
 
 # PyInstaller output
 build/

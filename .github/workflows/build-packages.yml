@@ -26,7 +26,7 @@ jobs:
         run: python -m pip install --upgrade pip pyinstaller
       - name: Build Windows exe
         shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File .\build_windows.ps1
+        run: powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1
       - name: Pack Windows artifact
         shell: pwsh
         run: Compress-Archive -Path dist\LJM-Java-Manager.exe -DestinationPath LJM-Java-Manager-windows.zip -Force
@@ -47,7 +47,7 @@ jobs:
       - name: Install build tools
         run: python -m pip install --upgrade pip pyinstaller
       - name: Build Linux binary
-        run: chmod +x ./build_linux.sh && ./build_linux.sh
+        run: chmod +x ./scripts/build_linux.sh && ./scripts/build_linux.sh
       - name: Pack Linux artifact
         run: tar -czf LJM-Java-Manager-linux.tar.gz -C dist LJM-Java-Manager linux-desktop
       - uses: actions/upload-artifact@v4
@@ -65,7 +65,7 @@ jobs:
       - name: Install build tools
         run: python -m pip install --upgrade pip pyinstaller
       - name: Build macOS app
-        run: chmod +x ./build_macos.sh && ./build_macos.sh
+        run: chmod +x ./scripts/build_macos.sh && ./scripts/build_macos.sh
       - name: Pack macOS artifact
         run: ditto -c -k --sequesterRsrc --keepParent dist/LJM-Java-Manager.app LJM-Java-Manager-macos.zip
       - uses: actions/upload-artifact@v4
@@ -92,8 +92,8 @@ jobs:
       - name: Create or update GitHub Release
         run: |
           gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
-            gh release create "$RELEASE_TAG" --title "LJM Java Manager $RELEASE_TAG" --notes-file RELEASE_NOTES_2.6.md || true
-          gh release edit "$RELEASE_TAG" --title "LJM Java Manager $RELEASE_TAG" --notes-file RELEASE_NOTES_2.6.md
+            gh release create "$RELEASE_TAG" --title "LJM Java Manager $RELEASE_TAG" --notes-file docs/releases/RELEASE_NOTES_2.6.md || true
+          gh release edit "$RELEASE_TAG" --title "LJM Java Manager $RELEASE_TAG" --notes-file docs/releases/RELEASE_NOTES_2.6.md
           gh release upload "$RELEASE_TAG" \
             release-assets/LJM-Java-Manager-windows/LJM-Java-Manager-windows.zip \
             release-assets/LJM-Java-Manager-linux/LJM-Java-Manager-linux.tar.gz \
