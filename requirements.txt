@@ -1,5 +1,0 @@
-pystray>=0.19.5
-Pillow>=10.0.0
-python-xlib>=0.33; sys_platform == "linux"
-pyobjc-framework-Cocoa>=9.0; sys_platform == "darwin"
-pyobjc-framework-Quartz>=9.0; sys_platform == "darwin"
