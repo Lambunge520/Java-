@@ -1,0 +1,31 @@
+# Local runtime logs and config
+*.log
+javamanager_config.json
+java_virtual_registry.json
+ljm_headless_result.json
+headless_test_result*.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Bundled dependency binaries are release inputs, not cache.
+!deps/**/*.pyd
+
+# PyInstaller output
+build/
+dist/
+*.spec
+
+# Temporary files
+*.tmp
+*.new
+deps_wheels_tmp/
+
+# IDE/editor noise
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store

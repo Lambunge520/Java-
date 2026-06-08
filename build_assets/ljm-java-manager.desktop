@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=LJM Java Manager
+Comment=Java core environment manager
+Exec=./LJM-Java-Manager
+Icon=java
+Terminal=false
+Categories=Development;Utility;
