@@ -65,3 +65,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_headless_windows.ps1
 ```
 
 打包产物默认输出到 `dist/`，发布说明位于 `docs/releases/`。
+
+## 维护说明
+
+桌面端和无桌面端共用 `src/LJM.pyw` 核心版本与核心逻辑，后续版本升级默认同时维护 Windows、Linux、macOS 三个平台产物。维护约定见 `docs/MAINTENANCE.md`。
+
+提交或发布前可运行清理脚本，避免临时文件和打包产物进入 GitHub：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\clean_workspace.ps1
+```

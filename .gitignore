@@ -18,6 +18,14 @@ build/
 dist/
 *.spec
 
+# Local release archives and checksums
+/LJM-Java-Manager*.zip
+/LJM-Java-Manager*.tar.gz
+/LJM-Java-Manager*.tgz
+/LJM-Java-Manager*.exe
+/SHA256SUMS*.txt
+/release-assets/
+
 # Temporary files
 *.tmp
 *.new
