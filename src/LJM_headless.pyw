@@ -109,14 +109,7 @@ def resolve_target(value):
 
 
 def find_source_jdk(extract_dir):
-    exe = "java.exe" if core.IS_WIN else "java"
-    for root_dir, dirs, _files in os.walk(extract_dir):
-        if "bin" in dirs and os.path.exists(os.path.join(root_dir, "bin", exe)):
-            return root_dir
-        candidate_jre = os.path.join(root_dir, "jre", "bin", exe)
-        if os.path.exists(candidate_jre):
-            return root_dir
-    raise FileNotFoundError("download archive does not contain a recognizable Java home")
+    return core.find_source_jdk_dir(extract_dir)
 
 
 def download_latest_jdk(vendor, major, log_prefix="download"):
@@ -124,7 +117,7 @@ def download_latest_jdk(vendor, major, log_prefix="download"):
     if not info:
         raise RuntimeError(f"no available update source for {vendor} {major}")
 
-    suffix = core.current_archive_suffix(info["url"])
+    suffix = core.download_info_archive_suffix(info)
     fd, archive_path = tempfile.mkstemp(suffix=suffix)
     os.close(fd)
     progress_cb, status_cb = progress_logger(log_prefix)
@@ -257,6 +250,43 @@ def command_update(args):
     return {"ok": True, "action": "update", "result": result}
 
 
+def command_download(args):
+    progress_cb, status_cb = progress_logger(f"download-{args.vendor}-{args.major}")
+    result = core.download_and_install_java(args.vendor, args.major, args.parent, progress_cb, status_cb)
+    return {"ok": True, "action": "download", "result": result}
+
+
+def command_vendors(_args):
+    items = []
+    for vendor in core.JAVA_VENDOR_OPTIONS:
+        profile = core.java_vendor_profile(vendor)
+        items.append(
+            {
+                "vendor": vendor,
+                "foojay": profile.get("foojay"),
+                "scenario": profile.get("scenario"),
+                "pros": profile.get("pros"),
+                "cons": profile.get("cons"),
+            }
+        )
+    return {
+        "ok": True,
+        "platform": core.current_java_download_platform_text(),
+        "majors": list(core.JAVA_MAJOR_OPTIONS),
+        "items": items,
+    }
+
+
+def command_move(args):
+    java_home, registry_name = resolve_target(args.target)
+    if not args.force:
+        processes = core.find_processes_using_java_home(java_home)
+        if processes:
+            raise RuntimeError("target Java is in use: " + "; ".join(processes[:5]))
+    result = core.move_java_home(java_home, args.destination, preferred_name=registry_name)
+    return {"ok": True, "action": "move", "result": result}
+
+
 def command_set_default(args):
     return {"ok": True, "action": "set-default", "result": set_default_java(args.target)}
 
@@ -296,6 +326,21 @@ def build_parser():
     p_update.add_argument("--vendor")
     p_update.add_argument("--major")
     p_update.set_defaults(func=command_update)
+
+    p_download = sub.add_parser("download", parents=[common], help="download and register a new JDK under a parent folder")
+    p_download.add_argument("vendor", help="Java vendor, for example: Eclipse Temurin")
+    p_download.add_argument("major", help="Java major version, for example: 21")
+    p_download.add_argument("parent", help="parent folder for the new Java installation")
+    p_download.set_defaults(func=command_download)
+
+    p_vendors = sub.add_parser("vendors", parents=[common], help="list supported Java vendors and usage guidance")
+    p_vendors.set_defaults(func=command_vendors)
+
+    p_move = sub.add_parser("move", parents=[common], help="move a registered Java runtime and update registry/index")
+    p_move.add_argument("target", help="registered name or Java home path")
+    p_move.add_argument("destination", help="new Java home path; must not already exist")
+    p_move.add_argument("--force", action="store_true", help="move even when related Java processes are detected")
+    p_move.set_defaults(func=command_move)
 
     p_default = sub.add_parser("set-default", parents=[common], help="set target as default JAVA_HOME")
     p_default.add_argument("target", help="registered name or Java home path")

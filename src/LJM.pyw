@@ -20,6 +20,7 @@ import platform
 import shlex
 import hashlib
 import locale
+import socket
 from urllib.parse import urlparse
 import urllib.request
 import urllib.error
@@ -79,7 +80,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 
-VERSION = "2.6 Stable"
+VERSION = "2.7 Stable"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -3240,6 +3241,8 @@ I18N_ZH_CN = {
     "tab_registration": "注册管理",
     "tab_fix": "环境分析与修复",
     "tab_update": "云端更新引擎",
+    "tab_download": "Java 下载",
+    "tab_move": "Java 移动",
     "toolbar_search_label": "搜索/筛选 Java:",
     "toolbar_clear_filter": "清空筛选",
     "toolbar_settings": "系统设置 & 工具更新",
@@ -3264,6 +3267,37 @@ I18N_ZH_CN = {
     "reset_retry": "重置缓存并重新检测",
     "reset_done_title": "重置完成",
     "reset_done_text": "已清空版本缓存并刷新网络环境，即将重新检测全部 Java 更新。",
+    "download_java_section": "下载新的 Java 环境",
+    "download_vendor": "Java 发行商",
+    "download_major": "Java 大版本",
+    "download_parent": "下载/安装到父目录",
+    "browse_folder": "浏览...",
+    "download_platform": "当前系统自动匹配: {platform}",
+    "download_vendor_profile": "适合场景: {scenario}\n优点: {pros}\n缺点: {cons}",
+    "download_preview": "预计安装目录: {path}",
+    "download_start": "开始下载并注册 Java",
+    "download_confirm_title": "确认下载 Java",
+    "download_confirm_text": "即将下载 {vendor} JDK {major}，并安装到:\n{parent}\n\n工具会自动使用最快可用源、断点续传、缓存复用和校验机制。是否继续？",
+    "transfer_title_download": "正在下载 Java...",
+    "cancel_download": "取消下载",
+    "download_installing": "下载包已验证，正在安装到:\n{path}",
+    "download_done": "Java 下载完成",
+    "download_done_text": "已安装并注册 Java:\n{path}\n\n版本: {version}\n来源: {source}",
+    "move_java_section": "移动已注册 Java 环境",
+    "move_target_parent": "移动到父目录",
+    "move_target_name": "目标文件夹名",
+    "move_refresh": "刷新列表",
+    "move_start": "移动选中 Java",
+    "move_preview": "预计移动到: {path}",
+    "move_no_selection_title": "未选择 Java",
+    "move_no_selection_text": "请先在列表中选中一个要移动的 Java 环境。",
+    "move_confirm_title": "确认移动 Java",
+    "move_confirm_text": "即将移动:\n{source}\n\n到:\n{target}\n\n移动完成后会自动更新注册信息。是否继续？",
+    "transfer_title_move": "正在移动 Java...",
+    "cancel_move": "取消移动",
+    "move_running": "正在复制并切换 Java 目录，请稍候...",
+    "move_done": "Java 移动完成",
+    "move_done_text": "已移动并更新注册信息:\n{old_path}\n\n->\n{new_path}",
     "settings_title": "系统核心设置",
     "language_section": "界面语言",
     "language_auto": "自动跟随系统语言",
@@ -3392,6 +3426,8 @@ I18N_EN_US = {
     "tab_registration": "Registry",
     "tab_fix": "Analyze & Repair",
     "tab_update": "Cloud Update Engine",
+    "tab_download": "Java Download",
+    "tab_move": "Java Move",
     "toolbar_search_label": "Search/Filter Java:",
     "toolbar_clear_filter": "Clear",
     "toolbar_settings": "Settings & Updates",
@@ -3416,6 +3452,37 @@ I18N_EN_US = {
     "reset_retry": "Reset Cache and Retry",
     "reset_done_title": "Reset Complete",
     "reset_done_text": "Version cache and network state were cleared. Java update detection will run again.",
+    "download_java_section": "Download a New Java Runtime",
+    "download_vendor": "Java Vendor",
+    "download_major": "Java Major",
+    "download_parent": "Download/install parent folder",
+    "browse_folder": "Browse...",
+    "download_platform": "Current system auto match: {platform}",
+    "download_vendor_profile": "Best for: {scenario}\nPros: {pros}\nCons: {cons}",
+    "download_preview": "Planned install folder: {path}",
+    "download_start": "Download and Register Java",
+    "download_confirm_title": "Confirm Java Download",
+    "download_confirm_text": "The tool will download {vendor} JDK {major} and install it under:\n{parent}\n\nFastest available source, resume, cache reuse, and verification will be used. Continue?",
+    "transfer_title_download": "Downloading Java...",
+    "cancel_download": "Cancel Download",
+    "download_installing": "Package verified. Installing to:\n{path}",
+    "download_done": "Java Download Complete",
+    "download_done_text": "Java was installed and registered:\n{path}\n\nVersion: {version}\nSource: {source}",
+    "move_java_section": "Move a Registered Java Runtime",
+    "move_target_parent": "Move to parent folder",
+    "move_target_name": "Target folder name",
+    "move_refresh": "Refresh List",
+    "move_start": "Move Selected Java",
+    "move_preview": "Planned move target: {path}",
+    "move_no_selection_title": "No Java Selected",
+    "move_no_selection_text": "Select a Java runtime from the list first.",
+    "move_confirm_title": "Confirm Java Move",
+    "move_confirm_text": "The tool will move:\n{source}\n\nto:\n{target}\n\nRegistry information will be updated after the move. Continue?",
+    "transfer_title_move": "Moving Java...",
+    "cancel_move": "Cancel Move",
+    "move_running": "Copying and switching the Java folder. Please wait...",
+    "move_done": "Java Move Complete",
+    "move_done_text": "Java was moved and registry information was updated:\n{old_path}\n\n->\n{new_path}",
     "settings_title": "Core Settings",
     "language_section": "Interface Language",
     "language_auto": "Follow system language",
@@ -3592,9 +3659,86 @@ def normalize_text(value):
 
 def default_headers():
     return {
-        "User-Agent": "JavaManager/2.6",
+        "User-Agent": "JavaManager/2.7",
         "Accept": "application/json, text/plain, */*",
     }
+
+
+SINGLE_INSTANCE_TOKEN = b"LJM_SINGLE_INSTANCE_SHOW"
+
+
+def single_instance_port(app_identity=None):
+    identity = normalize_text(app_identity or APP_SOURCE_ROOT or APP_EXECUTABLE_PATH or "ljm-java-manager").lower()
+    digest = hashlib.sha256(identity.encode("utf-8", errors="ignore")).hexdigest()
+    return 43000 + (int(digest[:8], 16) % 6000)
+
+
+def notify_existing_instance(port, timeout=0.6):
+    try:
+        with socket.create_connection(("127.0.0.1", int(port)), timeout=timeout) as client:
+            client.sendall(SINGLE_INSTANCE_TOKEN)
+        return True
+    except Exception as exc:
+        logging.debug("通知已有实例失败: %s", exc)
+        return False
+
+
+class SingleInstanceGuard:
+    def __init__(self, port, on_show=None):
+        self.port = int(port)
+        self.on_show = on_show
+        self._server = None
+        self._thread = None
+        self._stop_event = threading.Event()
+
+    def acquire(self):
+        if self._server:
+            return True
+        server = None
+        try:
+            server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server.bind(("127.0.0.1", self.port))
+            server.listen(8)
+            server.settimeout(0.4)
+            self.port = server.getsockname()[1]
+            self._server = server
+            self._thread = threading.Thread(target=self._serve, name="LJMSingleInstanceGuard", daemon=True)
+            self._thread.start()
+            logging.info("单实例守卫已启动: 127.0.0.1:%s", self.port)
+            return True
+        except OSError as exc:
+            logging.info("单实例守卫端口已被占用: %s", exc)
+            try:
+                if server:
+                    server.close()
+            except Exception:
+                pass
+            return False
+
+    def _serve(self):
+        while not self._stop_event.is_set():
+            try:
+                client, _addr = self._server.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            with client:
+                try:
+                    data = client.recv(256)
+                    if data == SINGLE_INSTANCE_TOKEN and self.on_show:
+                        self.on_show()
+                except Exception as exc:
+                    logging.debug("处理单实例唤醒请求失败: %s", exc)
+
+    def close(self):
+        self._stop_event.set()
+        if self._server:
+            try:
+                self._server.close()
+            except Exception:
+                pass
+            self._server = None
 
 
 def unique_sequence(items):
@@ -3692,12 +3836,21 @@ def candidate_java_search_roots():
 
     home = os.path.expanduser("~")
     if IS_WIN:
+        program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+        program_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
         roots.extend(
             [
-                os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Java"),
-                os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Eclipse Adoptium"),
-                os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Zulu"),
-                os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), "Java"),
+                os.path.join(program_files, "Java"),
+                os.path.join(program_files, "Eclipse Adoptium"),
+                os.path.join(program_files, "Microsoft", "jdk"),
+                os.path.join(program_files, "Zulu"),
+                os.path.join(program_files, "BellSoft"),
+                os.path.join(program_files, "Amazon Corretto"),
+                os.path.join(program_files, "Oracle"),
+                os.path.join(program_files, "GraalVM"),
+                os.path.join(program_files, "Semeru"),
+                os.path.join(program_files, "IBM"),
+                os.path.join(program_files_x86, "Java"),
             ]
         )
     elif sys.platform == "darwin":
@@ -3728,27 +3881,58 @@ def candidate_java_search_roots():
     return unique_sequence(roots)
 
 
+JAVA_SEARCH_SKIP_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    "__pycache__",
+    "node_modules",
+    ".gradle",
+    ".m2",
+    ".idea",
+    ".vscode",
+    "$recycle.bin",
+    "system volume information",
+}
+
+
+def _candidate_java_home_paths(path):
+    expanded = os.path.abspath(os.path.expanduser(path))
+    candidates = [expanded]
+    if os.path.basename(expanded).lower() == "bin":
+        candidates.append(os.path.dirname(expanded))
+    candidates.append(os.path.join(expanded, "Contents", "Home"))
+    return unique_sequence(candidates)
+
+
+def looks_like_java_home(path):
+    exe = "java.exe" if IS_WIN else "java"
+    for candidate in _candidate_java_home_paths(path):
+        if os.path.exists(os.path.join(candidate, "bin", exe)) or os.path.exists(os.path.join(candidate, "jre", "bin", exe)):
+            return candidate
+    return ""
+
+
 def discover_java_homes(search_roots=None, max_depth=4):
     java_homes = []
     visited = set()
-    exe = "java.exe" if IS_WIN else "java"
 
     def maybe_add(path):
-        expanded = os.path.abspath(os.path.expanduser(path))
-        mac_home = os.path.join(expanded, "Contents", "Home")
-        for candidate in (expanded, mac_home):
+        for candidate in _candidate_java_home_paths(path):
             key = normalize_path(candidate)
             if key in visited:
                 continue
             visited.add(key)
-            if os.path.exists(os.path.join(candidate, "bin", exe)) or os.path.exists(os.path.join(candidate, "jre", "bin", exe)):
+            if looks_like_java_home(candidate):
                 java_homes.append(candidate)
+                return True
+        return False
 
     for root in search_roots or candidate_java_search_roots():
         root = os.path.abspath(os.path.expanduser(root))
         if not os.path.exists(root):
             continue
-        maybe_add(root)
+        root_is_java_home = maybe_add(root)
         if not os.path.isdir(root):
             continue
         root_depth = root.rstrip(os.sep).count(os.sep)
@@ -3757,8 +3941,13 @@ def discover_java_homes(search_roots=None, max_depth=4):
             if depth > max_depth:
                 dirs[:] = []
                 continue
-            dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", "node_modules")]
-            maybe_add(current)
+            dirs[:] = sorted(d for d in dirs if d.lower() not in JAVA_SEARCH_SKIP_DIRS)
+            if current == root and root_is_java_home:
+                dirs[:] = []
+                continue
+            if current != root or not root_is_java_home:
+                if maybe_add(current):
+                    dirs[:] = []
     return unique_sequence(java_homes)
 
 
@@ -3853,6 +4042,9 @@ def is_proxyable_github_url(url):
         for token in (
             "github.com",
             "api.github.com",
+            "githubusercontent.com",
+            "objects.githubusercontent.com",
+            "release-assets.githubusercontent.com",
         )
     )
 
@@ -4041,6 +4233,10 @@ def current_archive_suffix(url):
     return ".zip"
 
 
+def download_info_archive_suffix(info):
+    return current_archive_suffix(info.get("asset_name") or info.get("url"))
+
+
 def archive_cache_filename(info, suffix):
     vendor = sanitize_registry_name(info.get("vendor") or "JDK")
     major = sanitize_registry_name(info.get("major_version") or extract_major_from_version(info.get("version"), fallback="jdk"))
@@ -4167,6 +4363,36 @@ def safe_extract_tar(tar_ref, extract_dir):
     tar_ref.extractall(extract_dir)
 
 
+def find_source_jdk_dir(extract_dir):
+    exe = "java.exe" if IS_WIN else "java"
+    for root_dir, dirs, _files in os.walk(extract_dir):
+        if "bin" in dirs and os.path.exists(os.path.join(root_dir, "bin", exe)):
+            return root_dir
+        candidate_jre = os.path.join(root_dir, "jre", "bin", exe)
+        if os.path.exists(candidate_jre):
+            return root_dir
+    raise FileNotFoundError("download archive does not contain a recognizable Java home")
+
+
+def validate_java_move_target(source_java_home, target_path):
+    source = os.path.abspath(os.path.expanduser(normalize_text(source_java_home)))
+    target = os.path.abspath(os.path.expanduser(normalize_text(target_path)))
+    if not os.path.isdir(source):
+        raise FileNotFoundError(source)
+    if not target:
+        raise ValueError("target path is empty")
+    if normalize_path(source) == normalize_path(target):
+        raise ValueError("target path is the same as source")
+    if is_within_directory(source, target):
+        raise ValueError("target path cannot be inside source Java home")
+    if os.path.exists(target):
+        raise FileExistsError(target)
+    parent = os.path.dirname(target)
+    if not parent:
+        raise ValueError("target parent is empty")
+    return source, target
+
+
 def list_possible_jvm_paths(java_home):
     if IS_WIN:
         dll = "jvm.dll"
@@ -4286,6 +4512,349 @@ def sanitize_registry_name(value):
     return text[:120]
 
 
+JAVA_VENDOR_PROFILES = {
+    "Eclipse Temurin": {
+        "foojay": "temurin",
+        "scenario_zh": "通用开发、Minecraft、服务器和生产环境默认推荐。",
+        "pros_zh": "开源、更新稳定、生态兼容性好，HotSpot 表现均衡。",
+        "cons_zh": "没有额外商业增强，极致低内存或原生镜像场景不是强项。",
+        "scenario_en": "General development, Minecraft, servers, and production defaults.",
+        "pros_en": "Open source, stable updates, strong compatibility, and balanced HotSpot performance.",
+        "cons_en": "No vendor-specific enterprise additions; not specialized for tiny memory or native-image use.",
+    },
+    "IBM Semeru OpenJ9": {
+        "foojay": "semeru",
+        "github_repos": ("ibmruntimes/semeru{major}-binaries", "adoptopenjdk/semeru{major}-binaries"),
+        "scenario_zh": "内存敏感服务、长时间运行进程、想尝试 OpenJ9 的用户。",
+        "pros_zh": "OpenJ9 通常内存占用更克制，启动和运行特性与 HotSpot 不同。",
+        "cons_zh": "少数依赖 HotSpot 内部行为的工具兼容性需要实测。",
+        "scenario_en": "Memory-sensitive services, long-running processes, and OpenJ9 users.",
+        "pros_en": "OpenJ9 can use less memory and has different runtime characteristics from HotSpot.",
+        "cons_en": "Tools relying on HotSpot internals may need compatibility testing.",
+    },
+    "Azul Zulu": {
+        "foojay": "zulu",
+        "scenario_zh": "桌面端、服务器、旧版本兼容和需要稳定长期构建的环境。",
+        "pros_zh": "版本覆盖广，构建稳定，Windows/Linux/macOS 包较全。",
+        "cons_zh": "高级低延迟能力主要在商业 Zulu Prime 系列中。",
+        "scenario_en": "Desktop apps, servers, legacy compatibility, and stable long-term builds.",
+        "pros_en": "Broad version coverage with stable builds across Windows, Linux, and macOS.",
+        "cons_en": "Advanced low-latency features are mainly in commercial Zulu Prime builds.",
+    },
+    "Alibaba Dragonwell": {
+        "foojay": "dragonwell",
+        "github_repos": ("alibaba/dragonwell{major}",),
+        "scenario_zh": "国内云服务器、阿里生态、需要国内链路友好的服务端环境。",
+        "pros_zh": "国内访问体验较好，面向服务端有一些优化思路。",
+        "cons_zh": "非 LTS 或新大版本覆盖不一定和主流发行版同步。",
+        "scenario_en": "China-based cloud servers, Alibaba ecosystem, and server workloads.",
+        "pros_en": "Good domestic connectivity and server-oriented tuning focus.",
+        "cons_en": "Coverage for non-LTS or newest majors may lag mainstream distributions.",
+    },
+    "GraalVM": {
+        "foojay": "graalvm",
+        "github_repos": ("graalvm/graalvm-ce-builds",),
+        "scenario_zh": "高性能服务、Polyglot、Native Image 和框架 AOT 场景。",
+        "pros_zh": "支持 Native Image，JIT/编译器能力强，适合高级优化。",
+        "cons_zh": "体积和复杂度更高，部分原生镜像构建需要额外依赖。",
+        "scenario_en": "High-performance services, polyglot workloads, Native Image, and AOT frameworks.",
+        "pros_en": "Native Image support and strong compiler/runtime optimization capabilities.",
+        "cons_en": "Larger and more complex; native-image builds may require extra toolchains.",
+    },
+    "GraalVM Community": {
+        "foojay": "graalvm_community",
+        "github_repos": ("graalvm/graalvm-ce-builds",),
+        "scenario_zh": "想使用社区版 GraalVM/Native Image 的开发和测试环境。",
+        "pros_zh": "社区版获取方便，适合学习、实验和开源项目。",
+        "cons_zh": "版本节奏和支持边界与 Oracle GraalVM 不完全一致。",
+        "scenario_en": "Development and testing with community GraalVM and Native Image.",
+        "pros_en": "Easy to obtain and suitable for learning, experiments, and open-source projects.",
+        "cons_en": "Release cadence and support boundaries differ from Oracle GraalVM.",
+    },
+    "Microsoft Build of OpenJDK": {
+        "foojay": "microsoft",
+        "github_repos": ("microsoft/openjdk",),
+        "scenario_zh": "Windows 桌面、Azure、微软生态或企业标准镜像。",
+        "pros_zh": "微软维护，Windows/Azure 生态适配友好。",
+        "cons_zh": "版本选择相对聚焦，不是所有历史版本都有包。",
+        "scenario_en": "Windows desktop, Azure, Microsoft ecosystem, and enterprise standard images.",
+        "pros_en": "Maintained by Microsoft with friendly Windows and Azure integration.",
+        "cons_en": "Version coverage is focused; not every historical major is available.",
+    },
+    "Oracle Java": {
+        "foojay": "oracle_open_jdk",
+        "foojay_fallbacks": ("oracle",),
+        "scenario_zh": "需要 Oracle 官方构建、认证或与企业规范保持一致的场景。",
+        "pros_zh": "官方来源权威，版本语义清晰。",
+        "cons_zh": "授权和商用合规需要用户自行确认。",
+        "scenario_en": "Oracle official builds, certification, or enterprise policy alignment.",
+        "pros_en": "Authoritative official source with clear version semantics.",
+        "cons_en": "Licensing and commercial compliance must be checked by the user.",
+    },
+    "Amazon Corretto": {
+        "foojay": "corretto",
+        "scenario_zh": "AWS、云服务器、容器镜像和长期稳定服务。",
+        "pros_zh": "Amazon 长期维护，服务端和云环境表现稳。",
+        "cons_zh": "桌面/GUI 专项特性不是重点。",
+        "scenario_en": "AWS, cloud servers, containers, and long-lived services.",
+        "pros_en": "Long-term Amazon maintenance and stable server/cloud behavior.",
+        "cons_en": "Desktop or GUI-specific features are not its focus.",
+    },
+    "BellSoft Liberica": {
+        "foojay": "liberica",
+        "scenario_zh": "桌面应用、嵌入式、需要 JavaFX 或更完整运行包的场景。",
+        "pros_zh": "包类型丰富，跨平台覆盖好，适合桌面和嵌入式。",
+        "cons_zh": "可选包较多，初次选择时需要看清 JDK/JRE/Full。",
+        "scenario_en": "Desktop apps, embedded use, JavaFX, or fuller runtime packages.",
+        "pros_en": "Rich package choices with broad cross-platform coverage.",
+        "cons_en": "Many variants exist, so users should distinguish JDK/JRE/Full builds.",
+    },
+    "SAP SapMachine": {
+        "foojay": "sap_machine",
+        "github_repos": ("SAP/SapMachine",),
+        "scenario_zh": "SAP 生态、企业服务端和稳定 LTS 运行环境。",
+        "pros_zh": "SAP 维护，企业服务端场景清晰。",
+        "cons_zh": "面向通用桌面或游戏场景的资料相对少。",
+        "scenario_en": "SAP ecosystem, enterprise servers, and stable LTS runtimes.",
+        "pros_en": "Maintained by SAP with a clear enterprise-server focus.",
+        "cons_en": "Less desktop or game-oriented guidance than mainstream builds.",
+    },
+    "OpenLogic OpenJDK": {
+        "foojay": "openlogic",
+        "scenario_zh": "需要商业支持思路但仍使用 OpenJDK 的企业环境。",
+        "pros_zh": "OpenLogic 维护，版本覆盖和企业支持定位明确。",
+        "cons_zh": "个人用户通常优先选择 Temurin/Zulu 会更简单。",
+        "scenario_en": "Enterprise OpenJDK environments that value commercial support options.",
+        "pros_en": "Maintained by OpenLogic with clear enterprise support positioning.",
+        "cons_en": "Individual users may find Temurin or Zulu simpler.",
+    },
+    "JetBrains Runtime": {
+        "foojay": "jetbrains",
+        "github_repos": ("JetBrains/JetBrainsRuntime",),
+        "scenario_zh": "IntelliJ/IDEA、PyCharm、Android Studio 等 JetBrains/Swing 桌面工具。",
+        "pros_zh": "针对 JetBrains IDE 和桌面 UI 做过适配优化。",
+        "cons_zh": "不建议作为普通服务端默认 JDK，通用性需按项目验证。",
+        "scenario_en": "IntelliJ IDEA, PyCharm, Android Studio, and JetBrains/Swing desktop tools.",
+        "pros_en": "Optimized for JetBrains IDEs and desktop UI workloads.",
+        "cons_en": "Not the default choice for general server workloads; validate per project.",
+    },
+    "Tencent Kona": {
+        "foojay": "kona",
+        "scenario_zh": "腾讯云、国内服务端、希望使用国内厂商 OpenJDK 构建的环境。",
+        "pros_zh": "国内厂商维护，适合国内云和服务端部署。",
+        "cons_zh": "资料和社区案例少于 Temurin/Zulu。",
+        "scenario_en": "Tencent Cloud, China-based servers, and domestic OpenJDK builds.",
+        "pros_en": "Maintained by a domestic vendor and suitable for China-based deployments.",
+        "cons_en": "Documentation and community examples are fewer than Temurin or Zulu.",
+    },
+    "Huawei Bi Sheng": {
+        "foojay": "bisheng",
+        "scenario_zh": "华为鲲鹏、Linux/aarch64 和国内服务器环境。",
+        "pros_zh": "面向鲲鹏与服务端生态，适合国产化环境试用。",
+        "cons_zh": "Windows/macOS 包覆盖有限，当前系统不一定有可下载包。",
+        "scenario_en": "Huawei Kunpeng, Linux/aarch64, and China-based server environments.",
+        "pros_en": "Targets Kunpeng and server ecosystems, useful for localization scenarios.",
+        "cons_en": "Windows/macOS package coverage is limited and may not match the current system.",
+    },
+    "Mandrel": {
+        "foojay": "mandrel",
+        "github_repos": ("graalvm/mandrel",),
+        "scenario_zh": "Quarkus、容器原生和 GraalVM Native Image 构建。",
+        "pros_zh": "面向云原生 Native Image，适合 Quarkus 体系。",
+        "cons_zh": "不是普通 Java 运行环境首选，版本通常跟随特定生态。",
+        "scenario_en": "Quarkus, cloud-native containers, and GraalVM Native Image builds.",
+        "pros_en": "Focused on cloud-native Native Image workflows, especially Quarkus.",
+        "cons_en": "Not the first choice for ordinary Java runtimes; versions follow its ecosystem.",
+    },
+    "Liberica Native Image Kit": {
+        "foojay": "liberica_native",
+        "scenario_zh": "需要 BellSoft Native Image Kit、完整原生镜像工具链的项目。",
+        "pros_zh": "把 Liberica 与 Native Image 能力打包在一起，便于原生构建。",
+        "cons_zh": "包体更大，适合构建机，不适合只运行普通 Java 程序。",
+        "scenario_en": "Projects needing BellSoft Native Image Kit and a bundled native-image toolchain.",
+        "pros_en": "Combines Liberica with Native Image capabilities for native builds.",
+        "cons_en": "Larger packages; better for build machines than simple runtime use.",
+    },
+    "Gluon GraalVM": {
+        "foojay": "gluon_graalvm",
+        "scenario_zh": "Gluon/JavaFX、移动端或桌面原生镜像实验。",
+        "pros_zh": "适合 JavaFX/Gluon 生态的原生镜像方向。",
+        "cons_zh": "版本和系统覆盖较窄，不适合作为通用默认 JDK。",
+        "scenario_en": "Gluon/JavaFX, mobile, or desktop native-image experiments.",
+        "pros_en": "Useful for JavaFX/Gluon native-image workflows.",
+        "cons_en": "Narrower version and OS coverage; not a general default JDK.",
+    },
+    "Generic OpenJDK": {
+        "foojay": "temurin",
+        "scenario_zh": "不知道选什么时的通用 OpenJDK 入口。",
+        "pros_zh": "会走稳定通用链路，兼容性优先。",
+        "cons_zh": "类型名称不如具体发行商明确，建议优先选择具体发行版。",
+        "scenario_en": "Generic OpenJDK entry when the user is unsure.",
+        "pros_en": "Uses a stable general-purpose chain with compatibility first.",
+        "cons_en": "Less explicit than a concrete vendor; prefer a named distribution when possible.",
+    },
+}
+
+JAVA_VENDOR_OPTIONS = tuple(JAVA_VENDOR_PROFILES.keys())
+
+JAVA_MAJOR_OPTIONS = ("8", "11", "17", "21", "22", "23", "24", "25", "26")
+
+
+def canonical_java_vendor_name(vendor):
+    requested = normalize_text(vendor)
+    if requested in JAVA_VENDOR_PROFILES:
+        return requested
+    requested_lower = requested.lower()
+    for name in JAVA_VENDOR_PROFILES:
+        if name.lower() == requested_lower:
+            return name
+    return requested or "Generic OpenJDK"
+
+
+def java_vendor_profile(vendor, language=None):
+    requested = canonical_java_vendor_name(vendor)
+    profile = JAVA_VENDOR_PROFILES.get(requested)
+    if not profile:
+        requested = "Generic OpenJDK"
+        profile = JAVA_VENDOR_PROFILES[requested]
+
+    lang = language or active_language()
+    suffix = "zh" if str(lang).lower().startswith("zh") else "en"
+    result = dict(profile)
+    result["name"] = requested
+    result["scenario"] = profile.get(f"scenario_{suffix}") or profile.get("scenario_zh") or ""
+    result["pros"] = profile.get(f"pros_{suffix}") or profile.get("pros_zh") or ""
+    result["cons"] = profile.get(f"cons_{suffix}") or profile.get("cons_zh") or ""
+    return result
+
+
+def java_vendor_foojay_distributions(vendor):
+    profile = java_vendor_profile(vendor)
+    values = [profile.get("foojay")]
+    values.extend(profile.get("foojay_fallbacks", ()) or ())
+    return tuple(value for value in unique_sequence(values) if normalize_text(value))
+
+
+def java_vendor_github_repos(vendor, major_version):
+    profile = java_vendor_profile(vendor)
+    repos = []
+    for repo in profile.get("github_repos", ()) or ():
+        repos.append(normalize_text(repo).format(major=str(major_version)))
+    return tuple(repo for repo in unique_sequence(repos) if repo)
+
+
+def current_java_download_platform_text():
+    if IS_WIN:
+        os_name = "Windows"
+    elif sys.platform == "darwin":
+        os_name = "macOS"
+    else:
+        os_name = "Linux"
+    archive_text = "/".join(archive_type_candidates())
+    return f"{os_name} / {foojay_arch()} / {archive_text}"
+
+
+TOUCH_SCROLL_BLOCKED_WIDGET_CLASSES = {
+    "Button",
+    "TButton",
+    "Entry",
+    "TEntry",
+    "Text",
+    "Listbox",
+    "Treeview",
+    "TCombobox",
+    "Combobox",
+    "Scrollbar",
+    "TScrollbar",
+    "Radiobutton",
+    "TRadiobutton",
+    "Checkbutton",
+    "TCheckbutton",
+    "Scale",
+    "TScale",
+}
+
+
+def scroll_units_from_wheel_event(delta=0, num=None):
+    if num == 4:
+        return -1
+    if num == 5:
+        return 1
+    try:
+        delta = int(delta)
+    except Exception:
+        delta = 0
+    if not delta:
+        return 0
+    units = max(1, int(round(abs(delta) / 120.0)))
+    return -units if delta > 0 else units
+
+
+def widget_class_allows_touch_scroll(widget_class):
+    return normalize_text(widget_class) not in TOUCH_SCROLL_BLOCKED_WIDGET_CLASSES
+
+
+def is_horizontal_scroll_state(state):
+    try:
+        return bool(int(state) & 0x0001)
+    except Exception:
+        return False
+
+
+def java_row_search_text(row):
+    runtime = row.get("runtime", {}) or {}
+    report = row.get("report", {}) or {}
+    values = [
+        row.get("version_name"),
+        row.get("registry_name"),
+        row.get("java_home"),
+        row.get("status"),
+        row.get("mark"),
+        report.get("status"),
+        runtime.get("vendor"),
+        runtime.get("version"),
+        runtime.get("major"),
+        version_display_text(runtime.get("version")),
+    ]
+    return " ".join(normalize_text(value).lower() for value in values if normalize_text(value))
+
+
+def java_row_matches_query(row, query):
+    terms = [term for term in re.split(r"\s+", normalize_text(query).lower()) if term]
+    if not terms:
+        return True
+    haystack = java_row_search_text(row)
+    return all(term in haystack for term in terms)
+
+
+def sanitize_path_token(value):
+    text = sanitize_registry_name(value)
+    text = re.sub(r"[^A-Za-z0-9._-]+", "_", text)
+    text = re.sub(r"_+", "_", text).strip("._")
+    return text or "JDK_Unknown"
+
+
+def java_install_dir_name(info):
+    vendor = sanitize_path_token(info.get("vendor") or "JDK")
+    major = sanitize_path_token(info.get("major_version") or extract_major_from_version(info.get("version"), fallback="jdk"))
+    version = sanitize_path_token(version_display_text(info.get("version")))
+    return f"{vendor}_jdk{major}_{version}"
+
+
+def next_available_java_install_dir(parent_dir, info):
+    parent = os.path.abspath(os.path.expanduser(normalize_text(parent_dir)))
+    base_name = java_install_dir_name(info)
+    candidate = os.path.join(parent, base_name)
+    if not os.path.exists(candidate):
+        return candidate
+    index = 2
+    while True:
+        candidate = os.path.join(parent, f"{base_name}_{index}")
+        if not os.path.exists(candidate):
+            return candidate
+        index += 1
+
+
 def build_registry_name(runtime):
     vendor_token = {
         "IBM Semeru OpenJ9": "Semeru",
@@ -4295,8 +4864,19 @@ def build_registry_name(runtime):
         "Oracle Java": "Oracle",
         "Eclipse Temurin": "Temurin",
         "GraalVM": "GraalVM",
+        "GraalVM Community": "GraalVM_Community",
+        "Amazon Corretto": "Corretto",
+        "BellSoft Liberica": "Liberica",
+        "SAP SapMachine": "SapMachine",
+        "OpenLogic OpenJDK": "OpenLogic",
+        "JetBrains Runtime": "JetBrains",
+        "Tencent Kona": "Kona",
+        "Huawei Bi Sheng": "BiSheng",
+        "Mandrel": "Mandrel",
+        "Liberica Native Image Kit": "Liberica_NIK",
+        "Gluon GraalVM": "Gluon_GraalVM",
         "Generic OpenJDK": "OpenJDK",
-    }.get(runtime.get("vendor"), "JDK")
+    }.get(runtime.get("vendor"), sanitize_registry_name(runtime.get("vendor") or "JDK"))
     version_token = sanitize_registry_name(runtime.get("version") or runtime.get("major") or "Unknown")
     return f"{vendor_token}_{version_token}"
 
@@ -4626,10 +5206,12 @@ class WindowsTrayIcon:
     ID_TAB_REG = 1003
     ID_TAB_FIX = 1004
     ID_TAB_UPDATE = 1005
-    ID_SETTINGS = 1006
-    ID_REPO = 1007
+    ID_TAB_DOWNLOAD = 1006
+    ID_TAB_MOVE = 1007
+    ID_SETTINGS = 1008
+    ID_REPO = 1009
 
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_settings=None, on_repo=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_settings=None, on_repo=None):
         self.root = root
         self.tooltip = tooltip[:127]
         self.icon_path = icon_path
@@ -4638,6 +5220,8 @@ class WindowsTrayIcon:
         self.on_tab_reg = on_tab_reg
         self.on_tab_fix = on_tab_fix
         self.on_tab_update = on_tab_update
+        self.on_tab_download = on_tab_download
+        self.on_tab_move = on_tab_move
         self.on_settings = on_settings
         self.on_repo = on_repo
         self.hwnd = None
@@ -4760,6 +5344,8 @@ class WindowsTrayIcon:
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_REG, "切换到注册管理")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_FIX, "切换到环境分析与修复")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_UPDATE, "切换到云端更新引擎")
+            user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_DOWNLOAD, "切换到 Java 下载")
+            user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_MOVE, "切换到 Java 移动")
             user32.AppendMenuW(menu, self.MF_SEPARATOR, 0, None)
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_SETTINGS, "系统设置")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_REPO, "切换到开源项目地址")
@@ -4794,6 +5380,12 @@ class WindowsTrayIcon:
             if command_id == self.ID_TAB_UPDATE and self.on_tab_update:
                 self.root.after(0, self.on_tab_update)
                 return 0
+            if command_id == self.ID_TAB_DOWNLOAD and self.on_tab_download:
+                self.root.after(0, self.on_tab_download)
+                return 0
+            if command_id == self.ID_TAB_MOVE and self.on_tab_move:
+                self.root.after(0, self.on_tab_move)
+                return 0
             if command_id == self.ID_SETTINGS and self.on_settings:
                 self.root.after(0, self.on_settings)
                 return 0
@@ -4812,7 +5404,7 @@ class WindowsTrayIcon:
 
 
 class PystrayTrayIcon:
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_settings=None, on_repo=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_settings=None, on_repo=None):
         self.root = root
         self.tooltip = tooltip
         self.icon_path = icon_path
@@ -4821,6 +5413,8 @@ class PystrayTrayIcon:
         self.on_tab_reg = on_tab_reg
         self.on_tab_fix = on_tab_fix
         self.on_tab_update = on_tab_update
+        self.on_tab_download = on_tab_download
+        self.on_tab_move = on_tab_move
         self.on_settings = on_settings
         self.on_repo = on_repo
         self.icon = None
@@ -4857,6 +5451,8 @@ class PystrayTrayIcon:
             pystray.MenuItem("切换到注册管理", lambda _icon, _item: ui_call(self.on_tab_reg)),
             pystray.MenuItem("切换到环境分析与修复", lambda _icon, _item: ui_call(self.on_tab_fix)),
             pystray.MenuItem("切换到云端更新引擎", lambda _icon, _item: ui_call(self.on_tab_update)),
+            pystray.MenuItem("切换到 Java 下载", lambda _icon, _item: ui_call(self.on_tab_download)),
+            pystray.MenuItem("切换到 Java 移动", lambda _icon, _item: ui_call(self.on_tab_move)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("系统设置", lambda _icon, _item: ui_call(self.on_settings)),
             pystray.MenuItem("切换到开源项目地址", lambda _icon, _item: ui_call(self.on_repo)),
@@ -5175,6 +5771,39 @@ class NetworkEngine:
         return NetworkEngine.request_json_from_candidates([url], timeout=timeout, retries=retries, cache_ttl=cache_ttl)
 
     @staticmethod
+    def _request_text_via_curl(url, timeout=8):
+        curl_path = shutil.which("curl.exe") or shutil.which("curl")
+        if not curl_path:
+            raise RuntimeError("curl is not available")
+        command = [
+            curl_path,
+            "-L",
+            "-sS",
+            "--connect-timeout",
+            str(max(3, min(int(timeout), 12))),
+            "--max-time",
+            str(max(10, int(timeout) + 8)),
+            "-H",
+            f"User-Agent: {default_headers().get('User-Agent')}",
+        ]
+        if IS_WIN:
+            command.append("--ssl-no-revoke")
+        env_info = NetworkEngine.detect_environment()
+        if env_info.get("effective_direct"):
+            command.extend(["--noproxy", "*"])
+        command.append(url)
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WIN else 0
+        output = subprocess.check_output(
+            command,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+            timeout=max(12, int(timeout) + 10),
+            creationflags=creationflags,
+        )
+        return output
+
+    @staticmethod
     def request_json_from_candidates(urls, timeout=8, retries=2, cache_ttl=300):
         normalized_urls = tuple(unique_sequence(urls))
         if not normalized_urls:
@@ -5203,6 +5832,16 @@ class NetworkEngine:
                     logging.warning("请求失败 (%s/%s): %s - %s", attempt + 1, retries, url, exc)
                     if attempt < retries - 1:
                         time.sleep(0.6 * (attempt + 1))
+            try:
+                payload = NetworkEngine._request_text_via_curl(url, timeout=timeout)
+                data = json.loads(payload)
+                with NetworkEngine._response_lock:
+                    NetworkEngine._response_cache[cache_key] = {"time": time.time(), "data": data}
+                logging.info("curl JSON 兜底成功: %s", url)
+                return data
+            except Exception as exc:
+                last_error = exc
+                logging.warning("curl JSON 兜底失败: %s - %s", url, exc)
         raise last_error
 
     @staticmethod
@@ -5468,12 +6107,59 @@ class JavaDownloadEngine:
             return False
         if "jre" in lower or "debugimage" in lower or "staticlibs" in lower or "sources" in lower or "testimage" in lower or "sbom" in lower:
             return False
-        if "jdk" not in lower and "openjdk" not in lower and "semeru" not in lower:
+        archive_tokens = (
+            "jdk",
+            "openjdk",
+            "semeru",
+            "jbrsdk",
+            "sapmachine",
+            "graalvm",
+            "corretto",
+            "liberica",
+            "mandrel",
+            "kona",
+            "bisheng",
+            "gluon",
+        )
+        if not any(token in lower for token in archive_tokens):
             return False
         if vendor == "IBM Semeru OpenJ9" and "openj9" not in lower:
             return False
         if vendor in ("Eclipse Temurin", "Generic OpenJDK") and "openj9" in lower:
             return False
+        required_tokens = {
+            "Amazon Corretto": "corretto",
+            "BellSoft Liberica": "liberica",
+            "SAP SapMachine": "sapmachine",
+            "JetBrains Runtime": "jbr",
+            "Tencent Kona": "kona",
+            "Huawei Bi Sheng": "bisheng",
+            "Mandrel": "mandrel",
+            "Liberica Native Image Kit": "liberica",
+            "Gluon GraalVM": "gluon",
+        }
+        required = required_tokens.get(vendor)
+        if required and required not in lower:
+            return False
+        return True
+
+    @staticmethod
+    def _foojay_item_matches_major(item, major_version):
+        expected = str(major_version)
+        filename = normalize_text(item.get("filename")).lower()
+        for pattern in (
+            r"openjdk[-_]?(\d{1,2})(?:[._+\-]|$)",
+            r"jdk[-_]?(\d{1,2})(?:[._+\-]|$)",
+            r"java[-_]?(\d{1,2})(?:[._+\-]|$)",
+        ):
+            match = re.search(pattern, filename)
+            if match:
+                return match.group(1) == expected
+        java_version = normalize_text(item.get("java_version") or item.get("jdk_version"))
+        if java_version:
+            return extract_major_from_version(java_version, fallback="") == expected
+        if filename:
+            return extract_major_from_version(filename, fallback="") == expected
         return True
 
     @staticmethod
@@ -5487,6 +6173,7 @@ class JavaDownloadEngine:
             )
             data = NetworkEngine.request_json(url, timeout=5, retries=1, cache_ttl=300)
             items = data.get("result", []) if isinstance(data, dict) else []
+            items = [item for item in items if JavaDownloadEngine._foojay_item_matches_major(item, major_version)]
             if items:
                 break
         if not items:
@@ -5524,6 +6211,7 @@ class JavaDownloadEngine:
 
     @staticmethod
     def get_latest_download_info(vendor, major_version):
+        vendor = canonical_java_vendor_name(vendor)
         cache_key = (vendor, str(major_version), APP_CONFIG.get("update_source"), APP_CONFIG.get("enable_mirror"), APP_ARCH)
         now = time.time()
         with JavaDownloadEngine._cache_lock:
@@ -5577,6 +6265,38 @@ class JavaDownloadEngine:
         return unique_sequence(chain)
 
     @staticmethod
+    def _fetch_foojay_profile(vendor, major_version, resolve_final_url=False):
+        last_error = None
+        for distribution in java_vendor_foojay_distributions(vendor):
+            try:
+                result = JavaDownloadEngine._fetch_foojay_distribution(distribution, vendor, major_version, resolve_final_url=resolve_final_url)
+                if result:
+                    return result
+            except Exception as exc:
+                last_error = exc
+                logging.warning("Foojay 发行版源失败: vendor=%s distribution=%s error=%s", vendor, distribution, exc)
+        if last_error:
+            raise last_error
+        return None
+
+    @staticmethod
+    def _fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=False):
+        last_error = None
+        for repo in java_vendor_github_repos(vendor, major_version):
+            try:
+                data = JavaDownloadEngine._request_github_releases(repo, direct_first=direct_first, mirrors_only=mirrors_only, timeout=4)
+                result = JavaDownloadEngine._pick_github_release_asset(data, major_version, vendor, direct_first=direct_first)
+                if result:
+                    result["source"] = f"{vendor} GitHub Release ({repo})"
+                    return result
+            except Exception as exc:
+                last_error = exc
+                logging.warning("Java GitHub 发行版源失败: vendor=%s repo=%s error=%s", vendor, repo, exc)
+        if last_error:
+            logging.debug("所有 GitHub 发行版源均不可用: vendor=%s error=%s", vendor, last_error)
+        return None
+
+    @staticmethod
     def _fetch_official(vendor, major_version):
         if vendor in ("Eclipse Temurin", "Generic OpenJDK"):
             return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=False, mirrors_only=False)
@@ -5592,6 +6312,18 @@ class JavaDownloadEngine:
             return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=False, mirrors_only=False)
         if vendor == "GraalVM":
             return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=False, mirrors_only=False)
+        result = None
+        try:
+            result = JavaDownloadEngine._fetch_foojay_profile(vendor, major_version)
+        except Exception as exc:
+            logging.warning("Foojay 官方发行版源失败，尝试 GitHub 兜底: vendor=%s error=%s", vendor, exc)
+        if result:
+            return result
+        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=False)
+        if result:
+            return result
+        if vendor in JAVA_VENDOR_PROFILES:
+            return None
         return JavaDownloadEngine._fetch_temurin(major_version, "Generic OpenJDK", direct_first=False, mirrors_only=False)
 
     @staticmethod
@@ -5606,6 +6338,9 @@ class JavaDownloadEngine:
             return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=True, mirrors_only=False)
         if vendor == "GraalVM":
             return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=True, mirrors_only=False)
+        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=True, mirrors_only=False)
+        if result:
+            return result
         return JavaDownloadEngine._fetch_official(vendor, major_version)
 
     @staticmethod
@@ -5620,7 +6355,10 @@ class JavaDownloadEngine:
             return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=False, mirrors_only=True)
         if vendor == "GraalVM":
             return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=False, mirrors_only=True)
-        return None
+        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=True)
+        if result:
+            return result
+        return JavaDownloadEngine._fetch_foojay_profile(vendor, major_version)
 
     @staticmethod
     def _fetch_adoptium_api(major_version, jvm_impl, vendor):
@@ -5880,6 +6618,149 @@ class JavaDownloadEngine:
         return True
 
 
+def download_and_install_java(vendor, major_version, install_parent, progress_callback=None, status_callback=None, cancel_event=None):
+    vendor = canonical_java_vendor_name(vendor)
+    parent = os.path.abspath(os.path.expanduser(normalize_text(install_parent)))
+    if not parent:
+        raise ValueError("install parent is empty")
+    os.makedirs(parent, exist_ok=True)
+
+    info = None
+    temp_archive = ""
+    extract_dir = ""
+    temp_archive_is_cache = False
+    archive_verified = False
+
+    def status(message):
+        if status_callback:
+            status_callback(message)
+
+    try:
+        ensure_not_cancelled(cancel_event)
+        info = JavaDownloadEngine.get_latest_download_info(vendor, major_version)
+        if not info:
+            raise Exception(tr("metadata_missing"))
+
+        suffix = download_info_archive_suffix(info)
+        expected_sha256 = resolve_download_sha256(info)
+        if APP_CONFIG.get("download_cache_enabled", True):
+            temp_archive = archive_cache_path(info, suffix)
+            temp_archive_is_cache = True
+            if os.path.exists(temp_archive) and not archive_quick_check(temp_archive, suffix):
+                remove_cached_archive(temp_archive)
+        else:
+            fd, temp_archive = tempfile.mkstemp(suffix=suffix)
+            os.close(fd)
+
+        status(tr("source_locked", source=info.get("source", "Unknown")))
+        source_url = NetworkEngine.download_from_candidates(
+            info.get("urls") or [info["url"]],
+            temp_archive,
+            progress_callback,
+            status_callback,
+            cancel_event=cancel_event,
+            expected_sha256=expected_sha256,
+            reuse_existing=temp_archive_is_cache,
+        )
+        if APP_CONFIG.get("verify_download_sha256", True) and expected_sha256:
+            verify_file_sha256(temp_archive, expected_sha256, cancel_event=cancel_event)
+        if not archive_quick_check(temp_archive, suffix):
+            remove_cached_archive(temp_archive)
+            raise Exception("下载包结构校验失败，已丢弃损坏缓存，请重试。")
+        archive_verified = True
+        if temp_archive_is_cache:
+            write_archive_metadata(temp_archive, info, source_url, expected_sha256)
+
+        ensure_not_cancelled(cancel_event)
+        status(tr("verifying_extracting"))
+        extract_dir = tempfile.mkdtemp()
+        if suffix == ".tar.gz":
+            with tarfile.open(temp_archive, "r:gz") as tar_ref:
+                safe_extract_tar(tar_ref, extract_dir)
+        else:
+            with zipfile.ZipFile(temp_archive, "r") as zip_ref:
+                safe_extract_zip(zip_ref, extract_dir)
+
+        ensure_not_cancelled(cancel_event)
+        source_jdk_dir = find_source_jdk_dir(extract_dir)
+        target_path = next_available_java_install_dir(parent, info)
+        status(tr("download_installing", path=target_path))
+        try:
+            copy_path_with_cancel(source_jdk_dir, target_path, cancel_event=cancel_event)
+        except Exception:
+            if os.path.exists(target_path):
+                shutil.rmtree(target_path, ignore_errors=True)
+            raise
+        synced = JavaRegistryAdapter.sync_runtime_registration(target_path)
+        return {
+            "java_home": target_path,
+            "vendor": info.get("vendor") or vendor,
+            "major": str(major_version),
+            "latest_version": version_display_text(info.get("version")),
+            "source": info.get("source"),
+            "used_url": source_url,
+            "synced_registry_names": synced,
+            "archive_path": temp_archive if temp_archive_is_cache else "",
+        }
+    except Exception:
+        if temp_archive_is_cache and temp_archive and not archive_verified:
+            remove_cached_archive(temp_archive)
+        raise
+    finally:
+        if temp_archive and os.path.exists(temp_archive) and not temp_archive_is_cache:
+            os.remove(temp_archive)
+        if extract_dir and os.path.exists(extract_dir):
+            shutil.rmtree(extract_dir, ignore_errors=True)
+
+
+def build_java_move_target(source_java_home, destination_parent, target_name=""):
+    source = os.path.abspath(os.path.expanduser(normalize_text(source_java_home)))
+    parent = os.path.abspath(os.path.expanduser(normalize_text(destination_parent)))
+    name = sanitize_path_token(target_name or os.path.basename(source) or "java_home")
+    return os.path.join(parent, name)
+
+
+def move_java_home(source_java_home, target_path, preferred_name=None, cancel_event=None):
+    source, target = validate_java_move_target(source_java_home, target_path)
+    parent = os.path.dirname(target)
+    os.makedirs(parent, exist_ok=True)
+
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    stage = os.path.join(parent, f".ljm_move_stage_{stamp}")
+    old_names = JavaRegistryAdapter.find_version_names_by_home(source)
+    preferred_name = preferred_name or (old_names[0] if old_names else None)
+
+    ensure_not_cancelled(cancel_event)
+    try:
+        shutil.copytree(source, stage)
+        ensure_not_cancelled(cancel_event)
+        shutil.move(stage, target)
+        ensure_not_cancelled(cancel_event)
+        shutil.rmtree(source)
+    except Exception:
+        if os.path.exists(stage):
+            shutil.rmtree(stage, ignore_errors=True)
+        if os.path.exists(target):
+            try:
+                if os.path.exists(source):
+                    shutil.rmtree(target, ignore_errors=True)
+                else:
+                    shutil.move(target, source)
+            except Exception:
+                pass
+        raise
+
+    for name in old_names:
+        JavaRegistryAdapter.unregister(name)
+    synced = JavaRegistryAdapter.sync_runtime_registration(target, preferred_name=preferred_name)
+    return {
+        "old_java_home": source,
+        "java_home": target,
+        "old_registry_names": old_names,
+        "synced_registry_names": synced,
+    }
+
+
 class JavaManagerApp:
     def __init__(self, root):
         self.root = root
@@ -5887,8 +6768,18 @@ class JavaManagerApp:
         self.icon_img = None
         self.fix_items = {}
         self.update_items = {}
+        self.move_items = {}
         self._java_rows = []
         self.search_var = None
+        self.download_vendor_var = None
+        self.download_major_var = None
+        self.download_parent_var = None
+        self.download_profile_var = None
+        self.download_preview_var = None
+        self.move_parent_var = None
+        self.move_name_var = None
+        self.move_preview_var = None
+        self._last_move_source = ""
         self.repair_mode_status_var = None
         self.repair_action_text_var = None
         self._window_has_focus = False
@@ -5899,7 +6790,10 @@ class JavaManagerApp:
         self._minimize_to_tray_job = None
         self._background_update_job = None
         self._background_update_running = False
+        self._ui_ready_for_tab_fade = False
+        self.single_instance_guard = None
 
+        self._set_window_alpha(self.root, 0.0)
         try:
             self.icon_img = tk.PhotoImage(data=JAVA_BLACK_ICON)
             self.root.iconphoto(True, self.icon_img)
@@ -5915,6 +6809,7 @@ class JavaManagerApp:
             "粉色": ("#FFF0F5", "#8B0A50", "#FFB6C1", "#FFFFFF"),
             "暗粉色": ("#2D1B2E", "#F5C0C0", "#9B4A6B", "#3D2A3A"),
         }
+        self.current_bg, self.current_fg, self.current_btn, self.current_field = self.themes.get(APP_CONFIG.get("theme", "暗粉色"), self.themes["暗粉色"])
 
         self._init_main_window()
         self.setup_ui()
@@ -5927,6 +6822,8 @@ class JavaManagerApp:
         self.refresh_all_data()
         self._schedule_background_update_check(initial=True)
         NetworkEngine.maybe_refresh_mirror_speed_order_async()
+        self._ui_ready_for_tab_fade = True
+        self.root.after(60, lambda: self._fade_in_window(self.root, duration=360, steps=14, start_alpha=0.0))
 
     def apply_theme(self, theme_name):
         bg_color, fg_color, btn_color, field_bg = self.themes.get(theme_name, self.themes["暗粉色"])
@@ -5993,6 +6890,95 @@ class JavaManagerApp:
             pass
         for child in widget.winfo_children():
             self._traverse_and_paint(child)
+
+    def _set_window_alpha(self, window, alpha):
+        try:
+            window.attributes("-alpha", max(0.0, min(float(alpha), 1.0)))
+            return True
+        except Exception:
+            return False
+
+    def _fade_in_window(self, window, duration=320, steps=12, start_alpha=0.0):
+        try:
+            if not window.winfo_exists():
+                return
+        except Exception:
+            return
+        start_alpha = max(0.0, min(float(start_alpha), 0.98))
+        if not self._set_window_alpha(window, start_alpha):
+            return
+
+        interval = max(10, int(duration / max(1, steps)))
+
+        def tick(index=1):
+            try:
+                if not window.winfo_exists():
+                    return
+                alpha = start_alpha + ((1.0 - start_alpha) * index / max(1, steps))
+                self._set_window_alpha(window, alpha)
+                if index < steps:
+                    window.after(interval, lambda: tick(index + 1))
+                else:
+                    self._set_window_alpha(window, 1.0)
+            except Exception:
+                pass
+
+        window.after(interval, tick)
+
+    def _fade_out_window(self, window, on_done=None, duration=220, steps=10):
+        try:
+            if not window.winfo_exists():
+                return
+        except Exception:
+            return
+        interval = max(10, int(duration / max(1, steps)))
+
+        def finish():
+            try:
+                if on_done:
+                    on_done()
+            except Exception:
+                pass
+
+        def tick(index=steps):
+            try:
+                if not window.winfo_exists():
+                    return
+                alpha = max(0.0, index / max(1, steps))
+                if not self._set_window_alpha(window, alpha):
+                    finish()
+                    return
+                if index > 1:
+                    window.after(interval, lambda: tick(index - 1))
+                else:
+                    finish()
+            except Exception:
+                finish()
+
+        tick()
+
+    def _install_fade_destroy(self, window):
+        if getattr(window, "_ljm_fade_destroy_installed", False):
+            return
+        original_destroy = window.destroy
+        state = {"closing": False}
+
+        def fade_destroy():
+            if state["closing"]:
+                try:
+                    original_destroy()
+                except Exception:
+                    pass
+                return
+            state["closing"] = True
+            self._fade_out_window(window, on_done=original_destroy)
+
+        try:
+            window._ljm_fade_destroy_installed = True
+            window.destroy = fade_destroy
+            window.protocol("WM_DELETE_WINDOW", fade_destroy)
+        except Exception:
+            pass
 
     def _tk_screen_metrics(self, widget=None):
         widget = widget or self.root
@@ -6223,37 +7209,115 @@ class JavaManagerApp:
         except Exception:
             pass
         self._set_window_geometry(window, width, height, min_w=min_w, min_h=min_h, max_w_ratio=max_w_ratio, max_h_ratio=max_h_ratio)
+        self._install_fade_destroy(window)
+        self._fade_in_window(window)
         return window
 
     def _install_mousewheel_scroll(self, scope_widget, canvas):
-        def normalize_step(event):
-            if getattr(event, "num", None) == 4:
-                return -1
-            if getattr(event, "num", None) == 5:
-                return 1
-            delta = getattr(event, "delta", 0)
-            if not delta:
-                return 0
-            steps = int(-delta / 120)
-            return steps or (-1 if delta > 0 else 1)
+        drag_state = {"active": False, "x": 0, "y": 0}
+
+        def event_xy_on_canvas(event):
+            return (
+                int(getattr(event, "x_root", 0) - canvas.winfo_rootx()),
+                int(getattr(event, "y_root", 0) - canvas.winfo_rooty()),
+            )
 
         def on_mousewheel(event):
-            step = normalize_step(event)
+            step = scroll_units_from_wheel_event(getattr(event, "delta", 0), getattr(event, "num", None))
             if not step:
                 return
-            if event.state & 0x0001:
+            target = getattr(event, "widget", None)
+            target_class = ""
+            try:
+                target_class = target.winfo_class()
+            except Exception:
+                target_class = ""
+            horizontal = is_horizontal_scroll_state(getattr(event, "state", 0))
+            if target_class in ("Treeview", "Listbox") and hasattr(target, "xview") and horizontal:
+                target.xview_scroll(step, "units")
+            elif target_class in ("Treeview", "Listbox") and hasattr(target, "yview"):
+                target.yview_scroll(step, "units")
+            elif horizontal:
                 canvas.xview_scroll(step, "units")
             else:
                 canvas.yview_scroll(step, "units")
             return "break"
 
+        def on_touch_start(event):
+            try:
+                if not widget_class_allows_touch_scroll(event.widget.winfo_class()):
+                    drag_state["active"] = False
+                    return
+                x, y = event_xy_on_canvas(event)
+                drag_state.update({"active": True, "x": x, "y": y})
+                canvas.scan_mark(x, y)
+            except Exception:
+                drag_state["active"] = False
+
+        def on_touch_drag(event):
+            if not drag_state["active"]:
+                return
+            try:
+                x, y = event_xy_on_canvas(event)
+                if abs(x - drag_state["x"]) < 2 and abs(y - drag_state["y"]) < 2:
+                    return
+                canvas.scan_dragto(x, y, gain=1)
+                return "break"
+            except Exception:
+                return
+
+        def on_touch_end(_event=None):
+            drag_state["active"] = False
+
         def bind_recursive(widget):
             for sequence in ("<MouseWheel>", "<Shift-MouseWheel>", "<Button-4>", "<Button-5>", "<Shift-Button-4>", "<Shift-Button-5>"):
                 widget.bind(sequence, on_mousewheel, add="+")
+            if widget_class_allows_touch_scroll(widget.winfo_class()):
+                widget.bind("<ButtonPress-1>", on_touch_start, add="+")
+                widget.bind("<B1-Motion>", on_touch_drag, add="+")
+                widget.bind("<ButtonRelease-1>", on_touch_end, add="+")
+                widget.bind("<Leave>", on_touch_end, add="+")
             for child in widget.winfo_children():
                 bind_recursive(child)
 
         bind_recursive(scope_widget)
+
+    def _create_scrollable_area(self, parent, fill_width=True, fill_height=True):
+        shell = tk.Frame(parent, bg=self.current_bg)
+        shell.pack(fill=tk.BOTH, expand=True)
+        shell.grid_rowconfigure(0, weight=1)
+        shell.grid_columnconfigure(0, weight=1)
+
+        canvas = tk.Canvas(shell, bg=self.current_bg, highlightthickness=0, bd=0)
+        y_scroll = ttk.Scrollbar(shell, orient=tk.VERTICAL, command=canvas.yview)
+        x_scroll = ttk.Scrollbar(shell, orient=tk.HORIZONTAL, command=canvas.xview)
+        canvas.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+
+        content = tk.Frame(canvas, bg=self.current_bg)
+        window_id = canvas.create_window((0, 0), window=content, anchor="nw")
+
+        def sync_scroll_region(_event=None):
+            try:
+                width = canvas.winfo_width()
+                height = canvas.winfo_height()
+                req_width = content.winfo_reqwidth()
+                req_height = content.winfo_reqheight()
+                canvas.itemconfigure(window_id, width=max(width, req_width) if fill_width else req_width)
+                if fill_height:
+                    canvas.itemconfigure(window_id, height=max(height, req_height))
+                bbox = canvas.bbox("all")
+                if bbox:
+                    canvas.configure(scrollregion=bbox)
+            except Exception:
+                pass
+
+        content.bind("<Configure>", sync_scroll_region)
+        canvas.bind("<Configure>", sync_scroll_region)
+        parent.after(0, sync_scroll_region)
+        return content, canvas
 
     def _repair_mode_label(self, mode=None):
         mode = mode or APP_CONFIG.get("repair_mode", "smart")
@@ -6436,6 +7500,8 @@ class JavaManagerApp:
             self.show_registry_tab,
             self.show_fix_tab,
             self.show_update_tab,
+            self.show_download_tab,
+            self.show_move_tab,
             self.open_settings_from_tray,
             self.open_repository,
         )
@@ -6447,21 +7513,39 @@ class JavaManagerApp:
 
     def hide_to_tray(self):
         if self._allow_close:
-            self.root.destroy()
+            self._fade_out_window(self.root, on_done=self.root.destroy)
             return
         if self.tray_icon:
             self.tray_icon.show()
-            self.root.withdraw()
+
+            def hide_root():
+                try:
+                    self.root.withdraw()
+                    self._set_window_alpha(self.root, 1.0)
+                except Exception:
+                    pass
+
+            self._fade_out_window(self.root, on_done=hide_root)
         else:
             self.root.iconify()
 
     def show_from_tray(self):
         if self.tray_icon:
             self.tray_icon.show()
+        self._set_window_alpha(self.root, 0.0)
         self.root.deiconify()
         self.root.state("normal")
         self.root.lift()
         self.root.focus_force()
+        self._fade_in_window(self.root, duration=300, steps=12, start_alpha=0.0)
+
+    def bring_to_front(self):
+        self.show_from_tray()
+        try:
+            self.root.attributes("-topmost", True)
+            self.root.after(250, lambda: self.root.attributes("-topmost", False))
+        except Exception:
+            pass
 
     def show_tab(self, tab):
         self.show_from_tray()
@@ -6478,6 +7562,12 @@ class JavaManagerApp:
     def show_update_tab(self):
         self.show_tab(self.tab_update)
 
+    def show_download_tab(self):
+        self.show_tab(self.tab_download)
+
+    def show_move_tab(self):
+        self.show_tab(self.tab_move)
+
     def open_settings_from_tray(self):
         self.show_from_tray()
         self.open_settings()
@@ -6487,10 +7577,13 @@ class JavaManagerApp:
 
     def exit_from_tray(self):
         self._allow_close = True
+        if self.single_instance_guard:
+            self.single_instance_guard.close()
+            self.single_instance_guard = None
         if self.tray_icon:
             self.tray_icon.destroy()
             self.tray_icon = None
-        self.root.destroy()
+        self._fade_out_window(self.root, on_done=self.root.destroy)
 
     def _on_root_unmap(self, _event=None):
         return
@@ -6522,14 +7615,33 @@ class JavaManagerApp:
         self.tab_reg = ttk.Frame(self.notebook)
         self.tab_fix = ttk.Frame(self.notebook)
         self.tab_update = ttk.Frame(self.notebook)
+        self.tab_download = ttk.Frame(self.notebook)
+        self.tab_move = ttk.Frame(self.notebook)
+        self.tab_reg_body, self.tab_reg_canvas = self._create_scrollable_area(self.tab_reg)
+        self.tab_fix_body, self.tab_fix_canvas = self._create_scrollable_area(self.tab_fix)
+        self.tab_update_body, self.tab_update_canvas = self._create_scrollable_area(self.tab_update)
+        self.tab_download_body, self.tab_download_canvas = self._create_scrollable_area(self.tab_download)
+        self.tab_move_body, self.tab_move_canvas = self._create_scrollable_area(self.tab_move)
 
         self.notebook.add(self.tab_reg, text=tr("tab_registration"))
         self.notebook.add(self.tab_fix, text=tr("tab_fix"))
         self.notebook.add(self.tab_update, text=tr("tab_update"))
+        self.notebook.add(self.tab_download, text=tr("tab_download"))
+        self.notebook.add(self.tab_move, text=tr("tab_move"))
 
         self.setup_reg_tab()
         self.setup_fix_tab_enhanced()
         self.setup_update_tab()
+        self.setup_download_tab()
+        self.setup_move_tab()
+        for scope, canvas in (
+            (self.tab_reg_body, self.tab_reg_canvas),
+            (self.tab_fix_body, self.tab_fix_canvas),
+            (self.tab_update_body, self.tab_update_canvas),
+            (self.tab_download_body, self.tab_download_canvas),
+            (self.tab_move_body, self.tab_move_canvas),
+        ):
+            self._install_mousewheel_scroll(scope, canvas)
 
     def rebuild_main_ui(self):
         try:
@@ -6546,6 +7658,7 @@ class JavaManagerApp:
         self.root.title(tr("app_title", version=VERSION))
         self.fix_items.clear()
         self.update_items.clear()
+        self.move_items.clear()
         self.search_var = None
         self.setup_ui()
         self._setup_tray_icon()
@@ -6557,15 +7670,32 @@ class JavaManagerApp:
         tab_text = event.widget.tab(selected_tab, "text")
         if tab_text == tr("tab_update"):
             self.check_all_updates()
+        elif tab_text == tr("tab_move"):
+            self.refresh_move_target_preview()
+        if getattr(self, "_ui_ready_for_tab_fade", False):
+            self._fade_in_window(self.root, duration=180, steps=7, start_alpha=0.86)
 
     def setup_reg_tab(self):
-        tk.Button(self.tab_reg, text=tr("scan_register_local_java"), command=self.scan_folder, height=2).pack(fill=tk.X, padx=10, pady=5)
-        self.lb_reg = tk.Listbox(self.tab_reg, selectmode=tk.MULTIPLE, font=("Consolas", 10))
-        self.lb_reg.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        tk.Button(self.tab_reg, text=tr("unregister_selected"), command=self.unregister_selected).pack(fill=tk.X, padx=10, pady=5)
+        parent = getattr(self, "tab_reg_body", self.tab_reg)
+        tk.Button(parent, text=tr("scan_register_local_java"), command=self.scan_folder, height=2).pack(fill=tk.X, padx=10, pady=5)
+        list_frame = tk.Frame(parent)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.lb_reg = tk.Listbox(list_frame, selectmode=tk.MULTIPLE, font=("Consolas", 10))
+        y_scroll = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.lb_reg.yview)
+        x_scroll = ttk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.lb_reg.xview)
+        self.lb_reg.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        self.lb_reg.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        list_frame.grid_rowconfigure(0, weight=1)
+        list_frame.grid_columnconfigure(0, weight=1)
+        tk.Button(parent, text=tr("unregister_selected"), command=self.unregister_selected).pack(fill=tk.X, padx=10, pady=5)
 
     def setup_fix_tab(self):
-        self.tree_fix = ttk.Treeview(self.tab_fix, columns=("ver", "vendor", "path", "status"), show="headings")
+        parent = getattr(self, "tab_fix_body", self.tab_fix)
+        table_frame = tk.Frame(parent)
+        table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.tree_fix = ttk.Treeview(table_frame, columns=("ver", "vendor", "path", "status"), show="headings")
         self.tree_fix.heading("ver", text=tr("col_major"))
         self.tree_fix.heading("vendor", text=tr("col_vendor"))
         self.tree_fix.heading("path", text=tr("col_path"))
@@ -6574,9 +7704,16 @@ class JavaManagerApp:
         self.tree_fix.column("vendor", width=150, anchor=tk.CENTER)
         self.tree_fix.column("path", width=420)
         self.tree_fix.column("status", width=140, anchor=tk.CENTER)
-        self.tree_fix.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        y_scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree_fix.yview)
+        x_scroll = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree_fix.xview)
+        self.tree_fix.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        self.tree_fix.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
 
-        action_frame = ttk.LabelFrame(self.tab_fix, text=tr("fix_panel"))
+        action_frame = ttk.LabelFrame(parent, text=tr("fix_panel"))
         action_frame.pack(fill=tk.X, padx=10, pady=5)
         self.repair_mode_status_var = tk.StringVar()
         self.repair_action_text_var = tk.StringVar()
@@ -6586,7 +7723,10 @@ class JavaManagerApp:
         tk.Button(action_frame, text=tr("repair_action", mode=self._repair_mode_label()), command=self.cloud_repair_java).pack(side=tk.RIGHT, padx=10, pady=5)
 
     def setup_fix_tab_enhanced(self):
-        self.tree_fix = ttk.Treeview(self.tab_fix, columns=("ver", "vendor", "path", "status"), show="headings")
+        parent = getattr(self, "tab_fix_body", self.tab_fix)
+        table_frame = tk.Frame(parent)
+        table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        self.tree_fix = ttk.Treeview(table_frame, columns=("ver", "vendor", "path", "status"), show="headings")
         self.tree_fix.heading("ver", text=tr("col_major"))
         self.tree_fix.heading("vendor", text=tr("col_vendor"))
         self.tree_fix.heading("path", text=tr("col_path"))
@@ -6595,9 +7735,16 @@ class JavaManagerApp:
         self.tree_fix.column("vendor", width=150, anchor=tk.CENTER)
         self.tree_fix.column("path", width=420)
         self.tree_fix.column("status", width=140, anchor=tk.CENTER)
-        self.tree_fix.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        y_scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree_fix.yview)
+        x_scroll = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree_fix.xview)
+        self.tree_fix.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        self.tree_fix.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
 
-        action_frame = ttk.LabelFrame(self.tab_fix, text=tr("fix_panel"))
+        action_frame = ttk.LabelFrame(parent, text=tr("fix_panel"))
         action_frame.pack(fill=tk.X, padx=10, pady=5)
         self.repair_mode_status_var = tk.StringVar()
         self.repair_action_text_var = tk.StringVar()
@@ -6616,7 +7763,8 @@ class JavaManagerApp:
         self.refresh_repair_mode_ui()
 
     def setup_update_tab(self):
-        table_frame = tk.Frame(self.tab_update)
+        parent = getattr(self, "tab_update_body", self.tab_update)
+        table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
         self.tree_up = ttk.Treeview(table_frame, columns=("vendor", "path", "cur_ver", "new_ver", "has_update"), show="headings")
@@ -6631,16 +7779,334 @@ class JavaManagerApp:
         self.tree_up.column("new_ver", width=180, minwidth=160, anchor=tk.CENTER, stretch=False)
         self.tree_up.column("has_update", width=130, minwidth=120, anchor=tk.CENTER, stretch=False)
 
+        y_scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree_up.yview)
         x_scroll = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree_up.xview)
-        self.tree_up.configure(xscrollcommand=x_scroll.set)
-        self.tree_up.pack(fill=tk.BOTH, expand=True)
-        x_scroll.pack(fill=tk.X)
+        self.tree_up.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        self.tree_up.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
 
-        action_frame = tk.Frame(self.tab_update)
+        action_frame = tk.Frame(parent)
         action_frame.pack(fill=tk.X, padx=10, pady=5)
         tk.Button(action_frame, text=tr("check_all_updates"), command=self.check_all_updates, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         tk.Button(action_frame, text=tr("perform_update"), command=self.perform_update, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         tk.Button(action_frame, text=tr("reset_retry"), command=self.reset_and_retry, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+
+    def default_java_download_parent(self):
+        return os.path.join(os.path.expanduser("~"), "LJM-Java")
+
+    def setup_download_tab(self):
+        parent = getattr(self, "tab_download_body", self.tab_download)
+        main = ttk.LabelFrame(parent, text=tr("download_java_section"))
+        main.pack(fill=tk.X, padx=12, pady=12)
+
+        self.download_vendor_var = tk.StringVar(value=JAVA_VENDOR_OPTIONS[0])
+        self.download_major_var = tk.StringVar(value="21")
+        self.download_parent_var = tk.StringVar(value=self.default_java_download_parent())
+        self.download_profile_var = tk.StringVar()
+        self.download_preview_var = tk.StringVar()
+
+        tk.Label(main, text=tr("download_vendor")).grid(row=0, column=0, sticky="w", padx=10, pady=(12, 6))
+        vendor_box = ttk.Combobox(main, textvariable=self.download_vendor_var, values=JAVA_VENDOR_OPTIONS, state="readonly", width=32)
+        vendor_box.grid(row=0, column=1, sticky="ew", padx=10, pady=(12, 6))
+
+        tk.Label(main, text=tr("download_major")).grid(row=1, column=0, sticky="w", padx=10, pady=6)
+        major_box = ttk.Combobox(main, textvariable=self.download_major_var, values=JAVA_MAJOR_OPTIONS, width=12)
+        major_box.grid(row=1, column=1, sticky="w", padx=10, pady=6)
+
+        tk.Label(main, text=tr("download_parent")).grid(row=2, column=0, sticky="w", padx=10, pady=6)
+        parent_entry = tk.Entry(main, textvariable=self.download_parent_var)
+        parent_entry.grid(row=2, column=1, sticky="ew", padx=10, pady=6)
+        tk.Button(main, text=tr("browse_folder"), command=self.browse_download_parent).grid(row=2, column=2, sticky="ew", padx=(0, 10), pady=6)
+
+        profile_label = tk.Label(main, textvariable=self.download_profile_var, justify="left", anchor="w", wraplength=760)
+        profile_label.grid(row=3, column=0, columnspan=3, sticky="ew", padx=10, pady=(8, 4))
+
+        preview = tk.Label(main, textvariable=self.download_preview_var, justify="left", anchor="w")
+        preview.grid(row=4, column=0, columnspan=3, sticky="ew", padx=10, pady=(8, 4))
+
+        tk.Button(main, text=tr("download_start"), command=self.start_download_java, height=2).grid(row=5, column=0, columnspan=3, sticky="ew", padx=10, pady=(8, 12))
+        main.columnconfigure(1, weight=1)
+
+        for var in (self.download_vendor_var, self.download_major_var, self.download_parent_var):
+            var.trace_add("write", lambda *_args: self.refresh_download_preview())
+        self.refresh_download_preview()
+
+    def setup_move_tab(self):
+        parent = getattr(self, "tab_move_body", self.tab_move)
+        table_frame = tk.Frame(parent)
+        table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
+
+        self.tree_move = ttk.Treeview(table_frame, columns=("vendor", "path", "version", "status"), show="headings")
+        self.tree_move.heading("vendor", text=tr("col_vendor"))
+        self.tree_move.heading("path", text=tr("col_path"))
+        self.tree_move.heading("version", text=tr("col_current_version"))
+        self.tree_move.heading("status", text=tr("col_health"))
+        self.tree_move.column("vendor", width=150, minwidth=130, anchor=tk.CENTER, stretch=False)
+        self.tree_move.column("path", width=420, minwidth=280, stretch=True)
+        self.tree_move.column("version", width=170, minwidth=140, anchor=tk.CENTER, stretch=False)
+        self.tree_move.column("status", width=140, minwidth=120, anchor=tk.CENTER, stretch=False)
+        y_scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree_move.yview)
+        move_scroll = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree_move.xview)
+        self.tree_move.configure(yscrollcommand=y_scroll.set, xscrollcommand=move_scroll.set)
+        self.tree_move.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        move_scroll.grid(row=1, column=0, sticky="ew")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+        self.tree_move.bind("<<TreeviewSelect>>", lambda _event: self.refresh_move_target_preview())
+
+        action = ttk.LabelFrame(parent, text=tr("move_java_section"))
+        action.pack(fill=tk.X, padx=10, pady=(5, 10))
+        self.move_parent_var = tk.StringVar(value=self.default_java_download_parent())
+        self.move_name_var = tk.StringVar()
+        self.move_preview_var = tk.StringVar()
+
+        tk.Label(action, text=tr("move_target_parent")).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 5))
+        tk.Entry(action, textvariable=self.move_parent_var).grid(row=0, column=1, sticky="ew", padx=10, pady=(10, 5))
+        tk.Button(action, text=tr("browse_folder"), command=self.browse_move_parent).grid(row=0, column=2, sticky="ew", padx=(0, 10), pady=(10, 5))
+
+        tk.Label(action, text=tr("move_target_name")).grid(row=1, column=0, sticky="w", padx=10, pady=5)
+        tk.Entry(action, textvariable=self.move_name_var).grid(row=1, column=1, columnspan=2, sticky="ew", padx=10, pady=5)
+        tk.Label(action, textvariable=self.move_preview_var, justify="left", anchor="w").grid(row=2, column=0, columnspan=3, sticky="ew", padx=10, pady=(8, 4))
+
+        buttons = tk.Frame(action)
+        buttons.grid(row=3, column=0, columnspan=3, sticky="ew", padx=10, pady=(8, 12))
+        tk.Button(buttons, text=tr("move_refresh"), command=self.refresh_all_data).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 4))
+        tk.Button(buttons, text=tr("move_start"), command=self.start_move_java).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(4, 0))
+        action.columnconfigure(1, weight=1)
+
+        for var in (self.move_parent_var, self.move_name_var):
+            var.trace_add("write", lambda *_args: self.refresh_move_target_preview())
+        self.refresh_move_target_preview()
+
+    def browse_download_parent(self):
+        folder = filedialog.askdirectory(title=tr("download_parent"))
+        if folder:
+            self.download_parent_var.set(folder)
+
+    def refresh_download_preview(self):
+        if not self.download_preview_var:
+            return
+        vendor = self.download_vendor_var.get() if self.download_vendor_var else JAVA_VENDOR_OPTIONS[0]
+        if self.download_profile_var is not None:
+            profile = java_vendor_profile(vendor)
+            profile_text = "\n".join(
+                [
+                    tr("download_platform", platform=current_java_download_platform_text()),
+                    tr(
+                        "download_vendor_profile",
+                        scenario=profile.get("scenario", ""),
+                        pros=profile.get("pros", ""),
+                        cons=profile.get("cons", ""),
+                    ),
+                ]
+            )
+            self.download_profile_var.set(profile_text)
+        info = {
+            "vendor": vendor,
+            "major_version": self.download_major_var.get() if self.download_major_var else "21",
+            "version": f"JDK {self.download_major_var.get() if self.download_major_var else '21'}",
+        }
+        parent = self.download_parent_var.get() if self.download_parent_var else self.default_java_download_parent()
+        try:
+            path = next_available_java_install_dir(parent, info)
+        except Exception:
+            path = os.path.join(parent, java_install_dir_name(info))
+        self.download_preview_var.set(tr("download_preview", path=path))
+
+    def browse_move_parent(self):
+        folder = filedialog.askdirectory(title=tr("move_target_parent"))
+        if folder:
+            self.move_parent_var.set(folder)
+
+    def selected_move_runtime(self):
+        if not hasattr(self, "tree_move"):
+            return None
+        selected = self.tree_move.selection()
+        if not selected:
+            return None
+        return self.move_items.get(selected[0])
+
+    def refresh_move_target_preview(self):
+        if not self.move_preview_var:
+            return
+        meta = self.selected_move_runtime()
+        current_source = meta.get("java_home") if meta else ""
+        if current_source and current_source != self._last_move_source:
+            self._last_move_source = current_source
+            if self.move_name_var is not None:
+                self.move_name_var.set(os.path.basename(current_source) or "java_home")
+            return
+        if meta and self.move_name_var is not None and not normalize_text(self.move_name_var.get()):
+            self.move_name_var.set(os.path.basename(current_source or "java_home"))
+            return
+        source = current_source
+        parent = self.move_parent_var.get() if self.move_parent_var else self.default_java_download_parent()
+        name = self.move_name_var.get() if self.move_name_var else ""
+        try:
+            path = build_java_move_target(source or "java_home", parent, name or "java_home")
+        except Exception:
+            path = os.path.join(parent, name or "java_home")
+        self.move_preview_var.set(tr("move_preview", path=path))
+
+    def start_download_java(self):
+        vendor = canonical_java_vendor_name(self.download_vendor_var.get())
+        major = normalize_text(self.download_major_var.get())
+        parent = normalize_text(self.download_parent_var.get())
+        if not vendor or not major or not parent:
+            return messagebox.showerror(tr("task_interrupted_title"), "Java 发行商、大版本和下载位置不能为空。")
+        if not messagebox.askyesno(tr("download_confirm_title"), tr("download_confirm_text", vendor=vendor, major=major, parent=parent)):
+            return
+        self.run_download_java(vendor, major, parent)
+
+    def run_download_java(self, vendor, major, parent):
+        top = tk.Toplevel(self.root)
+        self._configure_popup(top, tr("transfer_title_download"), 540, 220, min_w=440, min_h=190, max_w_ratio=0.76, max_h_ratio=0.42, resizable=False)
+        top.grab_set()
+        self._begin_active_transfer()
+
+        cancel_event = threading.Event()
+        finished_state = {"done": False}
+        progress = ttk.Progressbar(top, orient=tk.HORIZONTAL, mode="determinate")
+        progress.pack(fill=tk.X, padx=24, pady=(22, 12))
+        status_label = tk.Label(top, text=tr("connecting_vendor"), justify="center", wraplength=470)
+        status_label.pack(fill=tk.X, padx=16, pady=(0, 10))
+        button_frame = tk.Frame(top, bg=self.current_bg)
+        button_frame.pack(fill=tk.X, padx=20, pady=(0, 16))
+        cancel_button = tk.Button(button_frame, text=tr("cancel_download"), width=14)
+        cancel_button.pack(side=tk.RIGHT)
+        self._traverse_and_paint(top)
+
+        def mark_finished():
+            if finished_state["done"]:
+                return
+            finished_state["done"] = True
+            self._end_active_transfer()
+
+        def request_cancel():
+            if finished_state["done"] or cancel_event.is_set():
+                return
+            cancel_event.set()
+            cancel_button.config(state=tk.DISABLED, text=tr("canceling"))
+            status_label.config(text=tr("cancel_requested"))
+
+        cancel_button.config(command=request_cancel)
+        top.protocol("WM_DELETE_WINDOW", request_cancel)
+
+        def update_progress(percent, downloaded, total):
+            self.root.after(0, lambda: progress.config(value=percent))
+            if total > 0:
+                text = tr("download_progress_total", downloaded=downloaded / 1024 / 1024, total=total / 1024 / 1024)
+            else:
+                text = tr("download_progress", downloaded=downloaded / 1024 / 1024)
+            self.root.after(0, lambda: status_label.config(text=text))
+
+        def update_status(message):
+            self.root.after(0, lambda: status_label.config(text=message))
+
+        def task():
+            try:
+                NetworkEngine.apply_proxy_settings()
+                result = download_and_install_java(vendor, major, parent, update_progress, update_status, cancel_event=cancel_event)
+                mark_finished()
+                self.root.after(0, top.destroy)
+                self.root.after(
+                    0,
+                    lambda: messagebox.showinfo(
+                        tr("download_done"),
+                        tr("download_done_text", path=result["java_home"], version=result["latest_version"], source=result.get("source") or ""),
+                    ),
+                )
+                self.root.after(0, self.refresh_all_data)
+            except OperationCancelled:
+                mark_finished()
+                self.root.after(0, top.destroy)
+                self.root.after(0, lambda: messagebox.showinfo(tr("task_cancelled_title"), tr("task_cancelled_text")))
+            except Exception as exc:
+                logging.error("Java 下载失败: %s\n%s", exc, traceback.format_exc())
+                mark_finished()
+                self.root.after(0, top.destroy)
+                self.root.after(0, lambda: messagebox.showerror(tr("task_interrupted_title"), tr("task_interrupted_text", error=exc, rollback="")))
+            finally:
+                mark_finished()
+
+        threading.Thread(target=task, daemon=True).start()
+
+    def start_move_java(self):
+        meta = self.selected_move_runtime()
+        if not meta:
+            return messagebox.showwarning(tr("move_no_selection_title"), tr("move_no_selection_text"))
+        source = meta.get("java_home")
+        target = build_java_move_target(source, self.move_parent_var.get(), self.move_name_var.get())
+        try:
+            validate_java_move_target(source, target)
+        except Exception as exc:
+            return messagebox.showerror(tr("task_interrupted_title"), str(exc))
+        if not self._confirm_process_usage(source, tr("move_start")):
+            return
+        if not messagebox.askyesno(tr("move_confirm_title"), tr("move_confirm_text", source=source, target=target)):
+            return
+        self.run_move_java(meta, target)
+
+    def run_move_java(self, meta, target):
+        top = tk.Toplevel(self.root)
+        self._configure_popup(top, tr("transfer_title_move"), 500, 180, min_w=420, min_h=160, max_w_ratio=0.72, max_h_ratio=0.36, resizable=False)
+        top.grab_set()
+        self._begin_active_transfer()
+
+        cancel_event = threading.Event()
+        finished_state = {"done": False}
+        progress = ttk.Progressbar(top, orient=tk.HORIZONTAL, mode="indeterminate")
+        progress.pack(fill=tk.X, padx=24, pady=(24, 12))
+        progress.start()
+        status_label = tk.Label(top, text=tr("move_running"), justify="center", wraplength=430)
+        status_label.pack(fill=tk.X, padx=16, pady=(0, 10))
+        button_frame = tk.Frame(top, bg=self.current_bg)
+        button_frame.pack(fill=tk.X, padx=20, pady=(0, 16))
+        cancel_button = tk.Button(button_frame, text=tr("cancel_move"), width=14)
+        cancel_button.pack(side=tk.RIGHT)
+        self._traverse_and_paint(top)
+
+        def mark_finished():
+            if finished_state["done"]:
+                return
+            finished_state["done"] = True
+            self._end_active_transfer()
+
+        def request_cancel():
+            if finished_state["done"] or cancel_event.is_set():
+                return
+            cancel_event.set()
+            cancel_button.config(state=tk.DISABLED, text=tr("canceling"))
+            status_label.config(text=tr("cancel_requested"))
+
+        cancel_button.config(command=request_cancel)
+        top.protocol("WM_DELETE_WINDOW", request_cancel)
+
+        def task():
+            source = meta.get("java_home")
+            try:
+                result = move_java_home(source, target, preferred_name=meta.get("registry_name"), cancel_event=cancel_event)
+                mark_finished()
+                self.root.after(0, top.destroy)
+                self.root.after(0, lambda: messagebox.showinfo(tr("move_done"), tr("move_done_text", old_path=result["old_java_home"], new_path=result["java_home"])))
+                self.root.after(0, self.refresh_all_data)
+            except OperationCancelled:
+                mark_finished()
+                self.root.after(0, top.destroy)
+                self.root.after(0, lambda: messagebox.showinfo(tr("task_cancelled_title"), tr("task_cancelled_text")))
+            except Exception as exc:
+                logging.error("Java 移动失败: %s\n%s", exc, traceback.format_exc())
+                mark_finished()
+                self.root.after(0, top.destroy)
+                self.root.after(0, lambda: messagebox.showerror(tr("task_interrupted_title"), tr("task_interrupted_text", error=exc, rollback="")))
+            finally:
+                mark_finished()
+
+        threading.Thread(target=task, daemon=True).start()
 
     def reset_and_retry(self):
         JavaDownloadEngine.clear_cache()
@@ -7069,12 +8535,14 @@ class JavaManagerApp:
     def open_about_panel_v2(self):
         top = tk.Toplevel(self.root)
         self._configure_popup(top, tr("about_title"), 540, 360, min_w=480, min_h=300, max_w_ratio=0.88, max_h_ratio=0.82, resizable=False)
-        tk.Label(top, text=tr("about_name"), font=("", 16, "bold")).pack(pady=18)
-        tk.Label(top, text=tr("about_version", version=VERSION)).pack(pady=5)
-        tk.Label(top, text=tr("about_features")).pack(pady=5)
-        tk.Label(top, text=self._screen_summary_text(), wraplength=500, justify="center").pack(pady=(8, 4))
-        tk.Label(top, text=NetworkEngine.describe_environment(), wraplength=500, justify="center").pack(pady=(4, 10))
-        tk.Button(top, text=tr("open_repo"), command=lambda: webbrowser.open(GITHUB_REPO)).pack(pady=16)
+        body, canvas = self._create_scrollable_area(top, fill_width=True, fill_height=False)
+        tk.Label(body, text=tr("about_name"), font=("", 16, "bold")).pack(pady=18)
+        tk.Label(body, text=tr("about_version", version=VERSION)).pack(pady=5)
+        tk.Label(body, text=tr("about_features"), wraplength=500, justify="center").pack(pady=5)
+        tk.Label(body, text=self._screen_summary_text(), wraplength=500, justify="center").pack(pady=(8, 4))
+        tk.Label(body, text=NetworkEngine.describe_environment(), wraplength=500, justify="center").pack(pady=(4, 10))
+        tk.Button(body, text=tr("open_repo"), command=lambda: webbrowser.open(GITHUB_REPO)).pack(pady=16)
+        self._install_mousewheel_scroll(body, canvas)
         self._traverse_and_paint(top)
 
     def _tool_update_endpoints(self):
@@ -7514,17 +8982,7 @@ class JavaManagerApp:
         return normalize_text(self.search_var.get()).lower()
 
     def _row_matches_java_filter(self, row, query):
-        if not query:
-            return True
-        values = [
-            row.get("version_name"),
-            row.get("java_home"),
-            row.get("status"),
-            row.get("runtime", {}).get("vendor"),
-            row.get("runtime", {}).get("version"),
-            row.get("runtime", {}).get("major"),
-        ]
-        return query in " ".join(normalize_text(value).lower() for value in values)
+        return java_row_matches_query(row, query)
 
     def apply_java_filter(self):
         if not hasattr(self, "lb_reg") or not hasattr(self, "tree_fix") or not hasattr(self, "tree_up"):
@@ -7535,8 +8993,12 @@ class JavaManagerApp:
             self.tree_fix.delete(item_id)
         for item_id in self.tree_up.get_children():
             self.tree_up.delete(item_id)
+        if hasattr(self, "tree_move"):
+            for item_id in self.tree_move.get_children():
+                self.tree_move.delete(item_id)
         self.fix_items.clear()
         self.update_items.clear()
+        self.move_items.clear()
 
         for row in self._java_rows:
             if not self._row_matches_java_filter(row, query):
@@ -7565,6 +9027,20 @@ class JavaManagerApp:
                 runtime_info["registry_name"] = version_name
                 runtime_info["health_status"] = status
                 self.update_items[item_id] = runtime_info
+            if hasattr(self, "tree_move"):
+                move_item_id = self.tree_move.insert(
+                    "",
+                    tk.END,
+                    values=(runtime["vendor"], java_home, version_display_text(runtime["version"]), status),
+                )
+                self.move_items[move_item_id] = {
+                    "registry_name": version_name,
+                    "java_home": java_home,
+                    "runtime": runtime,
+                    "report": report,
+                }
+        if hasattr(self, "tree_move"):
+            self.refresh_move_target_preview()
 
     def refresh_all_data(self):
         rows = []
@@ -7751,7 +9227,7 @@ class JavaManagerApp:
                 if not info:
                     raise Exception("未从更新源拿到有效构建包，请稍后重试。")
 
-                suffix = current_archive_suffix(info["url"])
+                suffix = download_info_archive_suffix(info)
                 fd, temp_archive = tempfile.mkstemp(suffix=suffix)
                 os.close(fd)
 
@@ -7848,7 +9324,7 @@ class JavaManagerApp:
                 if not info:
                     raise Exception("未从更新源拿到有效构建包，请稍后重试。")
 
-                suffix = current_archive_suffix(info["url"])
+                suffix = download_info_archive_suffix(info)
                 fd, temp_archive = tempfile.mkstemp(suffix=suffix)
                 os.close(fd)
 
@@ -7977,7 +9453,7 @@ class JavaManagerApp:
                 if not info:
                     raise Exception(tr("metadata_missing"))
 
-                suffix = current_archive_suffix(info["url"])
+                suffix = download_info_archive_suffix(info)
                 expected_sha256 = resolve_download_sha256(info)
                 if APP_CONFIG.get("download_cache_enabled", True):
                     temp_archive = archive_cache_path(info, suffix)
@@ -8168,9 +9644,31 @@ class JavaManagerApp:
 
 if __name__ == "__main__":
     NetworkEngine.apply_proxy_settings()
+    pending_single_instance_show = {"requested": False, "callback": None}
+
+    def handle_single_instance_show():
+        callback = pending_single_instance_show.get("callback")
+        if callback:
+            callback()
+        else:
+            pending_single_instance_show["requested"] = True
+
+    single_instance_guard = SingleInstanceGuard(single_instance_port(APP_SOURCE_ROOT), on_show=handle_single_instance_show)
+    if not single_instance_guard.acquire():
+        if notify_existing_instance(single_instance_guard.port):
+            logging.info("检测到已有 LJM 实例，已发送唤醒请求并退出当前进程。")
+            sys.exit(0)
+        logging.warning("单实例端口被占用但唤醒失败，继续启动当前进程。")
+        single_instance_guard = None
+
     root = tk.Tk()
     root.withdraw()
     app = JavaManagerApp(root)
+    app.single_instance_guard = single_instance_guard
+    if single_instance_guard:
+        pending_single_instance_show["callback"] = lambda: root.after(0, app.bring_to_front)
+        if pending_single_instance_show.get("requested"):
+            pending_single_instance_show["callback"]()
     root.update_idletasks()
     if APP_CONFIG.get("start_minimized_to_tray", False):
         app.hide_to_tray()
