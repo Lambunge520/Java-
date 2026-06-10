@@ -1,6 +1,6 @@
-# LJM Java 核心环境管家
+# LJM(local Java manager) Java 核心环境管家
 
-LJM Java 核心环境管家是一款跨平台 Java 环境管理工具，用于扫描、注册、修复、更新本机 Java 环境，解决 Minecraft、IDE、启动器或其他程序无法识别本机 Java 的问题。
+LJM(local java manager) Java 核心环境管家是一款跨平台 Java 环境管理工具，用于扫描、注册、修复、更新本机 Java 环境，解决 Minecraft、IDE、启动器或其他程序无法识别本机 Java 的问题。
 
 ## 下载
 
