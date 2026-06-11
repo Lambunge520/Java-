@@ -266,6 +266,7 @@ def command_vendors(_args):
                 "foojay": profile.get("foojay"),
                 "scenario": profile.get("scenario"),
                 "platforms": profile.get("platforms"),
+                "minecraft": profile.get("minecraft"),
                 "pros": profile.get("pros"),
                 "cons": profile.get("cons"),
             }
@@ -298,6 +299,16 @@ def command_move(args):
             raise RuntimeError("target Java is in use: " + "; ".join(processes[:5]))
     result = core.move_java_home(java_home, args.destination, preferred_name=registry_name)
     return {"ok": True, "action": "move", "result": result}
+
+
+def command_delete(args):
+    java_home, registry_name = resolve_target(args.target)
+    if args.files and not args.force:
+        processes = core.find_processes_using_java_home(java_home)
+        if processes:
+            raise RuntimeError("target Java is in use: " + "; ".join(processes[:5]))
+    result = core.delete_java_home(java_home, delete_files=args.files, preferred_name=registry_name)
+    return {"ok": True, "action": "delete", "result": result}
 
 
 def command_set_default(args):
@@ -359,6 +370,12 @@ def build_parser():
     p_move.add_argument("destination", help="new Java home path; must not already exist")
     p_move.add_argument("--force", action="store_true", help="move even when related Java processes are detected")
     p_move.set_defaults(func=command_move)
+
+    p_delete = sub.add_parser("delete", parents=[common], help="unregister a Java runtime and optionally delete its folder")
+    p_delete.add_argument("target", help="registered name or Java home path")
+    p_delete.add_argument("--files", action="store_true", help="delete the Java folder in addition to unregistering it")
+    p_delete.add_argument("--force", action="store_true", help="delete even when related Java processes are detected")
+    p_delete.set_defaults(func=command_delete)
 
     p_default = sub.add_parser("set-default", parents=[common], help="set target as default JAVA_HOME")
     p_default.add_argument("target", help="registered name or Java home path")

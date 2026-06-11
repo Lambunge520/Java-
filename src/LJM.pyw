@@ -88,8 +88,13 @@ GITHUB_ISSUES_NEW = GITHUB_REPO.rstrip("/") + "/issues/new"
 GITHUB_FEEDBACK_TEMPLATE = "bug_report.md"
 GITHUB_MIRROR_PREFIXES = (
     "https://ghfast.top/",
+    "https://gh.llkk.cc/",
+    "https://gh-proxy.com/",
+    "https://ghproxy.cc/",
     "https://mirror.ghproxy.com/",
     "https://ghproxy.net/",
+    "https://gh.ddlc.top/",
+    "https://hub.gitmirror.com/",
 )
 
 JAVA_BLACK_ICON = (
@@ -3245,6 +3250,7 @@ I18N_ZH_CN = {
     "tab_update": "云端更新引擎",
     "tab_download": "Java 下载",
     "tab_move": "Java 移动",
+    "tab_delete": "Java 卸载/删除",
     "toolbar_search_label": "搜索/筛选 Java:",
     "toolbar_clear_filter": "清空筛选",
     "toolbar_settings": "系统设置 & 工具更新",
@@ -3276,13 +3282,14 @@ I18N_ZH_CN = {
     "download_parent": "下载/安装到父目录",
     "browse_folder": "浏览...",
     "download_platform": "当前系统自动匹配: {platform}",
-    "download_vendor_profile": "适合场景: {scenario}\n平台覆盖: {platforms}\n优点: {pros}\n缺点: {cons}",
+    "download_vendor_profile": "适合场景: {scenario}\n平台覆盖: {platforms}\nMinecraft: {minecraft}\n优点: {pros}\n缺点: {cons}",
     "download_preview": "预计安装目录: {path}",
     "download_start": "开始下载并注册 Java",
     "download_confirm_title": "确认下载 Java",
     "download_confirm_text": "即将下载 {vendor} JDK {major}，并安装到:\n{parent}\n\n工具会自动使用最快可用源、断点续传、缓存复用和校验机制。是否继续？",
     "transfer_title_download": "正在下载 Java...",
     "cancel_download": "取消下载",
+    "download_source_fallback": "当前下载源失败，正在尝试下一组 Java 下载源...",
     "download_installing": "下载包已验证，正在安装到:\n{path}",
     "download_done": "Java 下载完成",
     "download_done_text": "已安装并注册 Java:\n{path}\n\n版本: {version}\n来源: {source}",
@@ -3301,6 +3308,19 @@ I18N_ZH_CN = {
     "move_running": "正在复制并切换 Java 目录，请稍候...",
     "move_done": "Java 移动完成",
     "move_done_text": "已移动并更新注册信息:\n{old_path}\n\n->\n{new_path}",
+    "delete_java_section": "卸载或删除已注册 Java 环境",
+    "delete_warning": "建议先关闭 Minecraft、IDE、启动器和 java.exe。只注销会保留文件；删除文件会移除整个 Java 目录并同步注销注册信息。",
+    "delete_refresh": "刷新列表",
+    "delete_unregister_only": "仅注销选中 Java（保留文件）",
+    "delete_files": "删除文件并注销",
+    "delete_no_selection_title": "未选择 Java",
+    "delete_no_selection_text": "请先在列表中选中一个要卸载或删除的 Java 环境。",
+    "delete_confirm_unregister": "即将只注销注册信息，保留文件:\n{path}\n\n是否继续？",
+    "delete_confirm_files": "即将删除整个 Java 目录并注销注册信息:\n{path}\n\n此操作不可撤销，请确认没有选错目录。是否继续？",
+    "delete_done": "Java 卸载完成",
+    "delete_done_text": "已处理:\n{path}\n\n删除文件: {deleted}\n注销项: {names}",
+    "delete_yes": "是",
+    "delete_no": "否",
     "settings_title": "系统核心设置",
     "language_section": "界面语言",
     "language_auto": "自动跟随系统语言",
@@ -3325,7 +3345,7 @@ I18N_ZH_CN = {
     "source_mirror": "仅镜像源优先",
     "mirror_fallback": "启用镜像兜底（直连或官方超时后自动尝试）",
     "mirror_speedtest": "立即测速并记忆最快镜像",
-    "source_desc": "说明：自动模式下，如检测到 Clash、V2Ray、WireGuard、OpenVPN 等代理/VPN 工具或系统代理/PAC，工具会自动开启直连；未检测到时自动关闭直连。也可以关闭自动识别后手动固定为直连或非直连。",
+    "source_desc": "说明：自动模式会按当前环境决定优先路线；下载和检测时会自动在直连、系统代理和默认连接之间轮切兜底，适配国内网络、VPN、代理工具和 PAC。也可以关闭自动识别后手动固定优先策略。",
     "safety_download": "安全备份与下载加速",
     "backup_before_changes": "更新/修复前自动备份核心文件，失败时可回滚",
     "download_cache": "启用下载缓存与断点续传，重复修复优先复用本地 JDK 包",
@@ -3434,6 +3454,7 @@ I18N_EN_US = {
     "tab_update": "Cloud Update Engine",
     "tab_download": "Java Download",
     "tab_move": "Java Move",
+    "tab_delete": "Java Uninstall/Delete",
     "toolbar_search_label": "Search/Filter Java:",
     "toolbar_clear_filter": "Clear",
     "toolbar_settings": "Settings & Updates",
@@ -3465,13 +3486,14 @@ I18N_EN_US = {
     "download_parent": "Download/install parent folder",
     "browse_folder": "Browse...",
     "download_platform": "Current system auto match: {platform}",
-    "download_vendor_profile": "Best for: {scenario}\nPlatform coverage: {platforms}\nPros: {pros}\nCons: {cons}",
+    "download_vendor_profile": "Best for: {scenario}\nPlatform coverage: {platforms}\nMinecraft: {minecraft}\nPros: {pros}\nCons: {cons}",
     "download_preview": "Planned install folder: {path}",
     "download_start": "Download and Register Java",
     "download_confirm_title": "Confirm Java Download",
     "download_confirm_text": "The tool will download {vendor} JDK {major} and install it under:\n{parent}\n\nFastest available source, resume, cache reuse, and verification will be used. Continue?",
     "transfer_title_download": "Downloading Java...",
     "cancel_download": "Cancel Download",
+    "download_source_fallback": "Current download source failed. Trying the next Java source...",
     "download_installing": "Package verified. Installing to:\n{path}",
     "download_done": "Java Download Complete",
     "download_done_text": "Java was installed and registered:\n{path}\n\nVersion: {version}\nSource: {source}",
@@ -3490,6 +3512,19 @@ I18N_EN_US = {
     "move_running": "Copying and switching the Java folder. Please wait...",
     "move_done": "Java Move Complete",
     "move_done_text": "Java was moved and registry information was updated:\n{old_path}\n\n->\n{new_path}",
+    "delete_java_section": "Uninstall or Delete Registered Java Runtime",
+    "delete_warning": "Close Minecraft, IDEs, launchers, and java.exe first. Unregister keeps files; deleting files removes the whole Java folder and unregisters it.",
+    "delete_refresh": "Refresh List",
+    "delete_unregister_only": "Unregister Selected Java (Keep Files)",
+    "delete_files": "Delete Files and Unregister",
+    "delete_no_selection_title": "No Java Selected",
+    "delete_no_selection_text": "Select a Java runtime to uninstall or delete first.",
+    "delete_confirm_unregister": "The tool will only unregister this Java and keep files:\n{path}\n\nContinue?",
+    "delete_confirm_files": "The tool will delete the entire Java folder and unregister it:\n{path}\n\nThis cannot be undone. Make sure the folder is correct. Continue?",
+    "delete_done": "Java Uninstall Complete",
+    "delete_done_text": "Processed:\n{path}\n\nDeleted files: {deleted}\nRemoved entries: {names}",
+    "delete_yes": "yes",
+    "delete_no": "no",
     "settings_title": "Core Settings",
     "language_section": "Interface Language",
     "language_auto": "Follow system language",
@@ -3514,7 +3549,7 @@ I18N_EN_US = {
     "source_mirror": "Mirror sources first",
     "mirror_fallback": "Enable mirror fallback after official/direct timeout",
     "mirror_speedtest": "Speed test and remember fastest mirror",
-    "source_desc": "In auto mode, if Clash, V2Ray, WireGuard, OpenVPN, system proxy, or PAC is detected, direct mode is enabled automatically; otherwise it is disabled. You can turn off auto-detect and pin the mode manually.",
+    "source_desc": "Auto mode chooses the preferred route from the current environment. Downloads and checks automatically rotate through direct, system proxy, and default routes for domestic networks, VPNs, proxy tools, and PAC. You can turn off auto-detect to pin the preferred route.",
     "safety_download": "Safety Backup and Download Acceleration",
     "backup_before_changes": "Back up core files before update/repair for rollback",
     "download_cache": "Enable download cache and resume; reuse local JDK archives for repeated repairs",
@@ -4123,15 +4158,19 @@ def ranked_github_mirror_prefixes():
     return tuple(unique_sequence(ordered))
 
 
-def build_github_url_variants(url, include_direct=True, mirrors_only=False):
+def build_github_url_variants(url, include_direct=True, mirrors_only=False, direct_first=False):
     clean_url = normalize_text(url)
     if not clean_url:
         return []
     if not is_proxyable_github_url(clean_url):
         return [clean_url]
-    urls = [prefix + clean_url for prefix in ranked_github_mirror_prefixes()]
-    if include_direct and not mirrors_only:
-        urls.append(clean_url)
+    mirrored = [prefix + clean_url for prefix in ranked_github_mirror_prefixes()]
+    if include_direct and not mirrors_only and direct_first:
+        urls = [clean_url] + mirrored
+    else:
+        urls = list(mirrored)
+        if include_direct and not mirrors_only:
+            urls.append(clean_url)
     return unique_sequence(urls)
 
 
@@ -4460,6 +4499,43 @@ def validate_java_move_target(source_java_home, target_path):
     return source, target
 
 
+def validate_java_delete_target(java_home):
+    source = os.path.abspath(os.path.expanduser(normalize_text(java_home)))
+    if not os.path.isdir(source):
+        raise FileNotFoundError(source)
+
+    dangerous = {
+        os.path.abspath(os.path.expanduser("~")),
+        os.path.abspath(APP_SOURCE_ROOT),
+        os.path.abspath(APP_DIR),
+        os.path.abspath(APP_RESOURCE_DIR),
+    }
+    drive, _tail = os.path.splitdrive(source)
+    if drive:
+        dangerous.add(os.path.abspath(drive + os.sep))
+    else:
+        dangerous.add(os.path.abspath(os.sep))
+    if os.path.normcase(source) in {os.path.normcase(path) for path in dangerous if path}:
+        raise ValueError("refusing to delete a dangerous top-level directory")
+
+    java_bin = os.path.join(source, "bin", "java.exe" if IS_WIN else "java")
+    release_file = os.path.join(source, "release")
+    if not os.path.exists(java_bin) and not os.path.exists(release_file):
+        raise ValueError("target does not look like a Java home")
+    return source
+
+
+def unregister_java_home(java_home, preferred_name=None):
+    names = JavaRegistryAdapter.find_version_names_by_home(java_home)
+    if preferred_name:
+        names.insert(0, preferred_name)
+    removed = []
+    for name in unique_sequence(names):
+        JavaRegistryAdapter.unregister(name)
+        removed.append(name)
+    return removed
+
+
 def list_possible_jvm_paths(java_home):
     if IS_WIN:
         dll = "jvm.dll"
@@ -4584,6 +4660,26 @@ JAVA_VENDOR_DEFAULT_PLATFORMS = {
     "en": "Windows / Linux / macOS are auto-matched for the current system; availability depends on vendor packages.",
 }
 
+JAVA_VENDOR_DEFAULT_MINECRAFT = {
+    "zh": "Minecraft Java 版通用建议优先选 HotSpot 系发行版；Java 21 适合 1.20.5/1.21+，Java 17 适合 1.18-1.20.4，Java 8 适合 1.16.5 及更老版本。",
+    "en": "For Minecraft Java Edition, HotSpot-based builds are the safest default: Java 21 for 1.20.5/1.21+, Java 17 for 1.18-1.20.4, and Java 8 for 1.16.5 or older.",
+}
+
+MINECRAFT_MAJOR_GUIDANCE = {
+    "8": {
+        "zh": "Java 8 适合 Minecraft 1.16.5 及更老版本，兼容旧 Forge/老启动器最好；性能不如新 JVM，但稳定性强。",
+        "en": "Java 8 fits Minecraft 1.16.5 and older, with the best legacy Forge/launcher compatibility; performance is older, but stability is strong.",
+    },
+    "17": {
+        "zh": "Java 17 适合 Minecraft 1.18 到 1.20.4，是现代整合包和服务器的稳定兼容选择。",
+        "en": "Java 17 fits Minecraft 1.18 through 1.20.4 and is the stable compatibility choice for modern modpacks and servers.",
+    },
+    "21": {
+        "zh": "Java 21 适合 Minecraft 1.20.5、1.21 及更新版本，当前性能、GC 和稳定性综合表现最好。",
+        "en": "Java 21 fits Minecraft 1.20.5, 1.21, and newer, with the best current balance of performance, GC behavior, and stability.",
+    },
+}
+
 
 JAVA_VENDOR_PROFILES = {
     "Eclipse Temurin": {
@@ -4591,9 +4687,11 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "通用开发、Minecraft、服务器和生产环境默认推荐。",
         "pros_zh": "开源、更新稳定、生态兼容性好，HotSpot 表现均衡。",
         "cons_zh": "没有额外商业增强，极致低内存或原生镜像场景不是强项。",
+        "minecraft_zh": "Minecraft 默认首选之一，Fabric/Forge/NeoForge 兼容性强；Java 21 跑新版 MC，Java 17 跑 1.18-1.20.4，Java 8 跑旧版最稳。",
         "scenario_en": "General development, Minecraft, servers, and production defaults.",
         "pros_en": "Open source, stable updates, strong compatibility, and balanced HotSpot performance.",
         "cons_en": "No vendor-specific enterprise additions; not specialized for tiny memory or native-image use.",
+        "minecraft_en": "One of the safest Minecraft defaults with strong Fabric/Forge/NeoForge compatibility; use Java 21 for newer MC, Java 17 for 1.18-1.20.4, and Java 8 for legacy versions.",
     },
     "IBM Semeru OpenJ9": {
         "foojay": "semeru",
@@ -4602,10 +4700,12 @@ JAVA_VENDOR_PROFILES = {
         "pros_zh": "OpenJ9 通常内存占用更克制，启动和运行特性与 HotSpot 不同。",
         "cons_zh": "少数依赖 HotSpot 内部行为的工具兼容性需要实测。",
         "platforms_zh": "Windows / Linux / macOS 主流架构优先，OpenJ9 包可用性随 Semeru 发布节奏变化。",
+        "minecraft_zh": "OpenJ9 可能降低内存占用，但 FPS/模组兼容性不如 HotSpot 稳定；大型整合包建议先用 Temurin/Zulu/Microsoft，内存紧张时再实测 OpenJ9。",
         "scenario_en": "Memory-sensitive services, long-running processes, and OpenJ9 users.",
         "pros_en": "OpenJ9 can use less memory and has different runtime characteristics from HotSpot.",
         "cons_en": "Tools relying on HotSpot internals may need compatibility testing.",
         "platforms_en": "Mainstream Windows / Linux / macOS architectures first; OpenJ9 package availability follows Semeru releases.",
+        "minecraft_en": "OpenJ9 may reduce memory usage, but FPS and mod compatibility are less predictable than HotSpot; try Temurin/Zulu/Microsoft first for large modpacks.",
     },
     "IBM Semeru Certified": {
         "foojay": "semeru_certified",
@@ -4624,9 +4724,11 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "桌面端、服务器、旧版本兼容和需要稳定长期构建的环境。",
         "pros_zh": "版本覆盖广，构建稳定，Windows/Linux/macOS 包较全。",
         "cons_zh": "高级低延迟能力主要在商业 Zulu Prime 系列中。",
+        "minecraft_zh": "Minecraft 兼容性和稳定性很好，尤其适合多版本共存、旧版本和启动器识别；性能表现接近 Temurin。",
         "scenario_en": "Desktop apps, servers, legacy compatibility, and stable long-term builds.",
         "pros_en": "Broad version coverage with stable builds across Windows, Linux, and macOS.",
         "cons_en": "Advanced low-latency features are mainly in commercial Zulu Prime builds.",
+        "minecraft_en": "Strong Minecraft compatibility and stability, especially for multi-version setups and launcher detection; performance is close to Temurin.",
     },
     "Alibaba Dragonwell": {
         "foojay": "dragonwell",
@@ -4644,9 +4746,11 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "高性能服务、Polyglot、Native Image 和框架 AOT 场景。",
         "pros_zh": "支持 Native Image，JIT/编译器能力强，适合高级优化。",
         "cons_zh": "体积和复杂度更高，部分原生镜像构建需要额外依赖。",
+        "minecraft_zh": "GraalVM 对普通 Minecraft 不一定比 Temurin/Zulu 更稳；可用于折腾性能测试，但模组兼容优先时不建议默认选择。",
         "scenario_en": "High-performance services, polyglot workloads, Native Image, and AOT frameworks.",
         "pros_en": "Native Image support and strong compiler/runtime optimization capabilities.",
         "cons_en": "Larger and more complex; native-image builds may require extra toolchains.",
+        "minecraft_en": "GraalVM is not always more stable for regular Minecraft than Temurin/Zulu; good for performance experiments, not the safest mod-compat default.",
     },
     "GraalVM Community": {
         "foojay": "graalvm_community",
@@ -4660,13 +4764,15 @@ JAVA_VENDOR_PROFILES = {
     },
     "Microsoft Build of OpenJDK": {
         "foojay": "microsoft",
-        "github_repos": ("microsoft/openjdk",),
+        "github_repos": ("microsoft/openjdk-adoptium-marketplace-data", "microsoft/openjdk"),
         "scenario_zh": "Windows 桌面、Azure、微软生态或企业标准镜像。",
         "pros_zh": "微软维护，Windows/Azure 生态适配友好。",
         "cons_zh": "版本选择相对聚焦，不是所有历史版本都有包。",
+        "minecraft_zh": "Windows + 官方启动器/Minecraft 服务端场景很稳，Java 21/17 推荐优先级高，兼容性接近 Temurin。",
         "scenario_en": "Windows desktop, Azure, Microsoft ecosystem, and enterprise standard images.",
         "pros_en": "Maintained by Microsoft with friendly Windows and Azure integration.",
         "cons_en": "Version coverage is focused; not every historical major is available.",
+        "minecraft_en": "Very solid for Windows, the official launcher, and Minecraft servers; Java 21/17 are high-priority choices with Temurin-like compatibility.",
     },
     "Oracle Java": {
         "foojay": "oracle_open_jdk",
@@ -4853,7 +4959,24 @@ def java_vendor_profile(vendor, language=None):
         or JAVA_VENDOR_DEFAULT_PLATFORMS.get(suffix)
         or JAVA_VENDOR_DEFAULT_PLATFORMS["zh"]
     )
+    result["minecraft"] = (
+        profile.get(f"minecraft_{suffix}")
+        or profile.get("minecraft_zh")
+        or JAVA_VENDOR_DEFAULT_MINECRAFT.get(suffix)
+        or JAVA_VENDOR_DEFAULT_MINECRAFT["zh"]
+    )
     return result
+
+
+def minecraft_java_guidance(major_version, language=None):
+    lang = language or active_language()
+    suffix = "zh" if str(lang).lower().startswith("zh") else "en"
+    major = normalize_text(major_version)
+    if major in MINECRAFT_MAJOR_GUIDANCE:
+        return MINECRAFT_MAJOR_GUIDANCE[major][suffix]
+    if suffix == "zh":
+        return "该 Java 大版本更适合测试或特定服务端需求；Minecraft 兼容性优先时建议选 Java 21、17 或 8。"
+    return "This Java major is better for testing or specific server needs; for Minecraft compatibility, prefer Java 21, 17, or 8."
 
 
 def java_vendor_foojay_distributions(vendor):
@@ -5343,8 +5466,9 @@ class WindowsTrayIcon:
     ID_SETTINGS = 1008
     ID_REPO = 1009
     ID_FEEDBACK = 1010
+    ID_TAB_DELETE = 1011
 
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_settings=None, on_repo=None, on_feedback=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
         self.tooltip = tooltip[:127]
         self.icon_path = icon_path
@@ -5355,6 +5479,7 @@ class WindowsTrayIcon:
         self.on_tab_update = on_tab_update
         self.on_tab_download = on_tab_download
         self.on_tab_move = on_tab_move
+        self.on_tab_delete = on_tab_delete
         self.on_settings = on_settings
         self.on_repo = on_repo
         self.on_feedback = on_feedback
@@ -5480,6 +5605,7 @@ class WindowsTrayIcon:
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_UPDATE, "切换到云端更新引擎")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_DOWNLOAD, "切换到 Java 下载")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_MOVE, "切换到 Java 移动")
+            user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_DELETE, "切换到 Java 卸载/删除")
             user32.AppendMenuW(menu, self.MF_SEPARATOR, 0, None)
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_SETTINGS, "系统设置")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_REPO, "切换到开源项目地址")
@@ -5521,6 +5647,9 @@ class WindowsTrayIcon:
             if command_id == self.ID_TAB_MOVE and self.on_tab_move:
                 self.root.after(0, self.on_tab_move)
                 return 0
+            if command_id == self.ID_TAB_DELETE and self.on_tab_delete:
+                self.root.after(0, self.on_tab_delete)
+                return 0
             if command_id == self.ID_SETTINGS and self.on_settings:
                 self.root.after(0, self.on_settings)
                 return 0
@@ -5542,7 +5671,7 @@ class WindowsTrayIcon:
 
 
 class PystrayTrayIcon:
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_settings=None, on_repo=None, on_feedback=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
         self.tooltip = tooltip
         self.icon_path = icon_path
@@ -5553,6 +5682,7 @@ class PystrayTrayIcon:
         self.on_tab_update = on_tab_update
         self.on_tab_download = on_tab_download
         self.on_tab_move = on_tab_move
+        self.on_tab_delete = on_tab_delete
         self.on_settings = on_settings
         self.on_repo = on_repo
         self.on_feedback = on_feedback
@@ -5592,6 +5722,7 @@ class PystrayTrayIcon:
             pystray.MenuItem("切换到云端更新引擎", lambda _icon, _item: ui_call(self.on_tab_update)),
             pystray.MenuItem("切换到 Java 下载", lambda _icon, _item: ui_call(self.on_tab_download)),
             pystray.MenuItem("切换到 Java 移动", lambda _icon, _item: ui_call(self.on_tab_move)),
+            pystray.MenuItem("切换到 Java 卸载/删除", lambda _icon, _item: ui_call(self.on_tab_delete)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("系统设置", lambda _icon, _item: ui_call(self.on_settings)),
             pystray.MenuItem("切换到开源项目地址", lambda _icon, _item: ui_call(self.on_repo)),
@@ -5907,11 +6038,100 @@ class NetworkEngine:
         return info
 
     @staticmethod
+    def _normalize_proxy_url(value):
+        text = normalize_text(value)
+        if not text:
+            return ""
+        if "://" not in text:
+            text = "http://" + text
+        return text
+
+    @staticmethod
+    def proxy_map_from_environment(info=None):
+        info = info or NetworkEngine.detect_environment()
+        proxies = dict(info.get("system_proxies") or {})
+        win_proxy = info.get("windows_proxy") or {}
+        server = normalize_text(win_proxy.get("proxy_server"))
+        if server and not proxies:
+            parsed = {}
+            for part in server.split(";"):
+                part = normalize_text(part)
+                if not part:
+                    continue
+                if "=" in part:
+                    scheme, value = part.split("=", 1)
+                    proxy_url = NetworkEngine._normalize_proxy_url(value)
+                    if proxy_url:
+                        parsed[scheme.strip().lower()] = proxy_url
+                else:
+                    proxy_url = NetworkEngine._normalize_proxy_url(part)
+                    if proxy_url:
+                        parsed["http"] = proxy_url
+                        parsed["https"] = proxy_url
+            proxies.update(parsed)
+        return {key: value for key, value in proxies.items() if normalize_text(value)}
+
+    @staticmethod
+    def connection_mode_candidates(info=None):
+        info = info or NetworkEngine.detect_environment()
+        has_proxy = bool(NetworkEngine.proxy_map_from_environment(info))
+        if info.get("effective_direct"):
+            candidates = ["direct"]
+            if has_proxy:
+                candidates.append("proxy")
+            candidates.append("default")
+        else:
+            candidates = ["proxy"] if has_proxy else ["default"]
+            candidates.append("direct")
+            candidates.append("default")
+        return tuple(unique_sequence(candidates))
+
+    @staticmethod
+    def connection_mode_label(mode):
+        return {
+            "direct": "直连",
+            "proxy": "系统代理",
+            "default": "系统默认",
+        }.get(mode, mode)
+
+    @staticmethod
+    def _build_opener_for_mode(mode, info=None):
+        info = info or NetworkEngine.detect_environment()
+        if mode == "direct":
+            proxy_handler = urllib.request.ProxyHandler({})
+        elif mode == "proxy":
+            proxy_handler = urllib.request.ProxyHandler(NetworkEngine.proxy_map_from_environment(info))
+        else:
+            proxy_handler = urllib.request.ProxyHandler()
+        return urllib.request.build_opener(proxy_handler, urllib.request.HTTPSHandler(context=SSL_CONTEXT))
+
+    @staticmethod
+    def open_request_with_mode(request_obj, timeout=10, mode="default", info=None):
+        opener = NetworkEngine._build_opener_for_mode(mode, info)
+        future = _executor.submit(opener.open, request_obj, timeout=timeout)
+        try:
+            return future.result(timeout=timeout + 2)
+        except concurrent.futures.TimeoutError:
+            future.cancel()
+            raise TimeoutError(f"请求超时 ({timeout}s, {NetworkEngine.connection_mode_label(mode)}): {getattr(request_obj, 'full_url', request_obj)}")
+
+    @staticmethod
+    def _curl_proxy_args_for_mode(mode, info=None):
+        if mode == "direct":
+            return ["--noproxy", "*"]
+        if mode == "proxy":
+            proxies = NetworkEngine.proxy_map_from_environment(info)
+            proxy_url = proxies.get("https") or proxies.get("http")
+            if proxy_url:
+                return ["--proxy", proxy_url]
+        return []
+
+    @staticmethod
     def request_json(url, timeout=8, retries=2, cache_ttl=300):
         return NetworkEngine.request_json_from_candidates([url], timeout=timeout, retries=retries, cache_ttl=cache_ttl)
 
     @staticmethod
-    def _request_text_via_curl(url, timeout=8):
+    def _request_text_via_curl(url, timeout=8, mode=None, info=None):
         curl_path = shutil.which("curl.exe") or shutil.which("curl")
         if not curl_path:
             raise RuntimeError("curl is not available")
@@ -5928,8 +6148,10 @@ class NetworkEngine:
         ]
         if IS_WIN:
             command.append("--ssl-no-revoke")
-        env_info = NetworkEngine.detect_environment()
-        if env_info.get("effective_direct"):
+        env_info = info or NetworkEngine.detect_environment()
+        if mode:
+            command.extend(NetworkEngine._curl_proxy_args_for_mode(mode, env_info))
+        elif env_info.get("effective_direct"):
             command.extend(["--noproxy", "*"])
         command.append(url)
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WIN else 0
@@ -5956,32 +6178,34 @@ class NetworkEngine:
                 return cached["data"]
 
         last_error = None
+        env_info = NetworkEngine.detect_environment()
+        modes = NetworkEngine.connection_mode_candidates(env_info)
         for url in normalized_urls:
-            for attempt in range(retries):
+            for mode in modes:
+                for attempt in range(retries):
+                    try:
+                        req = urllib.request.Request(url, headers=default_headers())
+                        with NetworkEngine.open_request_with_mode(req, timeout=timeout, mode=mode, info=env_info) as response:
+                            payload = response.read().decode("utf-8", errors="ignore")
+                        data = json.loads(payload)
+                        with NetworkEngine._response_lock:
+                            NetworkEngine._response_cache[cache_key] = {"time": time.time(), "data": data}
+                        return data
+                    except Exception as exc:
+                        last_error = exc
+                        logging.warning("请求失败 (%s/%s, %s): %s - %s", attempt + 1, retries, NetworkEngine.connection_mode_label(mode), url, exc)
+                        if attempt < retries - 1:
+                            time.sleep(0.4 * (attempt + 1))
                 try:
-                    NetworkEngine.apply_proxy_settings()
-                    req = urllib.request.Request(url, headers=default_headers())
-                    with urlopen_with_timeout(req, timeout=timeout) as response:
-                        payload = response.read().decode("utf-8", errors="ignore")
+                    payload = NetworkEngine._request_text_via_curl(url, timeout=timeout, mode=mode, info=env_info)
                     data = json.loads(payload)
                     with NetworkEngine._response_lock:
                         NetworkEngine._response_cache[cache_key] = {"time": time.time(), "data": data}
+                    logging.info("curl JSON 兜底成功 (%s): %s", NetworkEngine.connection_mode_label(mode), url)
                     return data
                 except Exception as exc:
                     last_error = exc
-                    logging.warning("请求失败 (%s/%s): %s - %s", attempt + 1, retries, url, exc)
-                    if attempt < retries - 1:
-                        time.sleep(0.6 * (attempt + 1))
-            try:
-                payload = NetworkEngine._request_text_via_curl(url, timeout=timeout)
-                data = json.loads(payload)
-                with NetworkEngine._response_lock:
-                    NetworkEngine._response_cache[cache_key] = {"time": time.time(), "data": data}
-                logging.info("curl JSON 兜底成功: %s", url)
-                return data
-            except Exception as exc:
-                last_error = exc
-                logging.warning("curl JSON 兜底失败: %s - %s", url, exc)
+                    logging.warning("curl JSON 兜底失败 (%s): %s - %s", NetworkEngine.connection_mode_label(mode), url, exc)
         raise last_error
 
     @staticmethod
@@ -6001,21 +6225,31 @@ class NetworkEngine:
                 return cached["data"]
 
         last_error = None
+        env_info = NetworkEngine.detect_environment()
+        modes = NetworkEngine.connection_mode_candidates(env_info)
         for url in normalized_urls:
-            for attempt in range(retries):
+            for mode in modes:
+                for attempt in range(retries):
+                    try:
+                        req = urllib.request.Request(url, headers=default_headers())
+                        with NetworkEngine.open_request_with_mode(req, timeout=timeout, mode=mode, info=env_info) as response:
+                            payload = response.read().decode("utf-8", errors="ignore")
+                        with NetworkEngine._response_lock:
+                            NetworkEngine._response_cache[cache_key] = {"time": time.time(), "data": payload}
+                        return payload
+                    except Exception as exc:
+                        last_error = exc
+                        logging.warning("文本请求失败 (%s/%s, %s): %s - %s", attempt + 1, retries, NetworkEngine.connection_mode_label(mode), url, exc)
+                        if attempt < retries - 1:
+                            time.sleep(0.4 * (attempt + 1))
                 try:
-                    NetworkEngine.apply_proxy_settings()
-                    req = urllib.request.Request(url, headers=default_headers())
-                    with urlopen_with_timeout(req, timeout=timeout) as response:
-                        payload = response.read().decode("utf-8", errors="ignore")
+                    payload = NetworkEngine._request_text_via_curl(url, timeout=timeout, mode=mode, info=env_info)
                     with NetworkEngine._response_lock:
                         NetworkEngine._response_cache[cache_key] = {"time": time.time(), "data": payload}
                     return payload
                 except Exception as exc:
                     last_error = exc
-                    logging.warning("文本请求失败 (%s/%s): %s - %s", attempt + 1, retries, url, exc)
-                    if attempt < retries - 1:
-                        time.sleep(0.6 * (attempt + 1))
+                    logging.warning("curl 文本兜底失败 (%s): %s - %s", NetworkEngine.connection_mode_label(mode), url, exc)
         raise last_error
 
     @staticmethod
@@ -6041,21 +6275,24 @@ class NetworkEngine:
     def refresh_mirror_speed_order():
         results = {}
         probe_target = "https://api.github.com/rate_limit"
+        env_info = NetworkEngine.detect_environment(force_refresh=True)
+        modes = NetworkEngine.connection_mode_candidates(env_info)
         for prefix in GITHUB_MIRROR_PREFIXES:
             probe_url = prefix + probe_target
             start = time.time()
-            try:
-                NetworkEngine.apply_proxy_settings()
-                req = urllib.request.Request(probe_url, headers=default_headers())
-                with urlopen_with_timeout(req, timeout=5) as response:
-                    response.read(512)
-                    code = getattr(response, "status", response.getcode())
-                elapsed_ms = int((time.time() - start) * 1000)
-                if 200 <= int(code) < 500:
-                    results[prefix] = elapsed_ms
-            except Exception as exc:
-                logging.info("镜像测速失败: %s - %s", prefix, exc)
-                results[prefix] = None
+            results[prefix] = None
+            for mode in modes:
+                try:
+                    req = urllib.request.Request(probe_url, headers=default_headers())
+                    with NetworkEngine.open_request_with_mode(req, timeout=5, mode=mode, info=env_info) as response:
+                        response.read(512)
+                        code = getattr(response, "status", response.getcode())
+                    elapsed_ms = int((time.time() - start) * 1000)
+                    if 200 <= int(code) < 500:
+                        results[prefix] = elapsed_ms
+                        break
+                except Exception as exc:
+                    logging.info("镜像测速失败: %s (%s) - %s", prefix, NetworkEngine.connection_mode_label(mode), exc)
 
         usable = [(prefix, delay) for prefix, delay in results.items() if isinstance(delay, int)]
         if usable:
@@ -6067,11 +6304,11 @@ class NetworkEngine:
         logging.info("镜像测速完成: %s", APP_CONFIG.get("mirror_speed_results"))
 
     @staticmethod
-    def download(url, dest, progress_cb, status_cb, timeout=45, cancel_event=None, expected_sha256="", reuse_existing=False):
+    def download(url, dest, progress_cb, status_cb, timeout=18, cancel_event=None, expected_sha256="", reuse_existing=False):
         return NetworkEngine.download_from_candidates([url], dest, progress_cb, status_cb, timeout=timeout, cancel_event=cancel_event, expected_sha256=expected_sha256, reuse_existing=reuse_existing)
 
     @staticmethod
-    def download_from_candidates(urls, dest, progress_cb, status_cb, timeout=45, cancel_event=None, expected_sha256="", reuse_existing=False):
+    def download_from_candidates(urls, dest, progress_cb, status_cb, timeout=18, cancel_event=None, expected_sha256="", reuse_existing=False):
         expected_sha256 = clean_sha256(expected_sha256)
         if reuse_existing and os.path.exists(dest) and os.path.getsize(dest) > 0:
             try:
@@ -6086,65 +6323,70 @@ class NetworkEngine:
 
         last_error = None
         candidates = unique_sequence(urls)
+        env_info = NetworkEngine.detect_environment()
+        modes = NetworkEngine.connection_mode_candidates(env_info)
         for index, url in enumerate(candidates, start=1):
-            part_path = dest + ".part"
-            try:
-                ensure_not_cancelled(cancel_event)
-                NetworkEngine.apply_proxy_settings()
-                status_cb(f"正在连接下载源 {index}/{len(candidates)} ...")
-                headers = default_headers()
-                resume_from = os.path.getsize(part_path) if os.path.exists(part_path) else 0
-                if resume_from > 0:
-                    headers["Range"] = f"bytes={resume_from}-"
-                    status_cb(f"检测到未完成下载，尝试从 {resume_from / 1024 / 1024:.1f} MB 处续传...")
-                req = urllib.request.Request(url, headers=headers)
-                with urlopen_with_timeout(req, timeout=timeout) as response:
-                    response_code = getattr(response, "status", response.getcode())
-                    append_mode = resume_from > 0 and int(response_code) == 206
-                    downloaded = resume_from if append_mode else 0
-                    content_length = int(response.headers.get("Content-Length") or 0)
-                    total_length = downloaded + content_length if append_mode and content_length else content_length
-                    chunk_size = 1024 * 1024 * 2
-                    with open(part_path, "ab" if append_mode else "wb") as f:
-                        while True:
-                            ensure_not_cancelled(cancel_event)
-                            chunk = response.read(chunk_size)
-                            if not chunk:
-                                break
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            progress_cb(downloaded * 100 / total_length if total_length else 0, downloaded, total_length)
-                os.replace(part_path, dest)
-                if expected_sha256:
-                    status_cb("下载完成，正在校验 SHA256...")
-                    verify_file_sha256(dest, expected_sha256, cancel_event=cancel_event)
-                return url
-            except Exception as exc:
-                last_error = exc
-                logging.warning("下载源失败 (%s/%s): %s - %s", index, len(candidates), url, exc)
-                if os.path.exists(dest) and expected_sha256:
-                    try:
-                        os.remove(dest)
-                    except Exception:
-                        pass
+            for mode in modes:
+                part_path = dest + ".part"
+                try:
+                    ensure_not_cancelled(cancel_event)
+                    route_label = NetworkEngine.connection_mode_label(mode)
+                    status_cb(f"正在连接下载源 {index}/{len(candidates)}（{route_label}）...")
+                    headers = default_headers()
+                    resume_from = os.path.getsize(part_path) if os.path.exists(part_path) else 0
+                    if resume_from > 0:
+                        headers["Range"] = f"bytes={resume_from}-"
+                        status_cb(f"检测到未完成下载，尝试从 {resume_from / 1024 / 1024:.1f} MB 处续传...")
+                    req = urllib.request.Request(url, headers=headers)
+                    with NetworkEngine.open_request_with_mode(req, timeout=timeout, mode=mode, info=env_info) as response:
+                        response_code = getattr(response, "status", response.getcode())
+                        append_mode = resume_from > 0 and int(response_code) == 206
+                        downloaded = resume_from if append_mode else 0
+                        content_length = int(response.headers.get("Content-Length") or 0)
+                        total_length = downloaded + content_length if append_mode and content_length else content_length
+                        chunk_size = 1024 * 256
+                        with open(part_path, "ab" if append_mode else "wb") as f:
+                            while True:
+                                ensure_not_cancelled(cancel_event)
+                                chunk = response.read(chunk_size)
+                                if not chunk:
+                                    break
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                progress_cb(downloaded * 100 / total_length if total_length else 0, downloaded, total_length)
+                    os.replace(part_path, dest)
+                    if expected_sha256:
+                        status_cb("下载完成，正在校验 SHA256...")
+                        verify_file_sha256(dest, expected_sha256, cancel_event=cancel_event)
+                    return url
+                except Exception as exc:
+                    last_error = exc
+                    logging.warning("下载源失败 (%s/%s, %s): %s - %s", index, len(candidates), NetworkEngine.connection_mode_label(mode), url, exc)
+                    if os.path.exists(dest) and expected_sha256:
+                        try:
+                            os.remove(dest)
+                        except Exception:
+                            pass
         raise last_error
 
     @staticmethod
     def resolve_final_url(urls, timeout=12):
         last_error = None
         candidates = unique_sequence(urls)
+        env_info = NetworkEngine.detect_environment()
+        modes = NetworkEngine.connection_mode_candidates(env_info)
         for index, url in enumerate(candidates, start=1):
-            try:
-                NetworkEngine.apply_proxy_settings()
-                req = urllib.request.Request(url, headers=default_headers())
-                response = urlopen_with_timeout(req, timeout=timeout)
-                final_url = response.geturl()
-                response.close()
-                logging.info("解析最终地址成功 (%s/%s): %s -> %s", index, len(candidates), url, final_url)
-                return final_url
-            except Exception as exc:
-                last_error = exc
-                logging.warning("解析最终地址失败 (%s/%s): %s - %s", index, len(candidates), url, exc)
+            for mode in modes:
+                try:
+                    req = urllib.request.Request(url, headers=default_headers())
+                    response = NetworkEngine.open_request_with_mode(req, timeout=timeout, mode=mode, info=env_info)
+                    final_url = response.geturl()
+                    response.close()
+                    logging.info("解析最终地址成功 (%s/%s, %s): %s -> %s", index, len(candidates), NetworkEngine.connection_mode_label(mode), url, final_url)
+                    return final_url
+                except Exception as exc:
+                    last_error = exc
+                    logging.warning("解析最终地址失败 (%s/%s, %s): %s - %s", index, len(candidates), NetworkEngine.connection_mode_label(mode), url, exc)
         raise last_error
 
     @staticmethod
@@ -6155,34 +6397,37 @@ class NetworkEngine:
 
         last_error = None
         candidates = unique_sequence(urls)
+        env_info = NetworkEngine.detect_environment()
+        modes = NetworkEngine.connection_mode_candidates(env_info)
         for index, url in enumerate(candidates, start=1):
-            try:
-                info = NetworkEngine.detect_environment()
-                handlers = []
-                if info["effective_direct"]:
-                    handlers.append(urllib.request.ProxyHandler({}))
-                else:
-                    proxies = info["system_proxies"]
-                    handlers.append(urllib.request.ProxyHandler(proxies if proxies else {}))
-                handlers.append(NoRedirectHandler())
-                handlers.append(urllib.request.HTTPSHandler(context=SSL_CONTEXT))
-                opener = urllib.request.build_opener(*handlers)
-                req = urllib.request.Request(url, headers=default_headers())
+            for mode in modes:
                 try:
-                    response = opener.open(req, timeout=timeout)
-                    location = response.headers.get("Location") or response.geturl()
-                    response.close()
-                except urllib.error.HTTPError as exc:
-                    if exc.code in (301, 302, 303, 307, 308):
-                        location = exc.headers.get("Location")
+                    handlers = []
+                    if mode == "direct":
+                        handlers.append(urllib.request.ProxyHandler({}))
+                    elif mode == "proxy":
+                        handlers.append(urllib.request.ProxyHandler(NetworkEngine.proxy_map_from_environment(env_info)))
                     else:
-                        raise
-                if location:
-                    logging.info("解析跳转地址成功 (%s/%s): %s -> %s", index, len(candidates), url, location)
-                    return location
-            except Exception as exc:
-                last_error = exc
-                logging.warning("解析跳转地址失败 (%s/%s): %s - %s", index, len(candidates), url, exc)
+                        handlers.append(urllib.request.ProxyHandler())
+                    handlers.append(NoRedirectHandler())
+                    handlers.append(urllib.request.HTTPSHandler(context=SSL_CONTEXT))
+                    opener = urllib.request.build_opener(*handlers)
+                    req = urllib.request.Request(url, headers=default_headers())
+                    try:
+                        response = opener.open(req, timeout=timeout)
+                        location = response.headers.get("Location") or response.geturl()
+                        response.close()
+                    except urllib.error.HTTPError as exc:
+                        if exc.code in (301, 302, 303, 307, 308):
+                            location = exc.headers.get("Location")
+                        else:
+                            raise
+                    if location:
+                        logging.info("解析跳转地址成功 (%s/%s, %s): %s -> %s", index, len(candidates), NetworkEngine.connection_mode_label(mode), url, location)
+                        return location
+                except Exception as exc:
+                    last_error = exc
+                    logging.warning("解析跳转地址失败 (%s/%s, %s): %s - %s", index, len(candidates), NetworkEngine.connection_mode_label(mode), url, exc)
         raise last_error
 
 
@@ -6201,11 +6446,11 @@ class JavaDownloadEngine:
         api_url = f"https://api.github.com/repos/{repo}/releases"
         if mirrors_only:
             return build_github_url_variants(api_url, include_direct=False, mirrors_only=True)
-        return build_github_url_variants(api_url)
+        return build_github_url_variants(api_url, direct_first=direct_first)
 
     @staticmethod
     def _github_download_candidates(url, direct_first=False):
-        return build_github_url_variants(url)
+        return build_github_url_variants(url, direct_first=direct_first)
 
     @staticmethod
     def _request_github_releases(repo, direct_first=False, mirrors_only=False, timeout=10):
@@ -6400,6 +6645,35 @@ class JavaDownloadEngine:
         return None
 
     @staticmethod
+    def _download_info_identity(info):
+        urls = info.get("urls") or [info.get("url")]
+        first_url = normalize_text(urls[0] if urls else "")
+        return (normalize_text(info.get("source")), normalize_text(info.get("version")), first_url)
+
+    @staticmethod
+    def get_download_info_candidates(vendor, major_version):
+        vendor = canonical_java_vendor_name(vendor)
+        major = str(major_version)
+        candidates = []
+        seen = set()
+        last_error = None
+        for fetcher in JavaDownloadEngine._resolve_source_chain(vendor):
+            try:
+                result = fetcher(vendor, major)
+                if result and result.get("version") and result.get("url"):
+                    result["major_version"] = major
+                    key = JavaDownloadEngine._download_info_identity(result)
+                    if key not in seen:
+                        seen.add(key)
+                        candidates.append(result)
+            except Exception as exc:
+                last_error = exc
+                logging.warning("获取 Java 候补下载源失败: vendor=%s major=%s error=%s", vendor, major, exc)
+        if not candidates and last_error:
+            logging.error("所有候补下载源均失败: %s", last_error)
+        return candidates
+
+    @staticmethod
     def _resolve_source_chain(vendor):
         source = APP_CONFIG.get("update_source", "official")
         chain = []
@@ -6421,6 +6695,8 @@ class JavaDownloadEngine:
             chain.extend(
                 [
                     JavaDownloadEngine._fetch_official,
+                    JavaDownloadEngine._fetch_github_direct,
+                    JavaDownloadEngine._fetch_github_mirror,
                 ]
             )
         if APP_CONFIG.get("enable_mirror", False) and JavaDownloadEngine._fetch_github_mirror not in chain:
@@ -6495,7 +6771,12 @@ class JavaDownloadEngine:
             return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=True, mirrors_only=False)
         if vendor == "IBM Semeru OpenJ9":
             return JavaDownloadEngine._fetch_semeru_openj9(major_version, direct_first=True, mirrors_only=False)
-        if vendor in ("Microsoft Build of OpenJDK", "Oracle Java"):
+        if vendor == "Microsoft Build of OpenJDK":
+            result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=True, mirrors_only=False)
+            if result:
+                return result
+            return JavaDownloadEngine._fetch_official(vendor, major_version)
+        if vendor == "Oracle Java":
             return JavaDownloadEngine._fetch_official(vendor, major_version)
         if vendor == "Alibaba Dragonwell":
             return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=True, mirrors_only=False)
@@ -6512,7 +6793,9 @@ class JavaDownloadEngine:
             return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=False, mirrors_only=True)
         if vendor == "IBM Semeru OpenJ9":
             return JavaDownloadEngine._fetch_semeru_openj9(major_version, direct_first=False, mirrors_only=True)
-        if vendor in ("Microsoft Build of OpenJDK", "Oracle Java"):
+        if vendor == "Microsoft Build of OpenJDK":
+            return JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=True)
+        if vendor == "Oracle Java":
             return None
         if vendor == "Alibaba Dragonwell":
             return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=False, mirrors_only=True)
@@ -6727,6 +7010,20 @@ class JavaDownloadEngine:
         return unique_sequence(urls)
 
     @staticmethod
+    def _asset_matches_major_version(asset_name, major_version):
+        lower = normalize_text(asset_name).lower()
+        expected = str(major_version)
+        matches = []
+        for pattern in (
+            r"(?:openjdk|jdk|java)[-_]?(\d{1,2})(?:[._+\-]|$)",
+            r"(?:^|[._+\-])jdk(\d{1,2})(?:[._+\-]|$)",
+        ):
+            matches.extend(re.findall(pattern, lower))
+        if matches:
+            return expected in matches
+        return True
+
+    @staticmethod
     def _pick_github_release_asset(releases, major_version, vendor, direct_first=False):
         sorted_releases = sorted(
             [r for r in releases if not r.get("draft")],
@@ -6739,7 +7036,11 @@ class JavaDownloadEngine:
                 continue
             for asset in release.get("assets", []):
                 asset_name = asset.get("name", "")
-                if JavaDownloadEngine._match_archive_asset(asset_name) and JavaDownloadEngine._is_desired_asset_name(asset_name, vendor):
+                if (
+                    JavaDownloadEngine._match_archive_asset(asset_name)
+                    and JavaDownloadEngine._asset_matches_major_version(asset_name, major_version)
+                    and JavaDownloadEngine._is_desired_asset_name(asset_name, vendor)
+                ):
                     checksum_urls = JavaDownloadEngine._github_checksum_asset_urls(release, asset_name)
                     return JavaDownloadEngine._make_result(
                         tag or f"JDK {major_version}",
@@ -6800,39 +7101,78 @@ def download_and_install_java(vendor, major_version, install_parent, progress_ca
 
     try:
         ensure_not_cancelled(cancel_event)
-        info = JavaDownloadEngine.get_latest_download_info(vendor, major_version)
-        if not info:
+        primary_info = JavaDownloadEngine.get_latest_download_info(vendor, major_version)
+        if not primary_info:
             raise Exception(tr("metadata_missing"))
 
-        suffix = download_info_archive_suffix(info)
-        expected_sha256 = resolve_download_sha256(info)
-        if APP_CONFIG.get("download_cache_enabled", True):
-            temp_archive = archive_cache_path(info, suffix)
-            temp_archive_is_cache = True
-            if os.path.exists(temp_archive) and not archive_quick_check(temp_archive, suffix):
-                remove_cached_archive(temp_archive)
-        else:
-            fd, temp_archive = tempfile.mkstemp(suffix=suffix)
-            os.close(fd)
+        info_queue = [primary_info]
+        seen_info = {JavaDownloadEngine._download_info_identity(primary_info)}
+        fallback_loaded = False
+        source_url = ""
+        last_download_error = None
 
-        status(tr("source_locked", source=info.get("source", "Unknown")))
-        source_url = NetworkEngine.download_from_candidates(
-            info.get("urls") or [info["url"]],
-            temp_archive,
-            progress_callback,
-            status_callback,
-            cancel_event=cancel_event,
-            expected_sha256=expected_sha256,
-            reuse_existing=temp_archive_is_cache,
-        )
-        if APP_CONFIG.get("verify_download_sha256", True) and expected_sha256:
-            verify_file_sha256(temp_archive, expected_sha256, cancel_event=cancel_event)
-        if not archive_quick_check(temp_archive, suffix):
-            remove_cached_archive(temp_archive)
-            raise Exception("下载包结构校验失败，已丢弃损坏缓存，请重试。")
-        archive_verified = True
-        if temp_archive_is_cache:
-            write_archive_metadata(temp_archive, info, source_url, expected_sha256)
+        while info_queue:
+            ensure_not_cancelled(cancel_event)
+            info = info_queue.pop(0)
+            suffix = download_info_archive_suffix(info)
+            expected_sha256 = resolve_download_sha256(info)
+            archive_verified = False
+            temp_archive = ""
+            temp_archive_is_cache = False
+            if APP_CONFIG.get("download_cache_enabled", True):
+                temp_archive = archive_cache_path(info, suffix)
+                temp_archive_is_cache = True
+                if os.path.exists(temp_archive) and not archive_quick_check(temp_archive, suffix):
+                    remove_cached_archive(temp_archive)
+            else:
+                fd, temp_archive = tempfile.mkstemp(suffix=suffix)
+                os.close(fd)
+
+            try:
+                status(tr("source_locked", source=info.get("source", "Unknown")))
+                source_url = NetworkEngine.download_from_candidates(
+                    info.get("urls") or [info["url"]],
+                    temp_archive,
+                    progress_callback,
+                    status_callback,
+                    cancel_event=cancel_event,
+                    expected_sha256=expected_sha256,
+                    reuse_existing=temp_archive_is_cache,
+                )
+                if APP_CONFIG.get("verify_download_sha256", True) and expected_sha256:
+                    verify_file_sha256(temp_archive, expected_sha256, cancel_event=cancel_event)
+                if not archive_quick_check(temp_archive, suffix):
+                    remove_cached_archive(temp_archive)
+                    raise Exception("下载包结构校验失败，已丢弃损坏缓存，请重试。")
+                archive_verified = True
+                if temp_archive_is_cache:
+                    write_archive_metadata(temp_archive, info, source_url, expected_sha256)
+                break
+            except OperationCancelled:
+                raise
+            except Exception as exc:
+                last_download_error = exc
+                logging.warning("当前 Java 下载源失败，准备尝试候补源: source=%s error=%s", info.get("source"), exc)
+                if temp_archive_is_cache and temp_archive and not archive_verified:
+                    remove_cached_archive(temp_archive)
+                elif temp_archive and os.path.exists(temp_archive):
+                    try:
+                        os.remove(temp_archive)
+                    except Exception:
+                        pass
+                temp_archive = ""
+                temp_archive_is_cache = False
+                archive_verified = False
+                if not fallback_loaded:
+                    status(tr("download_source_fallback"))
+                    for candidate in JavaDownloadEngine.get_download_info_candidates(vendor, major_version):
+                        key = JavaDownloadEngine._download_info_identity(candidate)
+                        if key not in seen_info:
+                            seen_info.add(key)
+                            info_queue.append(candidate)
+                    fallback_loaded = True
+                if not info_queue:
+                    raise last_download_error
 
         ensure_not_cancelled(cancel_event)
         status(tr("verifying_extracting"))
@@ -6924,6 +7264,26 @@ def move_java_home(source_java_home, target_path, preferred_name=None, cancel_ev
     }
 
 
+def delete_java_home(java_home, delete_files=False, preferred_name=None, cancel_event=None):
+    source = os.path.abspath(os.path.expanduser(normalize_text(java_home)))
+    removed_names = []
+    deleted = False
+
+    ensure_not_cancelled(cancel_event)
+    if delete_files:
+        source = validate_java_delete_target(source)
+        shutil.rmtree(source)
+        deleted = True
+
+    ensure_not_cancelled(cancel_event)
+    removed_names = unregister_java_home(source, preferred_name=preferred_name)
+    return {
+        "java_home": source,
+        "deleted_files": deleted,
+        "removed_registry_names": removed_names,
+    }
+
+
 class JavaManagerApp:
     def __init__(self, root):
         self.root = root
@@ -6932,6 +7292,7 @@ class JavaManagerApp:
         self.fix_items = {}
         self.update_items = {}
         self.move_items = {}
+        self.delete_items = {}
         self._java_rows = []
         self.search_var = None
         self.download_vendor_var = None
@@ -7665,6 +8026,7 @@ class JavaManagerApp:
             self.show_update_tab,
             self.show_download_tab,
             self.show_move_tab,
+            self.show_delete_tab,
             self.open_settings_from_tray,
             self.open_repository,
             self.open_feedback,
@@ -7732,6 +8094,9 @@ class JavaManagerApp:
     def show_move_tab(self):
         self.show_tab(self.tab_move)
 
+    def show_delete_tab(self):
+        self.show_tab(self.tab_delete)
+
     def open_settings_from_tray(self):
         self.show_from_tray()
         self.open_settings()
@@ -7791,29 +8156,34 @@ class JavaManagerApp:
         self.tab_update = ttk.Frame(self.notebook)
         self.tab_download = ttk.Frame(self.notebook)
         self.tab_move = ttk.Frame(self.notebook)
+        self.tab_delete = ttk.Frame(self.notebook)
         self.tab_reg_body, self.tab_reg_canvas = self._create_scrollable_area(self.tab_reg)
         self.tab_fix_body, self.tab_fix_canvas = self._create_scrollable_area(self.tab_fix)
         self.tab_update_body, self.tab_update_canvas = self._create_scrollable_area(self.tab_update)
         self.tab_download_body, self.tab_download_canvas = self._create_scrollable_area(self.tab_download)
         self.tab_move_body, self.tab_move_canvas = self._create_scrollable_area(self.tab_move)
+        self.tab_delete_body, self.tab_delete_canvas = self._create_scrollable_area(self.tab_delete)
 
         self.notebook.add(self.tab_reg, text=tr("tab_registration"))
         self.notebook.add(self.tab_fix, text=tr("tab_fix"))
         self.notebook.add(self.tab_update, text=tr("tab_update"))
         self.notebook.add(self.tab_download, text=tr("tab_download"))
         self.notebook.add(self.tab_move, text=tr("tab_move"))
+        self.notebook.add(self.tab_delete, text=tr("tab_delete"))
 
         self.setup_reg_tab()
         self.setup_fix_tab_enhanced()
         self.setup_update_tab()
         self.setup_download_tab()
         self.setup_move_tab()
+        self.setup_delete_tab()
         for scope, canvas in (
             (self.tab_reg_body, self.tab_reg_canvas),
             (self.tab_fix_body, self.tab_fix_canvas),
             (self.tab_update_body, self.tab_update_canvas),
             (self.tab_download_body, self.tab_download_canvas),
             (self.tab_move_body, self.tab_move_canvas),
+            (self.tab_delete_body, self.tab_delete_canvas),
         ):
             self._install_mousewheel_scroll(scope, canvas)
 
@@ -7833,6 +8203,7 @@ class JavaManagerApp:
         self.fix_items.clear()
         self.update_items.clear()
         self.move_items.clear()
+        self.delete_items.clear()
         self.search_var = None
         self.setup_ui()
         self._setup_tray_icon()
@@ -8056,6 +8427,38 @@ class JavaManagerApp:
             var.trace_add("write", lambda *_args: self.refresh_move_target_preview())
         self.refresh_move_target_preview()
 
+    def setup_delete_tab(self):
+        parent = getattr(self, "tab_delete_body", self.tab_delete)
+        table_frame = tk.Frame(parent)
+        table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
+
+        self.tree_delete = ttk.Treeview(table_frame, columns=("vendor", "path", "version", "status"), show="headings")
+        self.tree_delete.heading("vendor", text=tr("col_vendor"))
+        self.tree_delete.heading("path", text=tr("col_path"))
+        self.tree_delete.heading("version", text=tr("col_current_version"))
+        self.tree_delete.heading("status", text=tr("col_health"))
+        self.tree_delete.column("vendor", width=150, minwidth=130, anchor=tk.CENTER, stretch=False)
+        self.tree_delete.column("path", width=420, minwidth=280, stretch=True)
+        self.tree_delete.column("version", width=170, minwidth=140, anchor=tk.CENTER, stretch=False)
+        self.tree_delete.column("status", width=140, minwidth=120, anchor=tk.CENTER, stretch=False)
+        y_scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree_delete.yview)
+        x_scroll = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree_delete.xview)
+        self.tree_delete.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        self.tree_delete.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+
+        action = ttk.LabelFrame(parent, text=tr("delete_java_section"))
+        action.pack(fill=tk.X, padx=10, pady=(5, 10))
+        tk.Label(action, text=tr("delete_warning"), justify="left", anchor="w", wraplength=780).pack(fill=tk.X, padx=10, pady=(10, 8))
+        buttons = tk.Frame(action)
+        buttons.pack(fill=tk.X, padx=10, pady=(0, 12))
+        tk.Button(buttons, text=tr("delete_refresh"), command=self.refresh_all_data).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 4))
+        tk.Button(buttons, text=tr("delete_unregister_only"), command=lambda: self.start_delete_java(delete_files=False)).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=4)
+        tk.Button(buttons, text=tr("delete_files"), command=lambda: self.start_delete_java(delete_files=True)).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(4, 0))
+
     def browse_download_parent(self):
         folder = filedialog.askdirectory(title=tr("download_parent"))
         if folder:
@@ -8067,6 +8470,8 @@ class JavaManagerApp:
         vendor = self.download_vendor_var.get() if self.download_vendor_var else JAVA_VENDOR_OPTIONS[0]
         if self.download_profile_var is not None:
             profile = java_vendor_profile(vendor)
+            major = self.download_major_var.get() if self.download_major_var else "21"
+            minecraft_text = f"{profile.get('minecraft', '')}\n{minecraft_java_guidance(major)}"
             profile_text = "\n".join(
                 [
                     tr("download_platform", platform=current_java_download_platform_text()),
@@ -8074,6 +8479,7 @@ class JavaManagerApp:
                         "download_vendor_profile",
                         scenario=profile.get("scenario", ""),
                         platforms=profile.get("platforms", ""),
+                        minecraft=minecraft_text,
                         pros=profile.get("pros", ""),
                         cons=profile.get("cons", ""),
                     ),
@@ -8104,6 +8510,14 @@ class JavaManagerApp:
         if not selected:
             return None
         return self.move_items.get(selected[0])
+
+    def selected_delete_runtime(self):
+        if not hasattr(self, "tree_delete"):
+            return None
+        selected = self.tree_delete.selection()
+        if not selected:
+            return None
+        return self.delete_items.get(selected[0])
 
     def refresh_move_target_preview(self):
         if not self.move_preview_var:
@@ -8282,6 +8696,37 @@ class JavaManagerApp:
                 mark_finished()
 
         threading.Thread(target=task, daemon=True).start()
+
+    def start_delete_java(self, delete_files=False):
+        meta = self.selected_delete_runtime()
+        if not meta:
+            return messagebox.showwarning(tr("delete_no_selection_title"), tr("delete_no_selection_text"))
+        java_home = meta.get("java_home")
+        if delete_files:
+            try:
+                validate_java_delete_target(java_home)
+            except Exception as exc:
+                return messagebox.showerror(tr("task_interrupted_title"), str(exc))
+            if not self._confirm_process_usage(java_home, tr("delete_files")):
+                return
+            confirm_text = tr("delete_confirm_files", path=java_home)
+        else:
+            confirm_text = tr("delete_confirm_unregister", path=java_home)
+        if not messagebox.askyesno(tr("delete_java_section"), confirm_text):
+            return
+        self.run_delete_java(meta, delete_files=delete_files)
+
+    def run_delete_java(self, meta, delete_files=False):
+        java_home = meta.get("java_home")
+        try:
+            result = delete_java_home(java_home, delete_files=delete_files, preferred_name=meta.get("registry_name"))
+            names = ", ".join(result.get("removed_registry_names") or []) or "-"
+            deleted_text = tr("delete_yes") if result.get("deleted_files") else tr("delete_no")
+            messagebox.showinfo(tr("delete_done"), tr("delete_done_text", path=result["java_home"], deleted=deleted_text, names=names))
+            self.refresh_all_data()
+        except Exception as exc:
+            logging.error("Java 删除/注销失败: %s\n%s", exc, traceback.format_exc())
+            messagebox.showerror(tr("task_interrupted_title"), str(exc))
 
     def reset_and_retry(self):
         JavaDownloadEngine.clear_cache()
@@ -9172,9 +9617,13 @@ class JavaManagerApp:
         if hasattr(self, "tree_move"):
             for item_id in self.tree_move.get_children():
                 self.tree_move.delete(item_id)
+        if hasattr(self, "tree_delete"):
+            for item_id in self.tree_delete.get_children():
+                self.tree_delete.delete(item_id)
         self.fix_items.clear()
         self.update_items.clear()
         self.move_items.clear()
+        self.delete_items.clear()
 
         for row in self._java_rows:
             if not self._row_matches_java_filter(row, query):
@@ -9210,6 +9659,18 @@ class JavaManagerApp:
                     values=(runtime["vendor"], java_home, version_display_text(runtime["version"]), status),
                 )
                 self.move_items[move_item_id] = {
+                    "registry_name": version_name,
+                    "java_home": java_home,
+                    "runtime": runtime,
+                    "report": report,
+                }
+            if hasattr(self, "tree_delete"):
+                delete_item_id = self.tree_delete.insert(
+                    "",
+                    tk.END,
+                    values=(runtime["vendor"], java_home, version_display_text(runtime["version"]), status),
+                )
+                self.delete_items[delete_item_id] = {
                     "registry_name": version_name,
                     "java_home": java_home,
                     "runtime": runtime,

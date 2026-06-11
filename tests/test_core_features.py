@@ -3,6 +3,7 @@ import importlib.util
 import tempfile
 import time
 import unittest
+import zipfile
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -48,6 +49,93 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
         self.assertLess(len(url), 6000)
+
+    def test_network_route_candidates_keep_proxy_fallback_when_auto_direct(self):
+        env = {
+            "effective_direct": True,
+            "system_proxies": {"https": "http://127.0.0.1:7890"},
+        }
+
+        self.assertEqual(self.core.NetworkEngine.connection_mode_candidates(env), ("direct", "proxy", "default"))
+
+    def test_network_route_candidates_keep_direct_fallback_when_proxy_first(self):
+        env = {
+            "effective_direct": False,
+            "system_proxies": {"https": "http://127.0.0.1:7890"},
+        }
+
+        self.assertEqual(self.core.NetworkEngine.connection_mode_candidates(env), ("proxy", "direct", "default"))
+
+    def test_github_mirror_candidates_include_more_domestic_fallbacks(self):
+        url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21/test.zip"
+        variants = self.core.build_github_url_variants(url)
+
+        self.assertIn(url, variants)
+        self.assertGreaterEqual(len(variants), 6)
+        self.assertTrue(any("gh.llkk.cc" in item or "gh-proxy.com" in item for item in variants))
+
+    def test_github_direct_first_keeps_mirror_fallbacks(self):
+        url = "https://github.com/microsoft/openjdk/releases/download/jdk-21/test.zip"
+        variants = self.core.build_github_url_variants(url, direct_first=True)
+
+        self.assertEqual(variants[0], url)
+        self.assertGreaterEqual(len(variants), 6)
+        self.assertTrue(any(item.startswith("https://gh") and url in item for item in variants[1:]))
+
+    def test_official_source_chain_degrades_to_github_and_mirrors(self):
+        previous_source = self.core.APP_CONFIG.get("update_source")
+        previous_mirror = self.core.APP_CONFIG.get("enable_mirror")
+        try:
+            self.core.APP_CONFIG["update_source"] = "official"
+            self.core.APP_CONFIG["enable_mirror"] = False
+
+            chain = self.core.JavaDownloadEngine._resolve_source_chain("Eclipse Temurin")
+        finally:
+            self.core.APP_CONFIG["update_source"] = previous_source
+            self.core.APP_CONFIG["enable_mirror"] = previous_mirror
+
+        self.assertEqual(chain[0], self.core.JavaDownloadEngine._fetch_official)
+        self.assertIn(self.core.JavaDownloadEngine._fetch_github_direct, chain)
+        self.assertIn(self.core.JavaDownloadEngine._fetch_github_mirror, chain)
+
+    def test_microsoft_github_mirror_uses_profile_release_source(self):
+        calls = []
+        original = self.core.JavaDownloadEngine._fetch_github_profile_releases
+
+        def fake_profile(vendor, major_version, direct_first=False, mirrors_only=False):
+            calls.append((vendor, major_version, direct_first, mirrors_only))
+            return {"version": "21.0.1", "url": "https://example.invalid/jdk.zip"}
+
+        try:
+            self.core.JavaDownloadEngine._fetch_github_profile_releases = staticmethod(fake_profile)
+            result = self.core.JavaDownloadEngine._fetch_github_mirror("Microsoft Build of OpenJDK", "21")
+        finally:
+            self.core.JavaDownloadEngine._fetch_github_profile_releases = original
+
+        self.assertEqual(result["version"], "21.0.1")
+        self.assertEqual(calls, [("Microsoft Build of OpenJDK", "21", False, True)])
+        self.assertIn(
+            "microsoft/openjdk-adoptium-marketplace-data",
+            self.core.java_vendor_github_repos("Microsoft Build of OpenJDK", "21"),
+        )
+
+    def test_github_asset_selection_respects_requested_java_major(self):
+        releases = [
+            {
+                "tag_name": "apr-2026-psu",
+                "draft": False,
+                "published_at": "2026-04-15T00:00:00Z",
+                "assets": [
+                    {"name": "jdk11-windows-x64.zip", "browser_download_url": "https://github.com/example/releases/jdk11.zip"},
+                    {"name": "jdk21-windows-x64.zip", "browser_download_url": "https://github.com/example/releases/jdk21.zip"},
+                ],
+            }
+        ]
+
+        result = self.core.JavaDownloadEngine._pick_github_release_asset(releases, "21", "Microsoft Build of OpenJDK")
+
+        self.assertEqual(result["asset_name"], "jdk21-windows-x64.zip")
+        self.assertIn("jdk21.zip", result["url"])
 
     def test_java_filter_matches_multiple_terms_across_fields(self):
         row = {
@@ -116,6 +204,16 @@ class CoreFeatureTests(unittest.TestCase):
                 self.assertTrue(profile["pros"])
                 self.assertTrue(profile["cons"])
                 self.assertTrue(profile["platforms"])
+                self.assertTrue(profile["minecraft"])
+
+    def test_minecraft_java_guidance_matches_major_versions(self):
+        guidance_21 = self.core.minecraft_java_guidance("21", language="en_US")
+        guidance_17 = self.core.minecraft_java_guidance("17", language="en_US")
+        guidance_8 = self.core.minecraft_java_guidance("8", language="en_US")
+
+        self.assertIn("1.20.5", guidance_21)
+        self.assertIn("1.18", guidance_17)
+        self.assertIn("1.16.5", guidance_8)
 
     def test_new_vendor_registry_tokens_are_clear(self):
         cases = [
@@ -182,6 +280,63 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(selected["java_version"], "17.0.16+8")
 
+    def test_download_and_install_switches_metadata_source_after_download_failure(self):
+        primary = {
+            "vendor": "Eclipse Temurin",
+            "major_version": "21",
+            "version": "21.0.1",
+            "url": "https://primary.invalid/jdk.zip",
+            "urls": ["https://primary.invalid/jdk.zip"],
+            "source": "Primary",
+        }
+        fallback = {
+            "vendor": "Eclipse Temurin",
+            "major_version": "21",
+            "version": "21.0.2",
+            "url": "https://fallback.invalid/jdk.zip",
+            "urls": ["https://fallback.invalid/jdk.zip"],
+            "source": "Fallback",
+        }
+        calls = []
+        previous_cache = self.core.APP_CONFIG.get("download_cache_enabled")
+        previous_verify = self.core.APP_CONFIG.get("verify_download_sha256")
+        original_latest = self.core.JavaDownloadEngine.get_latest_download_info
+        original_candidates = self.core.JavaDownloadEngine.get_download_info_candidates
+        original_download = self.core.NetworkEngine.download_from_candidates
+        original_sync = self.core.JavaRegistryAdapter.sync_runtime_registration
+
+        def fake_download(urls, dest, *_args, **_kwargs):
+            calls.append(list(urls))
+            if len(calls) == 1:
+                raise RuntimeError("primary failed")
+            with zipfile.ZipFile(dest, "w") as archive:
+                archive.writestr("jdk-21/release", 'JAVA_VERSION="21.0.2"\nIMPLEMENTOR="Eclipse Temurin"\n')
+                archive.writestr("jdk-21/bin/java.exe" if self.core.IS_WIN else "jdk-21/bin/java", "")
+            return urls[0]
+
+        try:
+            self.core.APP_CONFIG["download_cache_enabled"] = False
+            self.core.APP_CONFIG["verify_download_sha256"] = False
+            self.core.JavaDownloadEngine.get_latest_download_info = staticmethod(lambda vendor, major: dict(primary))
+            self.core.JavaDownloadEngine.get_download_info_candidates = staticmethod(lambda vendor, major: [dict(primary), dict(fallback)])
+            self.core.NetworkEngine.download_from_candidates = staticmethod(fake_download)
+            self.core.JavaRegistryAdapter.sync_runtime_registration = staticmethod(lambda java_home, preferred_name=None: ["Temurin_21"])
+
+            with tempfile.TemporaryDirectory() as tmp:
+                result = self.core.download_and_install_java("Eclipse Temurin", "21", tmp)
+        finally:
+            self.core.APP_CONFIG["download_cache_enabled"] = previous_cache
+            self.core.APP_CONFIG["verify_download_sha256"] = previous_verify
+            self.core.JavaDownloadEngine.get_latest_download_info = original_latest
+            self.core.JavaDownloadEngine.get_download_info_candidates = original_candidates
+            self.core.NetworkEngine.download_from_candidates = original_download
+            self.core.JavaRegistryAdapter.sync_runtime_registration = original_sync
+
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[1], fallback["urls"])
+        self.assertEqual(result["source"], "Fallback")
+        self.assertIn("21.0.2", result["latest_version"])
+
     def test_scroll_units_support_mousewheel_touchpad_and_linux_buttons(self):
         self.assertEqual(self.core.scroll_units_from_wheel_event(delta=120), -1)
         self.assertEqual(self.core.scroll_units_from_wheel_event(delta=-240), 2)
@@ -233,17 +388,31 @@ class CoreFeatureTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "inside source"):
                 self.core.validate_java_move_target(str(source), str(nested))
 
+    def test_validate_java_delete_target_requires_java_home_shape(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "not look like a Java home"):
+                self.core.validate_java_delete_target(tmp)
+
+            java_home = Path(tmp) / "jdk-21"
+            bin_dir = java_home / "bin"
+            bin_dir.mkdir(parents=True)
+            (bin_dir / ("java.exe" if self.core.IS_WIN else "java")).write_text("", encoding="utf-8")
+            (java_home / "release").write_text('JAVA_VERSION="21.0.1"', encoding="utf-8")
+
+            self.assertEqual(Path(self.core.validate_java_delete_target(str(java_home))).resolve(), java_home.resolve())
+
 
 class HeadlessFeatureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.headless = load_headless()
 
-    def test_headless_parser_has_download_move_and_feedback_commands(self):
+    def test_headless_parser_has_download_move_delete_and_feedback_commands(self):
         parser = self.headless.build_parser()
 
         download_args = parser.parse_args(["download", "Eclipse Temurin", "21", r"D:\Java"])
         move_args = parser.parse_args(["move", "Temurin_21", r"D:\Java\Temurin_21"])
+        delete_args = parser.parse_args(["delete", "Temurin_21", "--files", "--force"])
         vendors_args = parser.parse_args(["vendors"])
         feedback_args = parser.parse_args(["feedback", "--message", "OpenJ9 source is slow"])
 
@@ -251,6 +420,10 @@ class HeadlessFeatureTests(unittest.TestCase):
         self.assertIs(download_args.func, self.headless.command_download)
         self.assertEqual(move_args.command, "move")
         self.assertIs(move_args.func, self.headless.command_move)
+        self.assertEqual(delete_args.command, "delete")
+        self.assertIs(delete_args.func, self.headless.command_delete)
+        self.assertTrue(delete_args.files)
+        self.assertTrue(delete_args.force)
         self.assertEqual(vendors_args.command, "vendors")
         self.assertIs(vendors_args.func, self.headless.command_vendors)
         self.assertEqual(feedback_args.command, "feedback")

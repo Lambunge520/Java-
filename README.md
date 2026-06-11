@@ -13,12 +13,13 @@ LJM(local java manager) Java 核心环境管家是一款跨平台 Java 环境管
 - 本地 Java 扫描、注册、注销与环境变量设置。
 - 独立 Java 下载界面，可选择发行商、大版本和下载/安装位置，自动匹配当前 Windows/Linux/macOS 与 CPU 架构包，完成后自动注册。
 - 独立 Java 移动界面，可迁移已注册 Java 目录并同步注册信息。
+- 独立 Java 卸载/删除界面，可选择仅注销或删除 Java 目录并同步注销注册信息。
 - Java 损坏检测、智能修复、完整修复、修复前备份与失败回滚。
 - Java 更新检测、断点续传、下载缓存复用、SHA256 校验。
 - 多镜像源测速、自动记忆最快源，优先使用更适合当前网络的源。
-- 支持 Eclipse Temurin、IBM Semeru OpenJ9、IBM Semeru Certified、Azul Zulu、Alibaba Dragonwell、GraalVM、GraalVM Community、Microsoft Build of OpenJDK、Oracle Java、Oracle JDK、Oracle OpenJDK、Amazon Corretto、BellSoft Liberica、SAP SapMachine、OpenLogic OpenJDK、Red Hat OpenJDK、JetBrains Runtime、Tencent Kona、Huawei Bi Sheng、Mandrel、Liberica Native Image Kit、Gluon GraalVM、Generic OpenJDK 等多类型 Java，并在下载页展示适合场景、平台覆盖、优点与缺点。
+- 支持 Eclipse Temurin、IBM Semeru OpenJ9、IBM Semeru Certified、Azul Zulu、Alibaba Dragonwell、GraalVM、GraalVM Community、Microsoft Build of OpenJDK、Oracle Java、Oracle JDK、Oracle OpenJDK、Amazon Corretto、BellSoft Liberica、SAP SapMachine、OpenLogic OpenJDK、Red Hat OpenJDK、JetBrains Runtime、Tencent Kona、Huawei Bi Sheng、Mandrel、Liberica Native Image Kit、Gluon GraalVM、Generic OpenJDK 等多类型 Java，并在下载页展示适合场景、平台覆盖、Minecraft 性能/稳定性建议、优点与缺点。
 - Java 下载目录名会保留发行商类型和大版本，例如 `GraalVM_jdk21_21.0.11`、`Azul_Zulu_jdk17_17.0.12_7`，便于区分不同 Java 类型。
-- 下载链路会优先使用 Foojay/厂商元数据，并对 GitHub Release、`objects.githubusercontent.com`、`release-assets.githubusercontent.com` 等地址生成代理候选；Foojay 在当前网络下异常时会尝试 curl JSON 兜底。
+- 下载链路会在直连、系统代理、系统默认连接之间自动轮切，并对 GitHub Release、`objects.githubusercontent.com`、`release-assets.githubusercontent.com` 等地址生成多个国内镜像/代理候选；官方源异常时会自动降级到 GitHub 直连和 GitHub 镜像。
 - 界面加入主窗口和弹窗淡入/淡出动画，栏目切换不销毁重建文本控件，降低文字闪烁。
 - 所有主界面栏目、设置页和关于页支持滚动；鼠标滚轮、触摸板高精度滚动、Shift 横向滚动和触摸屏拖拽滚动统一适配。
 - 桌面端加入单实例保护，重复打开时不会新建多个窗口，会唤醒并置顶已有窗口；无桌面端保持可多开，方便脚本批处理。
@@ -58,6 +59,7 @@ LJM(local java manager) Java 核心环境管家是一款跨平台 Java 环境管
 python .\src\LJM.pyw
 python .\src\LJM_headless.pyw
 python .\src\LJM_headless.pyw feedback --stdout --message "这里写反馈内容"
+python .\src\LJM_headless.pyw delete Temurin_21 --files --force
 ```
 
 ## 本地打包
@@ -78,7 +80,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_headless_windows.ps1
 
 ## 维护说明
 
-桌面端和无桌面端共用 `src/LJM.pyw` 核心版本与核心逻辑，后续版本升级默认同时维护 Windows、Linux、macOS 三个平台产物。2.7 起无桌面端也支持 `download`、`move` 和 `vendors` 命令，2.8 起 `vendors` 会同步输出各 Java 类型的平台覆盖说明。维护约定见 `docs/MAINTENANCE.md`。
+桌面端和无桌面端共用 `src/LJM.pyw` 核心版本与核心逻辑，后续版本升级默认同时维护 Windows、Linux、macOS 三个平台产物。2.7 起无桌面端也支持 `download`、`move` 和 `vendors` 命令，2.8 起 `vendors` 会同步输出各 Java 类型的平台覆盖与 Minecraft 建议，`delete` 命令支持无桌面端注销/删除 Java。维护约定见 `docs/MAINTENANCE.md`。
 
 提交或发布前可运行清理脚本，避免临时文件和打包产物进入 GitHub：
 
