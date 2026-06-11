@@ -4,7 +4,7 @@ LJM(local java manager) Java 核心环境管家是一款跨平台 Java 环境管
 
 ## 下载
 
-请前往 [GitHub Releases](https://github.com/Lambunge520/Java-/releases) 下载最新版本。
+请前往 [Releases](https://github.com/Lambunge520/Java-/releases) 下载最新版本。
 
 当前版本：`2.8 Stable`
 
