@@ -21,7 +21,7 @@ import shlex
 import hashlib
 import locale
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 import urllib.request
 import urllib.error
 import concurrent.futures
@@ -80,10 +80,12 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 
-VERSION = "2.7 Stable"
+VERSION = "2.8 Stable"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
+GITHUB_ISSUES_NEW = GITHUB_REPO.rstrip("/") + "/issues/new"
+GITHUB_FEEDBACK_TEMPLATE = "bug_report.md"
 GITHUB_MIRROR_PREFIXES = (
     "https://ghfast.top/",
     "https://mirror.ghproxy.com/",
@@ -3247,6 +3249,7 @@ I18N_ZH_CN = {
     "toolbar_clear_filter": "清空筛选",
     "toolbar_settings": "系统设置 & 工具更新",
     "toolbar_about": "关于开源版",
+    "toolbar_feedback": "GitHub 反馈",
     "scan_register_local_java": "从文件夹扫描并注册本地 Java",
     "unregister_selected": "移除选中项的注册信息",
     "col_major": "大版本",
@@ -3273,7 +3276,7 @@ I18N_ZH_CN = {
     "download_parent": "下载/安装到父目录",
     "browse_folder": "浏览...",
     "download_platform": "当前系统自动匹配: {platform}",
-    "download_vendor_profile": "适合场景: {scenario}\n优点: {pros}\n缺点: {cons}",
+    "download_vendor_profile": "适合场景: {scenario}\n平台覆盖: {platforms}\n优点: {pros}\n缺点: {cons}",
     "download_preview": "预计安装目录: {path}",
     "download_start": "开始下载并注册 Java",
     "download_confirm_title": "确认下载 Java",
@@ -3349,6 +3352,9 @@ I18N_ZH_CN = {
     "about_version": "当前版本: {version}",
     "about_features": "跨平台架构 | 网络自适应 | 多级降级 | 多类型 Java 支持",
     "open_repo": "访问开源仓库 (GitHub)",
+    "open_feedback": "提交 GitHub 反馈",
+    "feedback_open_failed_title": "无法打开反馈页",
+    "feedback_open_failed_text": "无法自动打开浏览器，请复制以下链接到浏览器访问:\n{url}",
     "tool_update_hint_title": "提示",
     "tool_update_no_asset": "发现新版本 {version}，但未找到匹配当前架构与后缀的构建包。",
     "tool_update_check_title": "检查更新",
@@ -3432,6 +3438,7 @@ I18N_EN_US = {
     "toolbar_clear_filter": "Clear",
     "toolbar_settings": "Settings & Updates",
     "toolbar_about": "About",
+    "toolbar_feedback": "GitHub Feedback",
     "scan_register_local_java": "Scan Folder and Register Local Java",
     "unregister_selected": "Remove Selected Registry Entries",
     "col_major": "Major",
@@ -3458,7 +3465,7 @@ I18N_EN_US = {
     "download_parent": "Download/install parent folder",
     "browse_folder": "Browse...",
     "download_platform": "Current system auto match: {platform}",
-    "download_vendor_profile": "Best for: {scenario}\nPros: {pros}\nCons: {cons}",
+    "download_vendor_profile": "Best for: {scenario}\nPlatform coverage: {platforms}\nPros: {pros}\nCons: {cons}",
     "download_preview": "Planned install folder: {path}",
     "download_start": "Download and Register Java",
     "download_confirm_title": "Confirm Java Download",
@@ -3534,6 +3541,9 @@ I18N_EN_US = {
     "about_version": "Current version: {version}",
     "about_features": "Cross-platform | Network adaptive | Multi-source fallback | Multi-vendor Java support",
     "open_repo": "Open GitHub Repository",
+    "open_feedback": "Submit GitHub Feedback",
+    "feedback_open_failed_title": "Could Not Open Feedback",
+    "feedback_open_failed_text": "The browser could not be opened automatically. Copy this link into your browser:\n{url}",
     "tool_update_hint_title": "Notice",
     "tool_update_no_asset": "Version {version} is available, but no build asset matches the current architecture or file suffix.",
     "tool_update_check_title": "Update Check",
@@ -3659,9 +3669,66 @@ def normalize_text(value):
 
 def default_headers():
     return {
-        "User-Agent": "JavaManager/2.7",
+        "User-Agent": "JavaManager/2.8",
         "Accept": "application/json, text/plain, */*",
     }
+
+
+def github_feedback_system_context():
+    def safe_value(getter, fallback="unknown"):
+        try:
+            value = getter()
+        except Exception:
+            value = fallback
+        return normalize_text(value) or fallback
+
+    return {
+        "Tool version": VERSION,
+        "Operating system": safe_value(platform.platform),
+        "Python": safe_value(platform.python_version),
+        "Architecture": safe_value(lambda: APP_ARCH or platform.machine()),
+        "Download platform": safe_value(current_java_download_platform_text),
+        "Language": safe_value(active_language),
+        "Packaged app": "yes" if getattr(sys, "frozen", False) else "no",
+        "Update source": safe_value(lambda: APP_CONFIG.get("update_source", "official")),
+        "Mirror fallback": "on" if APP_CONFIG.get("enable_mirror", False) else "off",
+        "Auto direct mode": "on" if APP_CONFIG.get("direct_mode_auto", True) else "off",
+    }
+
+
+def github_feedback_body(message=""):
+    user_message = normalize_text(message)
+    if not user_message:
+        user_message = "请在这里描述遇到的问题、希望新增的功能或体验建议。"
+    context_lines = [f"- {key}: {value}" for key, value in github_feedback_system_context().items()]
+    return "\n".join(
+        [
+            "## 用户反馈",
+            user_message,
+            "",
+            "## 复现步骤",
+            "1. ",
+            "2. ",
+            "3. ",
+            "",
+            "## 预期结果",
+            "",
+            "## 实际结果",
+            "",
+            "## 系统信息",
+            *context_lines,
+        ]
+    )
+
+
+def build_github_feedback_url(message="", title=""):
+    clean_title = normalize_text(title) or f"[Feedback] LJM Java Manager {VERSION}"
+    params = {
+        "template": GITHUB_FEEDBACK_TEMPLATE,
+        "title": clean_title,
+        "body": github_feedback_body(message),
+    }
+    return f"{GITHUB_ISSUES_NEW}?{urlencode(params)}"
 
 
 SINGLE_INSTANCE_TOKEN = b"LJM_SINGLE_INSTANCE_SHOW"
@@ -4512,6 +4579,12 @@ def sanitize_registry_name(value):
     return text[:120]
 
 
+JAVA_VENDOR_DEFAULT_PLATFORMS = {
+    "zh": "Windows / Linux / macOS 会按当前系统自动匹配，实际可用性取决于发行商发布包。",
+    "en": "Windows / Linux / macOS are auto-matched for the current system; availability depends on vendor packages.",
+}
+
+
 JAVA_VENDOR_PROFILES = {
     "Eclipse Temurin": {
         "foojay": "temurin",
@@ -4528,9 +4601,23 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "内存敏感服务、长时间运行进程、想尝试 OpenJ9 的用户。",
         "pros_zh": "OpenJ9 通常内存占用更克制，启动和运行特性与 HotSpot 不同。",
         "cons_zh": "少数依赖 HotSpot 内部行为的工具兼容性需要实测。",
+        "platforms_zh": "Windows / Linux / macOS 主流架构优先，OpenJ9 包可用性随 Semeru 发布节奏变化。",
         "scenario_en": "Memory-sensitive services, long-running processes, and OpenJ9 users.",
         "pros_en": "OpenJ9 can use less memory and has different runtime characteristics from HotSpot.",
         "cons_en": "Tools relying on HotSpot internals may need compatibility testing.",
+        "platforms_en": "Mainstream Windows / Linux / macOS architectures first; OpenJ9 package availability follows Semeru releases.",
+    },
+    "IBM Semeru Certified": {
+        "foojay": "semeru_certified",
+        "github_repos": ("ibmruntimes/semeru{major}-certified-binaries",),
+        "scenario_zh": "需要 IBM Semeru Certified 认证构建、企业标准镜像或 Linux 服务端的场景。",
+        "pros_zh": "认证构建更适合企业合规和受控生产环境，OpenJ9 特性与 Semeru 生态一致。",
+        "cons_zh": "当前 Foojay 上更偏 Linux，Windows/macOS 包可能缺失，检测不到时建议切 Semeru OpenJ9。",
+        "platforms_zh": "Linux x64 覆盖更稳定；Windows/macOS 可用性有限，会自动轮切其它候选源。",
+        "scenario_en": "IBM Semeru Certified builds, enterprise standard images, and Linux server workloads.",
+        "pros_en": "Certified builds suit enterprise compliance and controlled production environments.",
+        "cons_en": "Foojay coverage is currently Linux-heavy; use Semeru OpenJ9 when Windows/macOS packages are unavailable.",
+        "platforms_en": "Linux x64 is more consistently covered; Windows/macOS availability is limited and candidate sources are rotated automatically.",
     },
     "Azul Zulu": {
         "foojay": "zulu",
@@ -4587,9 +4674,33 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "需要 Oracle 官方构建、认证或与企业规范保持一致的场景。",
         "pros_zh": "官方来源权威，版本语义清晰。",
         "cons_zh": "授权和商用合规需要用户自行确认。",
+        "platforms_zh": "兼容入口，会优先走 Oracle OpenJDK，必要时回退 Oracle JDK；按当前系统自动匹配。",
         "scenario_en": "Oracle official builds, certification, or enterprise policy alignment.",
         "pros_en": "Authoritative official source with clear version semantics.",
         "cons_en": "Licensing and commercial compliance must be checked by the user.",
+        "platforms_en": "Compatibility entry: tries Oracle OpenJDK first, then Oracle JDK fallback when needed.",
+    },
+    "Oracle JDK": {
+        "foojay": "oracle",
+        "scenario_zh": "需要 Oracle 官方 JDK、企业认证或与 Oracle 生产环境保持一致的场景。",
+        "pros_zh": "Oracle 官方 JDK 覆盖新版本积极，企业标准化场景识别度高。",
+        "cons_zh": "授权、商用使用和长期支持策略需要用户自行确认。",
+        "platforms_zh": "Windows / Linux / macOS 主流架构通常覆盖较好，具体以 Oracle 发布包为准。",
+        "scenario_en": "Oracle official JDK builds, enterprise certification, and Oracle-aligned production environments.",
+        "pros_en": "Official Oracle JDK builds tend to cover new releases quickly and are recognizable in enterprise standards.",
+        "cons_en": "Licensing, commercial use, and long-term support terms must be checked by the user.",
+        "platforms_en": "Mainstream Windows / Linux / macOS architectures are usually well covered, subject to Oracle packages.",
+    },
+    "Oracle OpenJDK": {
+        "foojay": "oracle_open_jdk",
+        "scenario_zh": "希望使用 Oracle 官方 OpenJDK 构建、学习测试或保持上游 OpenJDK 语义的场景。",
+        "pros_zh": "官方 OpenJDK 来源清晰，适合验证上游行为和轻量使用。",
+        "cons_zh": "长期支持和企业增强不如商业 JDK 明确，旧版本覆盖可能有限。",
+        "platforms_zh": "Windows / Linux / macOS 主流架构按官方 OpenJDK 发布情况匹配。",
+        "scenario_en": "Oracle official OpenJDK builds, testing, learning, and upstream OpenJDK behavior checks.",
+        "pros_en": "Clear official OpenJDK source, useful for validating upstream behavior.",
+        "cons_en": "Long-term support and enterprise additions are less explicit than commercial JDK builds.",
+        "platforms_en": "Mainstream Windows / Linux / macOS architectures are matched according to official OpenJDK releases.",
     },
     "Amazon Corretto": {
         "foojay": "corretto",
@@ -4627,6 +4738,17 @@ JAVA_VENDOR_PROFILES = {
         "scenario_en": "Enterprise OpenJDK environments that value commercial support options.",
         "pros_en": "Maintained by OpenLogic with clear enterprise support positioning.",
         "cons_en": "Individual users may find Temurin or Zulu simpler.",
+    },
+    "Red Hat OpenJDK": {
+        "foojay": "redhat",
+        "scenario_zh": "Red Hat/RHEL 生态、企业 Linux 服务端，或需要 Red Hat OpenJDK 兼容环境。",
+        "pros_zh": "适合 Red Hat 企业栈和受控服务器环境，旧 LTS 版本支持较清晰。",
+        "cons_zh": "Foojay 上 Windows 包多集中在 8/11/17，macOS 和新大版本覆盖可能不足。",
+        "platforms_zh": "Linux/RHEL 场景优先；Windows 主要覆盖部分 LTS，macOS/新版本可能无包。",
+        "scenario_en": "Red Hat/RHEL ecosystems, enterprise Linux servers, and Red Hat OpenJDK-compatible environments.",
+        "pros_en": "Fits Red Hat enterprise stacks and controlled server environments, especially older LTS lines.",
+        "cons_en": "Foojay Windows packages are mostly older LTS lines such as 8/11/17; macOS/newer majors can be limited.",
+        "platforms_en": "Linux/RHEL first; Windows mainly covers selected LTS lines, while macOS/newer majors may be unavailable.",
     },
     "JetBrains Runtime": {
         "foojay": "jetbrains",
@@ -4725,6 +4847,12 @@ def java_vendor_profile(vendor, language=None):
     result["scenario"] = profile.get(f"scenario_{suffix}") or profile.get("scenario_zh") or ""
     result["pros"] = profile.get(f"pros_{suffix}") or profile.get("pros_zh") or ""
     result["cons"] = profile.get(f"cons_{suffix}") or profile.get("cons_zh") or ""
+    result["platforms"] = (
+        profile.get(f"platforms_{suffix}")
+        or profile.get("platforms_zh")
+        or JAVA_VENDOR_DEFAULT_PLATFORMS.get(suffix)
+        or JAVA_VENDOR_DEFAULT_PLATFORMS["zh"]
+    )
     return result
 
 
@@ -4862,6 +4990,8 @@ def build_registry_name(runtime):
         "Azul Zulu": "Zulu",
         "Microsoft Build of OpenJDK": "Microsoft",
         "Oracle Java": "Oracle",
+        "Oracle JDK": "OracleJDK",
+        "Oracle OpenJDK": "OracleOpenJDK",
         "Eclipse Temurin": "Temurin",
         "GraalVM": "GraalVM",
         "GraalVM Community": "GraalVM_Community",
@@ -4869,9 +4999,11 @@ def build_registry_name(runtime):
         "BellSoft Liberica": "Liberica",
         "SAP SapMachine": "SapMachine",
         "OpenLogic OpenJDK": "OpenLogic",
+        "Red Hat OpenJDK": "RedHat",
         "JetBrains Runtime": "JetBrains",
         "Tencent Kona": "Kona",
         "Huawei Bi Sheng": "BiSheng",
+        "IBM Semeru Certified": "SemeruCertified",
         "Mandrel": "Mandrel",
         "Liberica Native Image Kit": "Liberica_NIK",
         "Gluon GraalVM": "Gluon_GraalVM",
@@ -5210,8 +5342,9 @@ class WindowsTrayIcon:
     ID_TAB_MOVE = 1007
     ID_SETTINGS = 1008
     ID_REPO = 1009
+    ID_FEEDBACK = 1010
 
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_settings=None, on_repo=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
         self.tooltip = tooltip[:127]
         self.icon_path = icon_path
@@ -5224,6 +5357,7 @@ class WindowsTrayIcon:
         self.on_tab_move = on_tab_move
         self.on_settings = on_settings
         self.on_repo = on_repo
+        self.on_feedback = on_feedback
         self.hwnd = None
         self.hicon = None
         self.visible = False
@@ -5349,6 +5483,7 @@ class WindowsTrayIcon:
             user32.AppendMenuW(menu, self.MF_SEPARATOR, 0, None)
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_SETTINGS, "系统设置")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_REPO, "切换到开源项目地址")
+            user32.AppendMenuW(menu, self.MF_STRING, self.ID_FEEDBACK, "提交 GitHub 反馈")
             user32.AppendMenuW(menu, self.MF_SEPARATOR, 0, None)
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_EXIT, "退出")
             point = wintypes.POINT()
@@ -5392,6 +5527,9 @@ class WindowsTrayIcon:
             if command_id == self.ID_REPO and self.on_repo:
                 self.root.after(0, self.on_repo)
                 return 0
+            if command_id == self.ID_FEEDBACK and self.on_feedback:
+                self.root.after(0, self.on_feedback)
+                return 0
             if command_id == self.ID_EXIT:
                 self.root.after(0, self.on_exit)
                 return 0
@@ -5404,7 +5542,7 @@ class WindowsTrayIcon:
 
 
 class PystrayTrayIcon:
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_settings=None, on_repo=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
         self.tooltip = tooltip
         self.icon_path = icon_path
@@ -5417,6 +5555,7 @@ class PystrayTrayIcon:
         self.on_tab_move = on_tab_move
         self.on_settings = on_settings
         self.on_repo = on_repo
+        self.on_feedback = on_feedback
         self.icon = None
         self.visible = False
 
@@ -5456,6 +5595,7 @@ class PystrayTrayIcon:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("系统设置", lambda _icon, _item: ui_call(self.on_settings)),
             pystray.MenuItem("切换到开源项目地址", lambda _icon, _item: ui_call(self.on_repo)),
+            pystray.MenuItem("提交 GitHub 反馈", lambda _icon, _item: ui_call(self.on_feedback)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("退出", lambda _icon, _item: ui_call(self.on_exit)),
         )
@@ -6163,8 +6303,32 @@ class JavaDownloadEngine:
         return True
 
     @staticmethod
+    def _foojay_item_version_text(item, fallback_major=""):
+        filename = normalize_text(item.get("filename"))
+        return (
+            normalize_text(item.get("java_version"))
+            or normalize_text(item.get("jdk_version"))
+            or normalize_text(item.get("distribution_version"))
+            or extract_version_from_filename(filename, fallback_major=fallback_major)
+        )
+
+    @staticmethod
+    def _select_best_foojay_item(items, major_version):
+        matching = [item for item in items if JavaDownloadEngine._foojay_item_matches_major(item, major_version)]
+        if not matching:
+            return None
+
+        def score(item):
+            version_text = JavaDownloadEngine._foojay_item_version_text(item, fallback_major=major_version)
+            latest_rank = 1 if item.get("latest_build_available") else 0
+            downloadable_rank = 1 if item.get("directly_downloadable") or item.get("links", {}).get("pkg_download_redirect") or item.get("direct_download_uri") else 0
+            return (build_java_version_key(version_text, fallback_major=major_version), latest_rank, downloadable_rank)
+
+        return max(matching, key=score)
+
+    @staticmethod
     def _fetch_foojay_distribution(distribution, vendor, major_version, resolve_final_url=False):
-        items = []
+        item = None
         for archive_type in archive_type_candidates():
             url = (
                 "https://api.foojay.io/disco/v3.0/packages"
@@ -6173,16 +6337,15 @@ class JavaDownloadEngine:
             )
             data = NetworkEngine.request_json(url, timeout=5, retries=1, cache_ttl=300)
             items = data.get("result", []) if isinstance(data, dict) else []
-            items = [item for item in items if JavaDownloadEngine._foojay_item_matches_major(item, major_version)]
-            if items:
+            item = JavaDownloadEngine._select_best_foojay_item(items, major_version)
+            if item:
                 break
-        if not items:
+        if not item:
             return None
-        item = items[0]
         redirect_url = item.get("links", {}).get("pkg_download_redirect") or item.get("direct_download_uri")
         if not redirect_url:
             return None
-        version = normalize_text(item.get("java_version") or item.get("distribution_version") or extract_version_from_filename(item.get("filename", ""), fallback_major=major_version))
+        version = JavaDownloadEngine._foojay_item_version_text(item, fallback_major=major_version)
         checksum = clean_sha256(item.get("checksum") or item.get("sha256"))
         checksum_urls = unique_sequence(
             [
@@ -7504,6 +7667,7 @@ class JavaManagerApp:
             self.show_move_tab,
             self.open_settings_from_tray,
             self.open_repository,
+            self.open_feedback,
         )
         if self.tray_icon.install():
             self.tray_icon.show()
@@ -7575,6 +7739,15 @@ class JavaManagerApp:
     def open_repository(self):
         webbrowser.open(GITHUB_REPO)
 
+    def open_feedback(self):
+        url = build_github_feedback_url()
+        try:
+            opened = webbrowser.open(url)
+        except Exception:
+            opened = False
+        if not opened:
+            messagebox.showinfo(tr("feedback_open_failed_title"), tr("feedback_open_failed_text", url=url))
+
     def exit_from_tray(self):
         self._allow_close = True
         if self.single_instance_guard:
@@ -7606,6 +7779,7 @@ class JavaManagerApp:
         self.search_var.trace_add("write", lambda *_args: self.apply_java_filter())
         tk.Button(toolbar, text=tr("toolbar_clear_filter"), command=lambda: self.search_var.set(""), padx=8, pady=4).pack(side=tk.LEFT, padx=4, pady=5)
         tk.Button(toolbar, text=tr("toolbar_settings"), command=self.open_settings, padx=10, pady=5).pack(side=tk.RIGHT, padx=5, pady=5)
+        tk.Button(toolbar, text=tr("toolbar_feedback"), command=self.open_feedback, padx=10, pady=5).pack(side=tk.RIGHT, padx=5, pady=5)
         tk.Button(toolbar, text=tr("toolbar_about"), command=self.open_about, padx=10, pady=5).pack(side=tk.RIGHT, padx=5, pady=5)
 
         self.notebook = ttk.Notebook(self.root)
@@ -7899,6 +8073,7 @@ class JavaManagerApp:
                     tr(
                         "download_vendor_profile",
                         scenario=profile.get("scenario", ""),
+                        platforms=profile.get("platforms", ""),
                         pros=profile.get("pros", ""),
                         cons=profile.get("cons", ""),
                     ),
@@ -8541,7 +8716,8 @@ class JavaManagerApp:
         tk.Label(body, text=tr("about_features"), wraplength=500, justify="center").pack(pady=5)
         tk.Label(body, text=self._screen_summary_text(), wraplength=500, justify="center").pack(pady=(8, 4))
         tk.Label(body, text=NetworkEngine.describe_environment(), wraplength=500, justify="center").pack(pady=(4, 10))
-        tk.Button(body, text=tr("open_repo"), command=lambda: webbrowser.open(GITHUB_REPO)).pack(pady=16)
+        tk.Button(body, text=tr("open_repo"), command=lambda: webbrowser.open(GITHUB_REPO)).pack(pady=(12, 6))
+        tk.Button(body, text=tr("open_feedback"), command=self.open_feedback).pack(pady=(0, 16))
         self._install_mousewheel_scroll(body, canvas)
         self._traverse_and_paint(top)
 

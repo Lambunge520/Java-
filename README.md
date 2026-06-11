@@ -6,7 +6,7 @@ LJM(local java manager) Java 核心环境管家是一款跨平台 Java 环境管
 
 请前往 [GitHub Releases](https://github.com/Lambunge520/Java-/releases) 下载最新版本。
 
-当前版本：`2.7 Stable`
+当前版本：`2.8 Stable`
 
 ## 主要功能
 
@@ -16,13 +16,14 @@ LJM(local java manager) Java 核心环境管家是一款跨平台 Java 环境管
 - Java 损坏检测、智能修复、完整修复、修复前备份与失败回滚。
 - Java 更新检测、断点续传、下载缓存复用、SHA256 校验。
 - 多镜像源测速、自动记忆最快源，优先使用更适合当前网络的源。
-- 支持 Eclipse Temurin、IBM Semeru OpenJ9、Azul Zulu、Alibaba Dragonwell、GraalVM、GraalVM Community、Microsoft Build of OpenJDK、Oracle Java、Amazon Corretto、BellSoft Liberica、SAP SapMachine、OpenLogic OpenJDK、JetBrains Runtime、Tencent Kona、Huawei Bi Sheng、Mandrel、Liberica Native Image Kit、Gluon GraalVM、Generic OpenJDK 等多类型 Java，并在下载页展示适合场景、优点与缺点。
+- 支持 Eclipse Temurin、IBM Semeru OpenJ9、IBM Semeru Certified、Azul Zulu、Alibaba Dragonwell、GraalVM、GraalVM Community、Microsoft Build of OpenJDK、Oracle Java、Oracle JDK、Oracle OpenJDK、Amazon Corretto、BellSoft Liberica、SAP SapMachine、OpenLogic OpenJDK、Red Hat OpenJDK、JetBrains Runtime、Tencent Kona、Huawei Bi Sheng、Mandrel、Liberica Native Image Kit、Gluon GraalVM、Generic OpenJDK 等多类型 Java，并在下载页展示适合场景、平台覆盖、优点与缺点。
 - Java 下载目录名会保留发行商类型和大版本，例如 `GraalVM_jdk21_21.0.11`、`Azul_Zulu_jdk17_17.0.12_7`，便于区分不同 Java 类型。
 - 下载链路会优先使用 Foojay/厂商元数据，并对 GitHub Release、`objects.githubusercontent.com`、`release-assets.githubusercontent.com` 等地址生成代理候选；Foojay 在当前网络下异常时会尝试 curl JSON 兜底。
 - 界面加入主窗口和弹窗淡入/淡出动画，栏目切换不销毁重建文本控件，降低文字闪烁。
 - 所有主界面栏目、设置页和关于页支持滚动；鼠标滚轮、触摸板高精度滚动、Shift 横向滚动和触摸屏拖拽滚动统一适配。
 - 桌面端加入单实例保护，重复打开时不会新建多个窗口，会唤醒并置顶已有窗口；无桌面端保持可多开，方便脚本批处理。
 - 支持 Windows、Linux、macOS，包含托盘、开机自启、最小化启动、多语言界面。
+- 内置 GitHub 反馈入口，桌面工具栏、关于页、托盘菜单可直接打开预填系统信息的 Issue；无桌面端可用 `feedback` 命令生成同一条反馈链接。
 - 支持 GitHub Release 压缩包热更新，可自动识别并处理 zip、tar.gz、tgz 等发布包。
 
 ## 界面预览
@@ -56,6 +57,7 @@ LJM(local java manager) Java 核心环境管家是一款跨平台 Java 环境管
 ```powershell
 python .\src\LJM.pyw
 python .\src\LJM_headless.pyw
+python .\src\LJM_headless.pyw feedback --stdout --message "这里写反馈内容"
 ```
 
 ## 本地打包
@@ -76,7 +78,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_headless_windows.ps1
 
 ## 维护说明
 
-桌面端和无桌面端共用 `src/LJM.pyw` 核心版本与核心逻辑，后续版本升级默认同时维护 Windows、Linux、macOS 三个平台产物。2.7 起无桌面端也支持 `download`、`move` 和 `vendors` 命令。维护约定见 `docs/MAINTENANCE.md`。
+桌面端和无桌面端共用 `src/LJM.pyw` 核心版本与核心逻辑，后续版本升级默认同时维护 Windows、Linux、macOS 三个平台产物。2.7 起无桌面端也支持 `download`、`move` 和 `vendors` 命令，2.8 起 `vendors` 会同步输出各 Java 类型的平台覆盖说明。维护约定见 `docs/MAINTENANCE.md`。
 
 提交或发布前可运行清理脚本，避免临时文件和打包产物进入 GitHub：
 

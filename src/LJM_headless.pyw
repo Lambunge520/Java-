@@ -265,6 +265,7 @@ def command_vendors(_args):
                 "vendor": vendor,
                 "foojay": profile.get("foojay"),
                 "scenario": profile.get("scenario"),
+                "platforms": profile.get("platforms"),
                 "pros": profile.get("pros"),
                 "cons": profile.get("cons"),
             }
@@ -274,6 +275,18 @@ def command_vendors(_args):
         "platform": core.current_java_download_platform_text(),
         "majors": list(core.JAVA_MAJOR_OPTIONS),
         "items": items,
+    }
+
+
+def command_feedback(args):
+    message = getattr(args, "message", "") or ""
+    title = getattr(args, "title", "") or ""
+    return {
+        "ok": True,
+        "action": "feedback",
+        "url": core.build_github_feedback_url(message, title=title),
+        "title": title or f"[Feedback] LJM Java Manager {core.VERSION}",
+        "body": core.github_feedback_body(message),
     }
 
 
@@ -335,6 +348,11 @@ def build_parser():
 
     p_vendors = sub.add_parser("vendors", parents=[common], help="list supported Java vendors and usage guidance")
     p_vendors.set_defaults(func=command_vendors)
+
+    p_feedback = sub.add_parser("feedback", parents=[common], help="generate a prefilled GitHub feedback issue URL")
+    p_feedback.add_argument("--message", default="", help="optional feedback text to prefill")
+    p_feedback.add_argument("--title", default="", help="optional GitHub issue title")
+    p_feedback.set_defaults(func=command_feedback)
 
     p_move = sub.add_parser("move", parents=[common], help="move a registered Java runtime and update registry/index")
     p_move.add_argument("target", help="registered name or Java home path")

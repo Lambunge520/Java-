@@ -4,6 +4,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 
 def load_core():
@@ -30,6 +31,23 @@ class CoreFeatureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.core = load_core()
+
+    def test_version_and_user_agent_are_28(self):
+        self.assertEqual(self.core.VERSION, "2.8 Stable")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.8")
+
+    def test_github_feedback_url_prefills_issue_context(self):
+        url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+
+        self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
+        self.assertEqual(query["template"][0], "bug_report.md")
+        self.assertIn("2.8 Stable", query["body"][0])
+        self.assertIn("Tool version", query["body"][0])
+        self.assertIn("Download platform", query["body"][0])
+        self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
+        self.assertLess(len(url), 6000)
 
     def test_java_filter_matches_multiple_terms_across_fields(self):
         row = {
@@ -65,12 +83,28 @@ class CoreFeatureTests(unittest.TestCase):
 
     def test_java_vendor_profiles_include_scenarios_and_foojay_ids(self):
         expected = {
-            "GraalVM": "graalvm",
+            "Eclipse Temurin": "temurin",
+            "IBM Semeru OpenJ9": "semeru",
             "Azul Zulu": "zulu",
+            "Alibaba Dragonwell": "dragonwell",
+            "GraalVM": "graalvm",
+            "GraalVM Community": "graalvm_community",
+            "Microsoft Build of OpenJDK": "microsoft",
+            "Oracle Java": "oracle_open_jdk",
+            "Oracle JDK": "oracle",
+            "Oracle OpenJDK": "oracle_open_jdk",
             "Amazon Corretto": "corretto",
             "BellSoft Liberica": "liberica",
             "SAP SapMachine": "sap_machine",
+            "OpenLogic OpenJDK": "openlogic",
             "JetBrains Runtime": "jetbrains",
+            "Tencent Kona": "kona",
+            "Huawei Bi Sheng": "bisheng",
+            "Mandrel": "mandrel",
+            "Liberica Native Image Kit": "liberica_native",
+            "Gluon GraalVM": "gluon_graalvm",
+            "Red Hat OpenJDK": "redhat",
+            "IBM Semeru Certified": "semeru_certified",
         }
 
         for vendor, distribution in expected.items():
@@ -81,6 +115,22 @@ class CoreFeatureTests(unittest.TestCase):
                 self.assertTrue(profile["scenario"])
                 self.assertTrue(profile["pros"])
                 self.assertTrue(profile["cons"])
+                self.assertTrue(profile["platforms"])
+
+    def test_new_vendor_registry_tokens_are_clear(self):
+        cases = [
+            ("Oracle JDK", "OracleJDK_21.0.9"),
+            ("Oracle OpenJDK", "OracleOpenJDK_21.0.2"),
+            ("Red Hat OpenJDK", "RedHat_17.0.16"),
+            ("IBM Semeru Certified", "SemeruCertified_21.0.9"),
+        ]
+
+        for vendor, expected in cases:
+            with self.subTest(vendor=vendor):
+                self.assertEqual(
+                    self.core.build_registry_name({"vendor": vendor, "version": expected.split("_", 1)[1]}),
+                    expected,
+                )
 
     def test_java_install_dir_name_keeps_vendor_type_visible(self):
         cases = [
@@ -108,6 +158,29 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertFalse(self.core.JavaDownloadEngine._foojay_item_matches_major(wrong_java_major, "21"))
         self.assertTrue(self.core.JavaDownloadEngine._foojay_item_matches_major(matching_java_major, "21"))
+
+    def test_foojay_item_selection_prefers_highest_java_version(self):
+        items = [
+            {
+                "java_version": "17.0.3",
+                "distribution_version": "17.0.3.0.6",
+                "filename": "java-17-openjdk-17.0.3.0.6-2.win.x86_64.zip",
+            },
+            {
+                "java_version": "21.0.2",
+                "distribution_version": "21.0.2+13",
+                "filename": "openjdk-21.0.2_windows-x64_bin.zip",
+            },
+            {
+                "java_version": "17.0.16+8",
+                "distribution_version": "17.0.16.0.8",
+                "filename": "java-17-openjdk-17.0.16.0.8-1.win.jdk.x86_64.zip",
+            },
+        ]
+
+        selected = self.core.JavaDownloadEngine._select_best_foojay_item(items, "17")
+
+        self.assertEqual(selected["java_version"], "17.0.16+8")
 
     def test_scroll_units_support_mousewheel_touchpad_and_linux_buttons(self):
         self.assertEqual(self.core.scroll_units_from_wheel_event(delta=120), -1)
@@ -166,12 +239,13 @@ class HeadlessFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.headless = load_headless()
 
-    def test_headless_parser_has_download_and_move_commands(self):
+    def test_headless_parser_has_download_move_and_feedback_commands(self):
         parser = self.headless.build_parser()
 
         download_args = parser.parse_args(["download", "Eclipse Temurin", "21", r"D:\Java"])
         move_args = parser.parse_args(["move", "Temurin_21", r"D:\Java\Temurin_21"])
         vendors_args = parser.parse_args(["vendors"])
+        feedback_args = parser.parse_args(["feedback", "--message", "OpenJ9 source is slow"])
 
         self.assertEqual(download_args.command, "download")
         self.assertIs(download_args.func, self.headless.command_download)
@@ -179,6 +253,30 @@ class HeadlessFeatureTests(unittest.TestCase):
         self.assertIs(move_args.func, self.headless.command_move)
         self.assertEqual(vendors_args.command, "vendors")
         self.assertIs(vendors_args.func, self.headless.command_vendors)
+        self.assertEqual(feedback_args.command, "feedback")
+        self.assertIs(feedback_args.func, self.headless.command_feedback)
+
+    def test_headless_feedback_exports_github_issue_url(self):
+        parser = self.headless.build_parser()
+        args = parser.parse_args(["feedback", "--message", "Java update list is blocked"])
+
+        payload = self.headless.command_feedback(args)
+
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["action"], "feedback")
+        self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
+        self.assertIn("2.8 Stable", payload["body"])
+        self.assertIn("Java update list is blocked", payload["body"])
+
+    def test_headless_vendors_export_platform_guidance(self):
+        payload = self.headless.command_vendors(None)
+        vendors = {item["vendor"]: item for item in payload["items"]}
+
+        self.assertGreaterEqual(len(vendors), 21)
+        self.assertIn("Oracle JDK", vendors)
+        self.assertIn("Red Hat OpenJDK", vendors)
+        self.assertTrue(vendors["Oracle JDK"]["platforms"])
+        self.assertTrue(vendors["Red Hat OpenJDK"]["platforms"])
 
 
 if __name__ == "__main__":
