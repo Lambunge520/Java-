@@ -6,7 +6,7 @@ LJM 是一个跨平台 Java 环境管理工具，用来扫描、注册、下载�
 
 请前往 [Releases](https://github.com/Lambunge520/Java-/releases) 下载最新版本。
 
-当前版本：`2.9 Stable`
+当前版本：`2.9.1 Hotfix`
 
 ## 选哪个包
 

@@ -87,6 +87,9 @@ def registry_rows():
                 "java_home": java_home,
                 "vendor": runtime["vendor"],
                 "major": runtime["major"],
+                "package_type": runtime.get("package_type", "jdk"),
+                "update_java_home": core.runtime_update_java_home(runtime),
+                "nested_jre_home": runtime.get("nested_jre_home", ""),
                 "version": core.version_display_text(runtime["version"]),
                 "status": report["status"],
                 "healthy": report["healthy"],
@@ -112,10 +115,11 @@ def find_source_jdk(extract_dir):
     return core.find_source_jdk_dir(extract_dir)
 
 
-def download_latest_jdk(vendor, major, log_prefix="download"):
-    info = core.JavaDownloadEngine.get_latest_download_info(vendor, major)
+def download_latest_jdk(vendor, major, log_prefix="download", package_type="jdk"):
+    package_type = core.normalize_java_package_type(package_type)
+    info = core.JavaDownloadEngine.get_latest_download_info(vendor, major, package_type=package_type)
     if not info:
-        raise RuntimeError(f"no available update source for {vendor} {major}")
+        raise RuntimeError(f"no available update source for {vendor} {package_type} {major}")
 
     suffix = core.download_info_archive_suffix(info)
     fd, archive_path = tempfile.mkstemp(suffix=suffix)
@@ -143,26 +147,31 @@ def extract_archive(info):
 def repair_or_update_target(target, mode="smart", vendor=None, major=None):
     java_home, registry_name = resolve_target(target)
     runtime = core.read_java_runtime_info(java_home)
+    update_java_home = core.runtime_update_java_home(runtime)
     vendor = vendor or runtime["vendor"]
     major = str(major or runtime["major"])
+    package_type = core.runtime_update_package_type(runtime)
     info = None
     extract_dir = ""
     try:
-        info = download_latest_jdk(vendor, major, log_prefix=f"{vendor}-{major}")
+        info = download_latest_jdk(vendor, major, log_prefix=f"{vendor}-{package_type}-{major}", package_type=package_type)
         extract_dir = extract_archive(info)
         source_jdk = find_source_jdk(extract_dir)
         if mode == "smart":
-            core.repair_java_home_smart(source_jdk, java_home)
+            core.repair_java_home_smart(source_jdk, update_java_home)
         elif mode == "full":
-            core.replace_java_home_atomically(source_jdk, java_home)
+            core.replace_java_home_atomically(source_jdk, update_java_home)
         else:
             raise ValueError("mode must be smart or full")
-        synced = core.JavaRegistryAdapter.sync_runtime_registration(java_home, preferred_name=registry_name)
+        synced = core.JavaRegistryAdapter.sync_runtime_registration(update_java_home, preferred_name=registry_name)
         return {
-            "java_home": java_home,
+            "requested_java_home": java_home,
+            "java_home": update_java_home,
+            "nested_jre_home": runtime.get("nested_jre_home", ""),
             "registry_name": registry_name,
             "vendor": vendor,
             "major": major,
+            "package_type": package_type,
             "mode": mode,
             "latest_version": core.version_display_text(info["version"]),
             "source": info.get("source"),
@@ -208,10 +217,13 @@ def command_scan(args):
     registered = []
     for java_home in homes:
         runtime = core.read_java_runtime_info(java_home)
+        register_home = core.runtime_update_java_home(runtime)
+        if core.normalize_path(register_home) != core.normalize_path(java_home):
+            runtime = core.read_java_runtime_info(register_home)
         registry_name = core.build_registry_name(runtime)
-        jvm_path = core.find_jvm_library(java_home)
-        if core.JavaRegistryAdapter.register(registry_name, java_home, jvm_path):
-            registered.append({"registry_name": registry_name, "java_home": java_home})
+        jvm_path = core.find_jvm_library(register_home)
+        if core.JavaRegistryAdapter.register(registry_name, register_home, jvm_path):
+            registered.append({"registry_name": registry_name, "java_home": register_home})
     return {"ok": True, "found": homes, "registered": registered}
 
 
@@ -222,7 +234,7 @@ def command_check_updates(_args):
             rows.append({**item, "latest_version": "", "has_update": False, "error": "runtime is not usable"})
             continue
         try:
-            info = core.JavaDownloadEngine.get_latest_download_info(item["vendor"], item["major"])
+            info = core.JavaDownloadEngine.get_latest_download_info(item["vendor"], item["major"], package_type=item.get("package_type"))
             if not info:
                 rows.append({**item, "latest_version": "", "has_update": False, "error": "no update source"})
                 continue
@@ -252,7 +264,7 @@ def command_update(args):
 
 def command_download(args):
     progress_cb, status_cb = progress_logger(f"download-{args.vendor}-{args.major}")
-    result = core.download_and_install_java(args.vendor, args.major, args.parent, progress_cb, status_cb)
+    result = core.download_and_install_java(args.vendor, args.major, args.parent, progress_cb, status_cb, package_type=args.package_type)
     return {"ok": True, "action": "download", "result": result}
 
 
@@ -345,16 +357,17 @@ def build_parser():
     p_repair.add_argument("--major")
     p_repair.set_defaults(func=command_repair)
 
-    p_update = sub.add_parser("update", parents=[common], help="download latest same-major JDK and fully replace target")
+    p_update = sub.add_parser("update", parents=[common], help="download latest same-major runtime and fully replace target")
     p_update.add_argument("target", help="registered name or Java home path")
     p_update.add_argument("--vendor")
     p_update.add_argument("--major")
     p_update.set_defaults(func=command_update)
 
-    p_download = sub.add_parser("download", parents=[common], help="download and register a new JDK under a parent folder")
+    p_download = sub.add_parser("download", parents=[common], help="download and register a new Java runtime under a parent folder")
     p_download.add_argument("vendor", help="Java vendor, for example: Eclipse Temurin")
     p_download.add_argument("major", help="Java major version, for example: 21")
     p_download.add_argument("parent", help="parent folder for the new Java installation")
+    p_download.add_argument("--package-type", choices=("jdk", "jre"), default="jdk", help="runtime package type to download")
     p_download.set_defaults(func=command_download)
 
     p_vendors = sub.add_parser("vendors", parents=[common], help="list supported Java vendors and usage guidance")

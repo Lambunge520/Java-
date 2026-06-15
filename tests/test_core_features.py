@@ -34,9 +34,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_29(self):
-        self.assertEqual(self.core.VERSION, "2.9 Stable")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9")
+    def test_version_and_user_agent_are_hotfix_291(self):
+        self.assertEqual(self.core.VERSION, "2.9.1 Hotfix")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9.1")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -45,7 +45,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("2.9 Stable", query["body"][0])
+        self.assertIn("2.9.1 Hotfix", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -103,8 +103,8 @@ class CoreFeatureTests(unittest.TestCase):
         calls = []
         original = self.core.JavaDownloadEngine._fetch_github_profile_releases
 
-        def fake_profile(vendor, major_version, direct_first=False, mirrors_only=False):
-            calls.append((vendor, major_version, direct_first, mirrors_only))
+        def fake_profile(vendor, major_version, direct_first=False, mirrors_only=False, package_type="jdk"):
+            calls.append((vendor, major_version, direct_first, mirrors_only, package_type))
             return {"version": "21.0.1", "url": "https://example.invalid/jdk.zip"}
 
         try:
@@ -114,7 +114,7 @@ class CoreFeatureTests(unittest.TestCase):
             self.core.JavaDownloadEngine._fetch_github_profile_releases = original
 
         self.assertEqual(result["version"], "21.0.1")
-        self.assertEqual(calls, [("Microsoft Build of OpenJDK", "21", False, True)])
+        self.assertEqual(calls, [("Microsoft Build of OpenJDK", "21", False, True, "jdk")])
         self.assertIn(
             "microsoft/openjdk-adoptium-marketplace-data",
             self.core.java_vendor_github_repos("Microsoft Build of OpenJDK", "21"),
@@ -205,6 +205,70 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertTrue(self.core.java_row_matches_query(row, "temurin 17 ok"))
         self.assertTrue(self.core.java_row_matches_query(row, "adoptium 正常"))
         self.assertFalse(self.core.java_row_matches_query(row, "temurin 21"))
+
+    def test_legacy_jre8_nested_home_detects_major_8_not_default_17(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            java_home = Path(tmp) / "Java" / "jre1.8.0_351" / "jre"
+            bin_dir = java_home / "bin"
+            bin_dir.mkdir(parents=True)
+            (bin_dir / ("java.exe" if self.core.IS_WIN else "java")).write_text("", encoding="utf-8")
+
+            runtime = self.core.read_java_runtime_info(str(java_home))
+
+        self.assertEqual(runtime["major"], "8")
+        self.assertIn("1.8.0_351", runtime["version"])
+        self.assertEqual(runtime["package_type"], "jre")
+
+    def test_embedded_jre_inside_vendor_jdk_uses_parent_jdk_update_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            jdk_home = Path(tmp) / "Java" / "dragonwell-8.29.28"
+            jre_home = jdk_home / "jre"
+            (jdk_home / "bin").mkdir(parents=True)
+            (jre_home / "bin").mkdir(parents=True)
+            (jdk_home / "release").write_text(
+                'JAVA_VERSION="1.8.0_452"\nIMPLEMENTOR="Alibaba Dragonwell"\n',
+                encoding="utf-8",
+            )
+            (jdk_home / "bin" / ("java.exe" if self.core.IS_WIN else "java")).write_text("", encoding="utf-8")
+            (jdk_home / "bin" / ("javac.exe" if self.core.IS_WIN else "javac")).write_text("", encoding="utf-8")
+            (jre_home / "bin" / ("java.exe" if self.core.IS_WIN else "java")).write_text("", encoding="utf-8")
+
+            runtime = self.core.read_java_runtime_info(str(jre_home))
+
+        self.assertEqual(runtime["vendor"], "Alibaba Dragonwell")
+        self.assertEqual(runtime["major"], "8")
+        self.assertEqual(runtime["package_type"], "jdk")
+        self.assertEqual(Path(self.core.runtime_update_java_home(runtime)), jdk_home)
+        self.assertEqual(self.core.runtime_update_package_type(runtime), "jdk")
+        self.assertEqual(Path(runtime["nested_jre_home"]), jre_home)
+
+    def test_jre_runtime_update_requests_jre_package_type(self):
+        calls = []
+        original_fetch = self.core.JavaDownloadEngine._fetch_foojay_distribution
+        original_cache = dict(self.core.JavaDownloadEngine._cache)
+
+        def fake_fetch(distribution, vendor, major_version, resolve_final_url=False, package_type="jdk"):
+            calls.append((distribution, vendor, major_version, package_type))
+            return {
+                "version": "1.8.0_402",
+                "url": "https://download.example.invalid/jre8.zip",
+                "urls": ["https://download.example.invalid/jre8.zip"],
+                "source": "Foojay temurin",
+                "vendor": vendor,
+                "package_type": package_type,
+            }
+
+        try:
+            self.core.JavaDownloadEngine._cache.clear()
+            self.core.JavaDownloadEngine._fetch_foojay_distribution = staticmethod(fake_fetch)
+            result = self.core.JavaDownloadEngine.get_latest_download_info("Eclipse Temurin", "8", package_type="jre")
+        finally:
+            self.core.JavaDownloadEngine._fetch_foojay_distribution = original_fetch
+            self.core.JavaDownloadEngine._cache.clear()
+            self.core.JavaDownloadEngine._cache.update(original_cache)
+
+        self.assertEqual(result["package_type"], "jre")
+        self.assertIn(("temurin", "Eclipse Temurin", "8", "jre"), calls)
 
     def test_next_available_java_install_dir_uses_versioned_name(self):
         info = {
@@ -369,8 +433,8 @@ class CoreFeatureTests(unittest.TestCase):
         try:
             self.core.APP_CONFIG["download_cache_enabled"] = False
             self.core.APP_CONFIG["verify_download_sha256"] = False
-            self.core.JavaDownloadEngine.get_latest_download_info = staticmethod(lambda vendor, major: dict(primary))
-            self.core.JavaDownloadEngine.get_download_info_candidates = staticmethod(lambda vendor, major: [dict(primary), dict(fallback)])
+            self.core.JavaDownloadEngine.get_latest_download_info = staticmethod(lambda vendor, major, package_type="jdk": dict(primary))
+            self.core.JavaDownloadEngine.get_download_info_candidates = staticmethod(lambda vendor, major, package_type="jdk": [dict(primary), dict(fallback)])
             self.core.NetworkEngine.download_from_candidates = staticmethod(fake_download)
             self.core.JavaRegistryAdapter.sync_runtime_registration = staticmethod(lambda java_home, preferred_name=None: ["Temurin_21"])
 
@@ -388,6 +452,52 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertEqual(calls[1], fallback["urls"])
         self.assertEqual(result["source"], "Fallback")
         self.assertIn("21.0.2", result["latest_version"])
+
+    def test_download_and_install_uses_requested_jre_package_type(self):
+        info = {
+            "vendor": "Eclipse Temurin",
+            "major_version": "8",
+            "version": "1.8.0_402",
+            "package_type": "jre",
+            "url": "https://download.invalid/jre.zip",
+            "urls": ["https://download.invalid/jre.zip"],
+            "source": "Test JRE",
+        }
+        calls = []
+        previous_cache = self.core.APP_CONFIG.get("download_cache_enabled")
+        previous_verify = self.core.APP_CONFIG.get("verify_download_sha256")
+        original_latest = self.core.JavaDownloadEngine.get_latest_download_info
+        original_download = self.core.NetworkEngine.download_from_candidates
+        original_sync = self.core.JavaRegistryAdapter.sync_runtime_registration
+
+        def fake_latest(vendor, major, package_type="jdk"):
+            calls.append((vendor, major, package_type))
+            return dict(info)
+
+        def fake_download(urls, dest, *_args, **_kwargs):
+            with zipfile.ZipFile(dest, "w") as archive:
+                archive.writestr("jre-8/bin/java.exe" if self.core.IS_WIN else "jre-8/bin/java", "")
+            return urls[0]
+
+        try:
+            self.core.APP_CONFIG["download_cache_enabled"] = False
+            self.core.APP_CONFIG["verify_download_sha256"] = False
+            self.core.JavaDownloadEngine.get_latest_download_info = staticmethod(fake_latest)
+            self.core.NetworkEngine.download_from_candidates = staticmethod(fake_download)
+            self.core.JavaRegistryAdapter.sync_runtime_registration = staticmethod(lambda java_home, preferred_name=None: ["Temurin_8_JRE"])
+
+            with tempfile.TemporaryDirectory() as tmp:
+                result = self.core.download_and_install_java("Eclipse Temurin", "8", tmp, package_type="jre")
+        finally:
+            self.core.APP_CONFIG["download_cache_enabled"] = previous_cache
+            self.core.APP_CONFIG["verify_download_sha256"] = previous_verify
+            self.core.JavaDownloadEngine.get_latest_download_info = original_latest
+            self.core.NetworkEngine.download_from_candidates = original_download
+            self.core.JavaRegistryAdapter.sync_runtime_registration = original_sync
+
+        self.assertEqual(calls, [("Eclipse Temurin", "8", "jre")])
+        self.assertEqual(result["package_type"], "jre")
+        self.assertIn("_jre8_", Path(result["java_home"]).name)
 
     def test_download_and_install_repairs_unix_java_permissions_from_zip(self):
         info = {
@@ -424,7 +534,7 @@ class CoreFeatureTests(unittest.TestCase):
             self.core.IS_WIN = False
             self.core.sys.platform = "linux"
             self.core.os.chmod = record_chmod
-            self.core.JavaDownloadEngine.get_latest_download_info = staticmethod(lambda vendor, major: dict(info))
+            self.core.JavaDownloadEngine.get_latest_download_info = staticmethod(lambda vendor, major, package_type="jdk": dict(info))
             self.core.NetworkEngine.download_from_candidates = staticmethod(fake_download)
             self.core.JavaRegistryAdapter.sync_runtime_registration = staticmethod(lambda java_home, preferred_name=None: ["Temurin_21"])
 
@@ -728,7 +838,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("2.9 Stable", payload["body"])
+        self.assertIn("2.9.1 Hotfix", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_defaults_use_nogui_name(self):

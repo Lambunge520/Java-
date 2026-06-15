@@ -81,7 +81,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 
-VERSION = "2.9 Stable"
+VERSION = "2.9.1 Hotfix"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -98,6 +98,7 @@ GITHUB_MIRROR_PREFIXES = (
     "https://hub.gitmirror.com/",
 )
 ADOPTIUM_API_ENDPOINTS = ("latest", "feature_releases")
+JAVA_PACKAGE_TYPES = ("jdk", "jre")
 
 JAVA_BLACK_ICON = (
     b"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAwVpQ"
@@ -3706,7 +3707,7 @@ def normalize_text(value):
 
 def default_headers():
     return {
-        "User-Agent": "JavaManager/2.9",
+        "User-Agent": "JavaManager/2.9.1",
         "Accept": "application/json, text/plain, */*",
     }
 
@@ -4283,7 +4284,7 @@ def extract_major_from_version(version_text, fallback="17"):
     text = normalize_text(version_text).lower()
     if not text:
         return fallback
-    if text.startswith("1.8") or text.startswith("8u") or "jdk8u" in text:
+    if re.search(r"(?<!\d)(?:1\.8(?:\.0)?(?:[_\.\-]?\d+)?|8u\d+|jdk8u\d+|jre8u\d+)", text):
         return "8"
     match = re.search(r"(?<!\d)(\d{1,2})(?:\.\d+|u\d+|_|-|\+|$)", text)
     if match:
@@ -4302,11 +4303,13 @@ def build_java_version_key(version_text, fallback_major=None):
     if build_match:
         build = int(build_match.group(1))
 
-    if text.startswith("1.8") or text.startswith("8u") or "jdk8u" in text:
+    legacy_8_match = re.search(r"(?<!\d)(?:1\.8\.0[_\.\-]?(\d+)|8u(\d+)|jdk8u(\d+)|jre8u(\d+))", text)
+    if legacy_8_match:
         update = 0
-        update_match = re.search(r"(?:1\.8\.0[_\.]?|8u|jdk8u)(\d+)", text)
-        if update_match:
-            update = int(update_match.group(1))
+        for group in legacy_8_match.groups():
+            if group:
+                update = int(group)
+                break
         return (8, 0, update, 0, build)
 
     version_match = re.search(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?", text)
@@ -4319,6 +4322,11 @@ def build_java_version_key(version_text, fallback_major=None):
 
     major = int(fallback_major or 0)
     return (major, 0, 0, 0, build)
+
+
+def normalize_java_package_type(package_type):
+    value = normalize_text(package_type).lower()
+    return "jre" if value == "jre" else "jdk"
 
 
 def is_update_available(current_version, latest_version, major_version):
@@ -4413,10 +4421,11 @@ def download_info_archive_suffix(info):
 
 def archive_cache_filename(info, suffix):
     vendor = sanitize_registry_name(info.get("vendor") or "JDK")
+    package_type = sanitize_registry_name(normalize_java_package_type(info.get("package_type")))
     major = sanitize_registry_name(info.get("major_version") or extract_major_from_version(info.get("version"), fallback="jdk"))
     version = sanitize_registry_name(version_display_text(info.get("version")))
     url_hash = hashlib.sha256(normalize_text(info.get("url")).encode("utf-8", errors="ignore")).hexdigest()[:12]
-    return f"{vendor}_{major}_{version}_{url_hash}{suffix}"
+    return f"{vendor}_{package_type}_{major}_{version}_{url_hash}{suffix}"
 
 
 def archive_cache_path(info, suffix):
@@ -4498,9 +4507,11 @@ def extract_version_from_filename(text, fallback_major=None):
     if not value:
         return f"JDK {fallback_major}" if fallback_major else "未知版本"
     patterns = [
+        r"(\d+\.\d+\.\d+[_-]\d+)",
         r"(\d+\.\d+\.\d+\.\d+)",
         r"(\d+\.\d+\.\d+\+\d+)",
         r"(\d+\.\d+\.\d+)",
+        r"(8u\d+)",
         r"(\d+\+\d+)",
     ]
     for pattern in patterns:
@@ -4731,15 +4742,65 @@ def find_javac_binary(java_home):
     return ""
 
 
+def nested_jre_parent_java_home(java_home):
+    java_home = os.path.abspath(os.path.expanduser(normalize_text(java_home)))
+    if os.path.basename(java_home).lower() != "jre":
+        return ""
+    parent = os.path.dirname(java_home)
+    if not parent or not os.path.isdir(parent):
+        return ""
+    if not find_java_binary(java_home):
+        return ""
+    if find_javac_binary(parent):
+        return parent
+    return ""
+
+
+def java_runtime_context_home(java_home):
+    java_home = os.path.abspath(os.path.expanduser(normalize_text(java_home)))
+    return nested_jre_parent_java_home(java_home) or java_home
+
+
+def java_home_version_candidates(java_home, release):
+    java_home = os.path.abspath(os.path.expanduser(normalize_text(java_home)))
+    candidates = [
+        release.get("JAVA_RUNTIME_VERSION"),
+        release.get("JAVA_VERSION"),
+        release.get("IMPLEMENTOR_VERSION"),
+    ]
+    base_name = normalize_text(os.path.basename(java_home))
+    parent_name = normalize_text(os.path.basename(os.path.dirname(java_home)))
+    if base_name.lower() in ("jre", "jdk") and parent_name:
+        candidates.append(parent_name)
+    candidates.append(base_name)
+    return unique_sequence([candidate for candidate in candidates if normalize_text(candidate)])
+
+
+def detect_java_package_type(java_home):
+    if find_javac_binary(java_home):
+        return "jdk"
+    if find_java_binary(java_home):
+        return "jre"
+    return "jdk"
+
+
+def select_java_version_text(java_home, release):
+    candidates = java_home_version_candidates(java_home, release)
+    for candidate in candidates:
+        if extract_major_from_version(candidate, fallback=""):
+            return normalize_text(candidate)
+    return normalize_text(candidates[0] if candidates else "") or "未知版本"
+
+
 def read_java_runtime_info(java_home):
-    release = parse_release_file(java_home)
-    version = (
-        release.get("JAVA_RUNTIME_VERSION")
-        or release.get("JAVA_VERSION")
-        or normalize_text(os.path.basename(java_home))
-        or "未知版本"
-    )
+    java_home = os.path.abspath(os.path.expanduser(normalize_text(java_home)))
+    context_home = java_runtime_context_home(java_home)
+    nested_jre_home = java_home if normalize_path(context_home) != normalize_path(java_home) else ""
+    release = parse_release_file(context_home)
+    version = select_java_version_text(context_home, release)
     major = extract_major_from_version(version, fallback="17")
+    package_type = detect_java_package_type(context_home)
+    home_package_type = detect_java_package_type(java_home)
     content = " ".join(f"{k}={v}" for k, v in release.items()).upper()
     vendor = "Generic OpenJDK"
     jvm_impl = "hotspot"
@@ -4764,10 +4825,22 @@ def read_java_runtime_info(java_home):
         "java_home": java_home,
         "version": version,
         "major": major,
+        "package_type": package_type,
+        "home_package_type": home_package_type,
+        "update_java_home": context_home,
+        "nested_jre_home": nested_jre_home,
         "vendor": vendor,
         "jvm_impl": jvm_impl,
         "release": release,
     }
+
+
+def runtime_update_java_home(runtime):
+    return normalize_text((runtime or {}).get("update_java_home")) or normalize_text((runtime or {}).get("java_home"))
+
+
+def runtime_update_package_type(runtime):
+    return normalize_java_package_type((runtime or {}).get("package_type"))
 
 
 def version_display_text(version_text):
@@ -5216,9 +5289,10 @@ def sanitize_path_token(value):
 
 def java_install_dir_name(info):
     vendor = sanitize_path_token(info.get("vendor") or "JDK")
+    package_type = sanitize_path_token(normalize_java_package_type(info.get("package_type")))
     major = sanitize_path_token(info.get("major_version") or extract_major_from_version(info.get("version"), fallback="jdk"))
     version = sanitize_path_token(version_display_text(info.get("version")))
-    return f"{vendor}_jdk{major}_{version}"
+    return f"{vendor}_{package_type}{major}_{version}"
 
 
 def next_available_java_install_dir(parent_dir, info):
@@ -5970,11 +6044,14 @@ class JavaRegistryAdapter:
             result = [(key, value) for key, value in data.items()]
             known_homes = {normalize_path(value) for _key, value in result}
             for java_home in discover_java_homes():
-                home_key = normalize_path(java_home)
+                runtime = read_java_runtime_info(java_home)
+                register_home = runtime_update_java_home(runtime)
+                home_key = normalize_path(register_home)
                 if home_key in known_homes:
                     continue
-                runtime = read_java_runtime_info(java_home)
-                result.append((build_registry_name(runtime), java_home))
+                if normalize_path(register_home) != normalize_path(java_home):
+                    runtime = read_java_runtime_info(register_home)
+                result.append((build_registry_name(runtime), register_home))
                 known_homes.add(home_key)
         return result
 
@@ -6031,9 +6108,15 @@ class JavaRegistryAdapter:
 
     @staticmethod
     def sync_runtime_registration(java_home, preferred_name=None):
-        runtime = read_java_runtime_info(java_home)
+        requested_home = os.path.abspath(os.path.expanduser(normalize_text(java_home)))
+        runtime = read_java_runtime_info(requested_home)
+        java_home = os.path.abspath(runtime_update_java_home(runtime))
+        if normalize_path(java_home) != normalize_path(requested_home):
+            runtime = read_java_runtime_info(java_home)
         jvm_path = find_jvm_library(java_home)
-        names = JavaRegistryAdapter.find_version_names_by_home(java_home)
+        names = JavaRegistryAdapter.find_version_names_by_home(requested_home)
+        if normalize_path(java_home) != normalize_path(requested_home):
+            names.extend(JavaRegistryAdapter.find_version_names_by_home(java_home))
         if not names:
             names = [preferred_name or build_registry_name(runtime)]
         names = [sanitize_registry_name(name) for name in names if normalize_text(name)]
@@ -6622,7 +6705,7 @@ class JavaDownloadEngine:
         return NetworkEngine.request_json_from_candidates(candidates, timeout=timeout, retries=1, cache_ttl=300)
 
     @staticmethod
-    def _make_result(version, url, source, vendor, direct_first=False, sha256="", sha256_urls=None, asset_name=""):
+    def _make_result(version, url, source, vendor, direct_first=False, sha256="", sha256_urls=None, asset_name="", package_type="jdk"):
         urls = JavaDownloadEngine._github_download_candidates(url, direct_first=direct_first) if is_github_like_url(url) else [url]
         return {
             "version": version,
@@ -6630,13 +6713,14 @@ class JavaDownloadEngine:
             "urls": urls,
             "source": source,
             "vendor": vendor,
+            "package_type": normalize_java_package_type(package_type),
             "sha256": clean_sha256(sha256),
             "sha256_urls": unique_sequence(sha256_urls or []),
             "asset_name": asset_name,
         }
 
     @staticmethod
-    def _make_result_with_candidates(version, url, urls, source, vendor, sha256="", sha256_urls=None, asset_name=""):
+    def _make_result_with_candidates(version, url, urls, source, vendor, sha256="", sha256_urls=None, asset_name="", package_type="jdk"):
         ordered_urls = prefer_github_proxy_urls(urls or [url])
         return {
             "version": version,
@@ -6644,20 +6728,27 @@ class JavaDownloadEngine:
             "urls": ordered_urls,
             "source": source,
             "vendor": vendor,
+            "package_type": normalize_java_package_type(package_type),
             "sha256": clean_sha256(sha256),
             "sha256_urls": unique_sequence(sha256_urls or []),
             "asset_name": asset_name,
         }
 
     @staticmethod
-    def _is_desired_asset_name(name, vendor):
+    def _is_desired_asset_name(name, vendor, package_type="jdk"):
         lower = normalize_text(name).lower()
         if not lower:
             return False
-        if "jre" in lower or "debugimage" in lower or "staticlibs" in lower or "sources" in lower or "testimage" in lower or "sbom" in lower:
+        package_type = normalize_java_package_type(package_type)
+        if "debugimage" in lower or "staticlibs" in lower or "sources" in lower or "testimage" in lower or "sbom" in lower:
+            return False
+        if package_type == "jre":
+            if "jre" not in lower:
+                return False
+        elif "jre" in lower:
             return False
         archive_tokens = (
-            "jdk",
+            package_type,
             "openjdk",
             "semeru",
             "jbrsdk",
@@ -6736,12 +6827,13 @@ class JavaDownloadEngine:
         return max(matching, key=score)
 
     @staticmethod
-    def _fetch_foojay_distribution(distribution, vendor, major_version, resolve_final_url=False):
+    def _fetch_foojay_distribution(distribution, vendor, major_version, resolve_final_url=False, package_type="jdk"):
         item = None
+        package_type = normalize_java_package_type(package_type)
         for archive_type in archive_type_candidates():
             url = (
                 "https://api.foojay.io/disco/v3.0/packages"
-                f"?distribution={distribution}&package_type=jdk&operating_system={foojay_os()}"
+                f"?distribution={distribution}&package_type={package_type}&operating_system={foojay_os()}"
                 f"&architecture={foojay_arch()}&version={major_version}&archive_type={archive_type}&latest=available"
             )
             data = NetworkEngine.request_json(url, timeout=5, retries=1, cache_ttl=300)
@@ -6770,7 +6862,7 @@ class JavaDownloadEngine:
         if resolve_final_url:
             final_url = NetworkEngine.resolve_final_url([redirect_url], timeout=8)
             urls = build_github_url_variants(final_url) if is_github_like_url(final_url) else [final_url]
-            return JavaDownloadEngine._make_result_with_candidates(version, final_url, urls, f"Foojay {distribution}", vendor, sha256=checksum, sha256_urls=checksum_urls, asset_name=item.get("filename", ""))
+            return JavaDownloadEngine._make_result_with_candidates(version, final_url, urls, f"Foojay {distribution}", vendor, sha256=checksum, sha256_urls=checksum_urls, asset_name=item.get("filename", ""), package_type=package_type)
         urls = []
         if redirect_target:
             urls.extend(build_github_url_variants(redirect_target) if is_github_like_url(redirect_target) else [redirect_target])
@@ -6779,12 +6871,13 @@ class JavaDownloadEngine:
         if direct_download_uri and direct_download_uri != redirect_url:
             urls.append(direct_download_uri)
         primary_url = urls[0] if urls else redirect_url
-        return JavaDownloadEngine._make_result_with_candidates(version, primary_url, urls, f"Foojay {distribution}", vendor, sha256=checksum, sha256_urls=checksum_urls, asset_name=item.get("filename", ""))
+        return JavaDownloadEngine._make_result_with_candidates(version, primary_url, urls, f"Foojay {distribution}", vendor, sha256=checksum, sha256_urls=checksum_urls, asset_name=item.get("filename", ""), package_type=package_type)
 
     @staticmethod
-    def get_latest_download_info(vendor, major_version):
+    def get_latest_download_info(vendor, major_version, package_type="jdk"):
         vendor = canonical_java_vendor_name(vendor)
-        cache_key = (vendor, str(major_version), APP_CONFIG.get("update_source"), APP_CONFIG.get("enable_mirror"), APP_ARCH)
+        package_type = normalize_java_package_type(package_type)
+        cache_key = (vendor, str(major_version), package_type, APP_CONFIG.get("update_source"), APP_CONFIG.get("enable_mirror"), APP_ARCH)
         now = time.time()
         with JavaDownloadEngine._cache_lock:
             cached = JavaDownloadEngine._cache.get(cache_key)
@@ -6795,9 +6888,10 @@ class JavaDownloadEngine:
         last_error = None
         for fetcher in chain:
             try:
-                result = fetcher(vendor, str(major_version))
+                result = fetcher(vendor, str(major_version), package_type=package_type)
                 if result and result.get("version") and result.get("url"):
                     result["major_version"] = str(major_version)
+                    result["package_type"] = package_type
                     with JavaDownloadEngine._cache_lock:
                         JavaDownloadEngine._cache[cache_key] = {"time": time.time(), "data": result}
                     return result
@@ -6815,17 +6909,19 @@ class JavaDownloadEngine:
         return (normalize_text(info.get("source")), normalize_text(info.get("version")), first_url)
 
     @staticmethod
-    def get_download_info_candidates(vendor, major_version):
+    def get_download_info_candidates(vendor, major_version, package_type="jdk"):
         vendor = canonical_java_vendor_name(vendor)
         major = str(major_version)
+        package_type = normalize_java_package_type(package_type)
         candidates = []
         seen = set()
         last_error = None
         for fetcher in JavaDownloadEngine._resolve_source_chain(vendor):
             try:
-                result = fetcher(vendor, major)
+                result = fetcher(vendor, major, package_type=package_type)
                 if result and result.get("version") and result.get("url"):
                     result["major_version"] = major
+                    result["package_type"] = package_type
                     key = JavaDownloadEngine._download_info_identity(result)
                     if key not in seen:
                         seen.add(key)
@@ -6868,11 +6964,11 @@ class JavaDownloadEngine:
         return unique_sequence(chain)
 
     @staticmethod
-    def _fetch_foojay_profile(vendor, major_version, resolve_final_url=False):
+    def _fetch_foojay_profile(vendor, major_version, resolve_final_url=False, package_type="jdk"):
         last_error = None
         for distribution in java_vendor_foojay_distributions(vendor):
             try:
-                result = JavaDownloadEngine._fetch_foojay_distribution(distribution, vendor, major_version, resolve_final_url=resolve_final_url)
+                result = JavaDownloadEngine._fetch_foojay_distribution(distribution, vendor, major_version, resolve_final_url=resolve_final_url, package_type=package_type)
                 if result:
                     return result
             except Exception as exc:
@@ -6883,12 +6979,12 @@ class JavaDownloadEngine:
         return None
 
     @staticmethod
-    def _fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=False):
+    def _fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=False, package_type="jdk"):
         last_error = None
         for repo in java_vendor_github_repos(vendor, major_version):
             try:
                 data = JavaDownloadEngine._request_github_releases(repo, direct_first=direct_first, mirrors_only=mirrors_only, timeout=4)
-                result = JavaDownloadEngine._pick_github_release_asset(data, major_version, vendor, direct_first=direct_first)
+                result = JavaDownloadEngine._pick_github_release_asset(data, major_version, vendor, direct_first=direct_first, package_type=package_type)
                 if result:
                     result["source"] = f"{vendor} GitHub Release ({repo})"
                     return result
@@ -6900,81 +6996,82 @@ class JavaDownloadEngine:
         return None
 
     @staticmethod
-    def _fetch_official(vendor, major_version):
+    def _fetch_official(vendor, major_version, package_type="jdk"):
         if vendor in ("Eclipse Temurin", "Generic OpenJDK"):
-            return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=False, mirrors_only=False)
+            return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=False, mirrors_only=False, package_type=package_type)
         if vendor == "IBM Semeru OpenJ9":
-            return JavaDownloadEngine._fetch_semeru_openj9(major_version, direct_first=False, mirrors_only=False)
+            return JavaDownloadEngine._fetch_semeru_openj9(major_version, direct_first=False, mirrors_only=False, package_type=package_type)
         if vendor == "Azul Zulu":
-            return JavaDownloadEngine._fetch_zulu(major_version)
+            return JavaDownloadEngine._fetch_zulu(major_version, package_type=package_type)
         if vendor == "Microsoft Build of OpenJDK":
-            return JavaDownloadEngine._fetch_microsoft(major_version)
+            return JavaDownloadEngine._fetch_microsoft(major_version, package_type=package_type)
         if vendor == "Oracle Java":
-            return JavaDownloadEngine._fetch_oracle(major_version)
+            return JavaDownloadEngine._fetch_oracle(major_version, package_type=package_type)
         if vendor == "Alibaba Dragonwell":
-            return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=False, mirrors_only=False)
+            return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=False, mirrors_only=False, package_type=package_type)
         if vendor == "GraalVM":
-            return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=False, mirrors_only=False)
+            return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=False, mirrors_only=False, package_type=package_type)
         result = None
         try:
-            result = JavaDownloadEngine._fetch_foojay_profile(vendor, major_version)
+            result = JavaDownloadEngine._fetch_foojay_profile(vendor, major_version, package_type=package_type)
         except Exception as exc:
             logging.warning("Foojay 官方发行版源失败，尝试 GitHub 兜底: vendor=%s error=%s", vendor, exc)
         if result:
             return result
-        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=False)
+        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=False, package_type=package_type)
         if result:
             return result
         if vendor in JAVA_VENDOR_PROFILES:
             return None
-        return JavaDownloadEngine._fetch_temurin(major_version, "Generic OpenJDK", direct_first=False, mirrors_only=False)
+        return JavaDownloadEngine._fetch_temurin(major_version, "Generic OpenJDK", direct_first=False, mirrors_only=False, package_type=package_type)
 
     @staticmethod
-    def _fetch_github_direct(vendor, major_version):
+    def _fetch_github_direct(vendor, major_version, package_type="jdk"):
         if vendor in ("Eclipse Temurin", "Generic OpenJDK"):
-            return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=True, mirrors_only=False)
+            return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=True, mirrors_only=False, package_type=package_type)
         if vendor == "IBM Semeru OpenJ9":
-            return JavaDownloadEngine._fetch_semeru_openj9(major_version, direct_first=True, mirrors_only=False)
+            return JavaDownloadEngine._fetch_semeru_openj9(major_version, direct_first=True, mirrors_only=False, package_type=package_type)
         if vendor == "Microsoft Build of OpenJDK":
-            result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=True, mirrors_only=False)
+            result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=True, mirrors_only=False, package_type=package_type)
             if result:
                 return result
-            return JavaDownloadEngine._fetch_official(vendor, major_version)
+            return JavaDownloadEngine._fetch_official(vendor, major_version, package_type=package_type)
         if vendor == "Oracle Java":
-            return JavaDownloadEngine._fetch_official(vendor, major_version)
+            return JavaDownloadEngine._fetch_official(vendor, major_version, package_type=package_type)
         if vendor == "Alibaba Dragonwell":
-            return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=True, mirrors_only=False)
+            return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=True, mirrors_only=False, package_type=package_type)
         if vendor == "GraalVM":
-            return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=True, mirrors_only=False)
-        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=True, mirrors_only=False)
+            return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=True, mirrors_only=False, package_type=package_type)
+        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=True, mirrors_only=False, package_type=package_type)
         if result:
             return result
-        return JavaDownloadEngine._fetch_official(vendor, major_version)
+        return JavaDownloadEngine._fetch_official(vendor, major_version, package_type=package_type)
 
     @staticmethod
-    def _fetch_github_mirror(vendor, major_version):
+    def _fetch_github_mirror(vendor, major_version, package_type="jdk"):
         if vendor in ("Eclipse Temurin", "Generic OpenJDK"):
-            return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=False, mirrors_only=True)
+            return JavaDownloadEngine._fetch_temurin(major_version, vendor, direct_first=False, mirrors_only=True, package_type=package_type)
         if vendor == "IBM Semeru OpenJ9":
-            return JavaDownloadEngine._fetch_semeru_openj9(major_version, direct_first=False, mirrors_only=True)
+            return JavaDownloadEngine._fetch_semeru_openj9(major_version, direct_first=False, mirrors_only=True, package_type=package_type)
         if vendor == "Microsoft Build of OpenJDK":
-            return JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=True)
+            return JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=True, package_type=package_type)
         if vendor == "Oracle Java":
             return None
         if vendor == "Alibaba Dragonwell":
-            return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=False, mirrors_only=True)
+            return JavaDownloadEngine._fetch_dragonwell(major_version, direct_first=False, mirrors_only=True, package_type=package_type)
         if vendor == "GraalVM":
-            return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=False, mirrors_only=True)
-        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=True)
+            return JavaDownloadEngine._fetch_graalvm(major_version, direct_first=False, mirrors_only=True, package_type=package_type)
+        result = JavaDownloadEngine._fetch_github_profile_releases(vendor, major_version, direct_first=False, mirrors_only=True, package_type=package_type)
         if result:
             return result
-        return JavaDownloadEngine._fetch_foojay_profile(vendor, major_version)
+        return JavaDownloadEngine._fetch_foojay_profile(vendor, major_version, package_type=package_type)
 
     @staticmethod
-    def _adoptium_api_urls(major_version, jvm_impl):
+    def _adoptium_api_urls(major_version, jvm_impl, package_type="jdk"):
         os_type = platform_os()
         arch = ARCH_INFO["adoptium"]
-        query = f"os={os_type}&architecture={arch}&image_type=jdk"
+        package_type = normalize_java_package_type(package_type)
+        query = f"os={os_type}&architecture={arch}&image_type={package_type}"
         urls = []
         for endpoint in ADOPTIUM_API_ENDPOINTS:
             if endpoint == "latest":
@@ -6984,9 +7081,10 @@ class JavaDownloadEngine:
         return tuple(urls)
 
     @staticmethod
-    def _adoptium_asset_entries(data, jvm_impl):
+    def _adoptium_asset_entries(data, jvm_impl, package_type="jdk"):
         if not isinstance(data, list):
             return []
+        package_type = normalize_java_package_type(package_type)
         entries = []
         for item in data:
             if not isinstance(item, dict):
@@ -6998,7 +7096,7 @@ class JavaDownloadEngine:
             for candidate in item.get("binaries", []) or []:
                 if not isinstance(candidate, dict):
                     continue
-                if normalize_text(candidate.get("image_type")).lower() not in ("", "jdk"):
+                if normalize_text(candidate.get("image_type")).lower() not in ("", package_type):
                     continue
                 candidate_jvm = normalize_text(candidate.get("jvm_impl")).lower()
                 if candidate_jvm and candidate_jvm != normalize_text(jvm_impl).lower():
@@ -7007,7 +7105,7 @@ class JavaDownloadEngine:
         return entries
 
     @staticmethod
-    def _adoptium_result_from_asset(asset, package_info, major_version, jvm_impl, vendor, endpoint):
+    def _adoptium_result_from_asset(asset, package_info, major_version, jvm_impl, vendor, endpoint, package_type="jdk"):
         package_info = package_info if isinstance(package_info, dict) else {}
         version_info = asset.get("version") or {}
         version_data = asset.get("version_data") or {}
@@ -7029,16 +7127,18 @@ class JavaDownloadEngine:
             sha256=package_info.get("checksum"),
             sha256_urls=[package_info.get("checksum_link")],
             asset_name=package_info.get("name", ""),
+            package_type=package_type,
         )
 
     @staticmethod
-    def _fetch_adoptium_api(major_version, jvm_impl, vendor):
+    def _fetch_adoptium_api(major_version, jvm_impl, vendor, package_type="jdk"):
         last_error = None
-        for endpoint, url in JavaDownloadEngine._adoptium_api_urls(major_version, jvm_impl):
+        package_type = normalize_java_package_type(package_type)
+        for endpoint, url in JavaDownloadEngine._adoptium_api_urls(major_version, jvm_impl, package_type=package_type):
             try:
                 data = NetworkEngine.request_json(url, timeout=4, retries=1, cache_ttl=300)
-                for asset, package_info in JavaDownloadEngine._adoptium_asset_entries(data, jvm_impl):
-                    result = JavaDownloadEngine._adoptium_result_from_asset(asset, package_info, major_version, jvm_impl, vendor, endpoint)
+                for asset, package_info in JavaDownloadEngine._adoptium_asset_entries(data, jvm_impl, package_type=package_type):
+                    result = JavaDownloadEngine._adoptium_result_from_asset(asset, package_info, major_version, jvm_impl, vendor, endpoint, package_type=package_type)
                     if result:
                         return result
             except Exception as exc:
@@ -7049,10 +7149,10 @@ class JavaDownloadEngine:
         return None
 
     @staticmethod
-    def _fetch_temurin(major_version, vendor, direct_first=False, mirrors_only=False):
+    def _fetch_temurin(major_version, vendor, direct_first=False, mirrors_only=False, package_type="jdk"):
         if not mirrors_only:
             try:
-                result = JavaDownloadEngine._fetch_foojay_distribution("temurin", vendor, major_version)
+                result = JavaDownloadEngine._fetch_foojay_distribution("temurin", vendor, major_version, package_type=package_type)
                 if result:
                     return result
             except Exception as exc:
@@ -7060,7 +7160,7 @@ class JavaDownloadEngine:
         repo = f"adoptium/temurin{major_version}-binaries"
         try:
             data = JavaDownloadEngine._request_github_releases(repo, direct_first=direct_first, mirrors_only=mirrors_only, timeout=3)
-            result = JavaDownloadEngine._pick_github_release_asset(data, major_version, vendor, direct_first=direct_first)
+            result = JavaDownloadEngine._pick_github_release_asset(data, major_version, vendor, direct_first=direct_first, package_type=package_type)
             if result:
                 result["source"] = "Temurin GitHub Release"
                 return result
@@ -7068,13 +7168,13 @@ class JavaDownloadEngine:
             logging.warning("Temurin GitHub 源失败: %s", exc)
         if mirrors_only:
             return None
-        return JavaDownloadEngine._fetch_adoptium_api(major_version, "hotspot", vendor)
+        return JavaDownloadEngine._fetch_adoptium_api(major_version, "hotspot", vendor, package_type=package_type)
 
     @staticmethod
-    def _fetch_semeru_openj9(major_version, direct_first=False, mirrors_only=False):
+    def _fetch_semeru_openj9(major_version, direct_first=False, mirrors_only=False, package_type="jdk"):
         if not mirrors_only:
             try:
-                result = JavaDownloadEngine._fetch_foojay_distribution("semeru", "IBM Semeru OpenJ9", major_version, resolve_final_url=False)
+                result = JavaDownloadEngine._fetch_foojay_distribution("semeru", "IBM Semeru OpenJ9", major_version, resolve_final_url=False, package_type=package_type)
                 if result:
                     return result
             except Exception as exc:
@@ -7082,14 +7182,14 @@ class JavaDownloadEngine:
 
         binary_api = (
             f"https://api.adoptopenjdk.net/v3/binary/latest/{major_version}/ga/"
-            f"{platform_os()}/{ARCH_INFO['adoptium']}/jdk/openj9/normal/adoptopenjdk?project=jdk"
+            f"{platform_os()}/{ARCH_INFO['adoptium']}/{normalize_java_package_type(package_type)}/openj9/normal/adoptopenjdk?project=jdk"
         )
         binary_candidates = [binary_api]
         if not mirrors_only:
             try:
                 final_url = NetworkEngine.resolve_final_url(binary_candidates, timeout=8)
                 version = extract_version_from_filename(final_url, fallback_major=major_version)
-                return JavaDownloadEngine._make_result(version, final_url, "IBM Semeru Binary API", "IBM Semeru OpenJ9", direct_first=direct_first)
+                return JavaDownloadEngine._make_result(version, final_url, "IBM Semeru Binary API", "IBM Semeru OpenJ9", direct_first=direct_first, package_type=package_type)
             except Exception as exc:
                 logging.warning("Semeru Binary API 失败: %s", exc)
 
@@ -7100,7 +7200,7 @@ class JavaDownloadEngine:
         for repo in repos:
             try:
                 data = JavaDownloadEngine._request_github_releases(repo, direct_first=direct_first, mirrors_only=mirrors_only, timeout=3)
-                result = JavaDownloadEngine._pick_github_release_asset(data, major_version, "IBM Semeru OpenJ9", direct_first=direct_first)
+                result = JavaDownloadEngine._pick_github_release_asset(data, major_version, "IBM Semeru OpenJ9", direct_first=direct_first, package_type=package_type)
                 if result:
                     result["source"] = f"Semeru GitHub Release ({repo})"
                     return result
@@ -7108,12 +7208,12 @@ class JavaDownloadEngine:
                 logging.warning("Semeru GitHub 源失败: repo=%s error=%s", repo, exc)
         if mirrors_only:
             return None
-        return JavaDownloadEngine._fetch_adoptium_api(major_version, "openj9", "IBM Semeru OpenJ9")
+        return JavaDownloadEngine._fetch_adoptium_api(major_version, "openj9", "IBM Semeru OpenJ9", package_type=package_type)
 
     @staticmethod
-    def _fetch_zulu(major_version):
+    def _fetch_zulu(major_version, package_type="jdk"):
         try:
-            result = JavaDownloadEngine._fetch_foojay_distribution("zulu", "Azul Zulu", major_version)
+            result = JavaDownloadEngine._fetch_foojay_distribution("zulu", "Azul Zulu", major_version, package_type=package_type)
             if result:
                 return result
         except Exception as exc:
@@ -7127,7 +7227,7 @@ class JavaDownloadEngine:
             url = (
                 "https://api.azul.com/metadata/v1/zulu/packages"
                 f"?java_version={major_version}&os={os_type}&arch={arch}&hw_bitness={bitness}"
-                f"&archive_type={archive_type}&java_package_type=jdk&latest=true"
+                f"&archive_type={archive_type}&java_package_type={normalize_java_package_type(package_type)}&latest=true"
             )
             data = NetworkEngine.request_json(url, timeout=5, retries=1, cache_ttl=300)
             if isinstance(data, list) and data:
@@ -7143,18 +7243,18 @@ class JavaDownloadEngine:
         download_url = asset.get("download_url")
         if not download_url:
             return None
-        return JavaDownloadEngine._make_result(display_version, download_url, "Azul API", "Azul Zulu")
+        return JavaDownloadEngine._make_result(display_version, download_url, "Azul API", "Azul Zulu", package_type=package_type)
 
     @staticmethod
-    def _fetch_microsoft(major_version):
-        return JavaDownloadEngine._fetch_foojay_distribution("microsoft", "Microsoft Build of OpenJDK", major_version)
+    def _fetch_microsoft(major_version, package_type="jdk"):
+        return JavaDownloadEngine._fetch_foojay_distribution("microsoft", "Microsoft Build of OpenJDK", major_version, package_type=package_type)
 
     @staticmethod
-    def _fetch_oracle(major_version):
+    def _fetch_oracle(major_version, package_type="jdk"):
         last_error = None
         for distribution in ("oracle_open_jdk", "oracle"):
             try:
-                result = JavaDownloadEngine._fetch_foojay_distribution(distribution, "Oracle Java", major_version)
+                result = JavaDownloadEngine._fetch_foojay_distribution(distribution, "Oracle Java", major_version, package_type=package_type)
                 if result:
                     return result
             except Exception as exc:
@@ -7165,10 +7265,10 @@ class JavaDownloadEngine:
         return None
 
     @staticmethod
-    def _fetch_dragonwell(major_version, direct_first=False, mirrors_only=False):
+    def _fetch_dragonwell(major_version, direct_first=False, mirrors_only=False, package_type="jdk"):
         if not mirrors_only:
             try:
-                result = JavaDownloadEngine._fetch_foojay_distribution("dragonwell", "Alibaba Dragonwell", major_version)
+                result = JavaDownloadEngine._fetch_foojay_distribution("dragonwell", "Alibaba Dragonwell", major_version, package_type=package_type)
                 if result:
                     return result
             except Exception as exc:
@@ -7177,16 +7277,16 @@ class JavaDownloadEngine:
         data = JavaDownloadEngine._request_github_releases(repo, direct_first=direct_first, mirrors_only=mirrors_only, timeout=3)
         if not isinstance(data, list) or not data:
             return None
-        result = JavaDownloadEngine._pick_github_release_asset(data, major_version, "Alibaba Dragonwell", direct_first=direct_first)
+        result = JavaDownloadEngine._pick_github_release_asset(data, major_version, "Alibaba Dragonwell", direct_first=direct_first, package_type=package_type)
         if result:
             result["source"] = "Dragonwell GitHub Release"
         return result
 
     @staticmethod
-    def _fetch_graalvm(major_version, direct_first=False, mirrors_only=False):
+    def _fetch_graalvm(major_version, direct_first=False, mirrors_only=False, package_type="jdk"):
         if not mirrors_only:
             try:
-                result = JavaDownloadEngine._fetch_foojay_distribution("graalvm", "GraalVM", major_version)
+                result = JavaDownloadEngine._fetch_foojay_distribution("graalvm", "GraalVM", major_version, package_type=package_type)
                 if result:
                     return result
             except Exception as exc:
@@ -7195,7 +7295,7 @@ class JavaDownloadEngine:
         data = JavaDownloadEngine._request_github_releases(repo, direct_first=direct_first, mirrors_only=mirrors_only, timeout=3)
         if not isinstance(data, list) or not data:
             return None
-        result = JavaDownloadEngine._pick_github_release_asset(data, major_version, "GraalVM", direct_first=direct_first)
+        result = JavaDownloadEngine._pick_github_release_asset(data, major_version, "GraalVM", direct_first=direct_first, package_type=package_type)
         if result:
             result["source"] = "GraalVM GitHub Release"
         return result
@@ -7236,7 +7336,8 @@ class JavaDownloadEngine:
         return True
 
     @staticmethod
-    def _pick_github_release_asset(releases, major_version, vendor, direct_first=False):
+    def _pick_github_release_asset(releases, major_version, vendor, direct_first=False, package_type="jdk"):
+        package_type = normalize_java_package_type(package_type)
         sorted_releases = sorted(
             [r for r in releases if not r.get("draft")],
             key=lambda item: item.get("published_at") or item.get("created_at") or "",
@@ -7251,7 +7352,7 @@ class JavaDownloadEngine:
                 if (
                     JavaDownloadEngine._match_archive_asset(asset_name)
                     and JavaDownloadEngine._asset_matches_major_version(asset_name, major_version)
-                    and JavaDownloadEngine._is_desired_asset_name(asset_name, vendor)
+                    and JavaDownloadEngine._is_desired_asset_name(asset_name, vendor, package_type=package_type)
                 ):
                     checksum_urls = JavaDownloadEngine._github_checksum_asset_urls(release, asset_name)
                     return JavaDownloadEngine._make_result(
@@ -7262,6 +7363,7 @@ class JavaDownloadEngine:
                         direct_first=direct_first,
                         sha256_urls=checksum_urls,
                         asset_name=asset_name,
+                        package_type=package_type,
                     )
         return None
 
@@ -7294,8 +7396,9 @@ class JavaDownloadEngine:
         return True
 
 
-def download_and_install_java(vendor, major_version, install_parent, progress_callback=None, status_callback=None, cancel_event=None):
+def download_and_install_java(vendor, major_version, install_parent, progress_callback=None, status_callback=None, cancel_event=None, package_type="jdk"):
     vendor = canonical_java_vendor_name(vendor)
+    package_type = normalize_java_package_type(package_type)
     parent = os.path.abspath(os.path.expanduser(normalize_text(install_parent)))
     if not parent:
         raise ValueError("install parent is empty")
@@ -7313,7 +7416,7 @@ def download_and_install_java(vendor, major_version, install_parent, progress_ca
 
     try:
         ensure_not_cancelled(cancel_event)
-        primary_info = JavaDownloadEngine.get_latest_download_info(vendor, major_version)
+        primary_info = JavaDownloadEngine.get_latest_download_info(vendor, major_version, package_type=package_type)
         if not primary_info:
             raise Exception(tr("metadata_missing"))
 
@@ -7377,7 +7480,7 @@ def download_and_install_java(vendor, major_version, install_parent, progress_ca
                 archive_verified = False
                 if not fallback_loaded:
                     status(tr("download_source_fallback"))
-                    for candidate in JavaDownloadEngine.get_download_info_candidates(vendor, major_version):
+                    for candidate in JavaDownloadEngine.get_download_info_candidates(vendor, major_version, package_type=package_type):
                         key = JavaDownloadEngine._download_info_identity(candidate)
                         if key not in seen_info:
                             seen_info.add(key)
@@ -7412,6 +7515,7 @@ def download_and_install_java(vendor, major_version, install_parent, progress_ca
             "java_home": target_path,
             "vendor": info.get("vendor") or vendor,
             "major": str(major_version),
+            "package_type": info.get("package_type") or package_type,
             "latest_version": version_display_text(info.get("version")),
             "source": info.get("source"),
             "used_url": source_url,
@@ -8153,7 +8257,11 @@ class JavaManagerApp:
                     if not row.get("report", {}).get("usable"):
                         continue
                     runtime = row.get("runtime", {})
-                    info = JavaDownloadEngine.get_latest_download_info(runtime.get("vendor"), runtime.get("major"))
+                    info = JavaDownloadEngine.get_latest_download_info(
+                        runtime.get("vendor"),
+                        runtime.get("major"),
+                        package_type=runtime_update_package_type(runtime),
+                    )
                     if not info:
                         continue
                     latest_version = version_display_text(info.get("version"))
@@ -9924,9 +10032,12 @@ class JavaManagerApp:
         success_count = 0
         for full_path in discover_java_homes([folder_path], max_depth=6):
             runtime = read_java_runtime_info(full_path)
+            register_home = runtime_update_java_home(runtime)
+            if normalize_path(register_home) != normalize_path(full_path):
+                runtime = read_java_runtime_info(register_home)
             registry_name = build_registry_name(runtime)
-            jvm_path = find_jvm_library(full_path)
-            if JavaRegistryAdapter.register(registry_name, full_path, jvm_path):
+            jvm_path = find_jvm_library(register_home)
+            if JavaRegistryAdapter.register(registry_name, register_home, jvm_path):
                 success_count += 1
         messagebox.showinfo("扫盘完毕", f"已探测并静默注册 {success_count} 个本地 Java 环境。")
         self.refresh_all_data()
@@ -10045,8 +10156,9 @@ class JavaManagerApp:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def download_and_extract(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None):
-        return self.download_and_extract_popup_v2(vendor, major_version, target_path, is_repair=is_repair, preferred_registry_name=preferred_registry_name)
+    def download_and_extract(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None, package_type="jdk"):
+        package_type = normalize_java_package_type(package_type)
+        return self.download_and_extract_popup_v2(vendor, major_version, target_path, is_repair=is_repair, preferred_registry_name=preferred_registry_name, package_type=package_type)
         top = tk.Toplevel(self.root)
         top.title("正在进行底层通信...")
         top.geometry("480x160")
@@ -10077,7 +10189,7 @@ class JavaManagerApp:
             temp_archive = ""
             extract_dir = ""
             try:
-                info = JavaDownloadEngine.get_latest_download_info(vendor, major_version)
+                info = JavaDownloadEngine.get_latest_download_info(vendor, major_version, package_type=package_type)
                 if not info:
                     raise Exception("未从更新源拿到有效构建包，请稍后重试。")
 
@@ -10147,7 +10259,8 @@ class JavaManagerApp:
 
         threading.Thread(target=task, daemon=True).start()
 
-    def download_and_extract_popup(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None):
+    def download_and_extract_popup(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None, package_type="jdk"):
+        package_type = normalize_java_package_type(package_type)
         top = tk.Toplevel(self.root)
         self._configure_popup(top, "正在进行底层通信...", 520, 200, min_w=420, min_h=180, max_w_ratio=0.74, max_h_ratio=0.4, resizable=False)
         top.grab_set()
@@ -10174,7 +10287,7 @@ class JavaManagerApp:
             temp_archive = ""
             extract_dir = ""
             try:
-                info = JavaDownloadEngine.get_latest_download_info(vendor, major_version)
+                info = JavaDownloadEngine.get_latest_download_info(vendor, major_version, package_type=package_type)
                 if not info:
                     raise Exception("未从更新源拿到有效构建包，请稍后重试。")
 
@@ -10244,7 +10357,8 @@ class JavaManagerApp:
 
         threading.Thread(target=task, daemon=True).start()
 
-    def download_and_extract_popup_v2(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None):
+    def download_and_extract_popup_v2(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None, package_type="jdk"):
+        package_type = normalize_java_package_type(package_type)
         top = tk.Toplevel(self.root)
         title = tr("transfer_title_repair") if is_repair else tr("transfer_title_update")
         self._configure_popup(top, title, 540, 220, min_w=440, min_h=190, max_w_ratio=0.76, max_h_ratio=0.42, resizable=False)
@@ -10303,7 +10417,7 @@ class JavaManagerApp:
             modification_started = False
             try:
                 ensure_not_cancelled(cancel_event)
-                info = JavaDownloadEngine.get_latest_download_info(vendor, major_version)
+                info = JavaDownloadEngine.get_latest_download_info(vendor, major_version, package_type=package_type)
                 if not info:
                     raise Exception(tr("metadata_missing"))
 
@@ -10434,12 +10548,21 @@ class JavaManagerApp:
             return messagebox.showwarning(tr("no_selection_repair_title"), tr("no_selection_repair_text"))
         item = self.tree_fix.item(selected[0])["values"]
         meta = self.fix_items.get(selected[0], {})
-        preferred_name = meta.get("registry_name") or build_registry_name(read_java_runtime_info(item[2]))
+        runtime = meta.get("runtime") or read_java_runtime_info(item[2])
+        target_path = runtime_update_java_home(runtime)
+        preferred_name = meta.get("registry_name") or build_registry_name(runtime)
         repair_mode_label = self._repair_mode_label()
-        if not self._confirm_process_usage(item[2], repair_mode_label):
+        if not self._confirm_process_usage(target_path, repair_mode_label):
             return
-        if messagebox.askyesno(tr("confirm_repair_title"), tr("confirm_repair_text", mode=repair_mode_label, path=item[2])):
-            self.download_and_extract(item[1], item[0], item[2], is_repair=True, preferred_registry_name=preferred_name)
+        if messagebox.askyesno(tr("confirm_repair_title"), tr("confirm_repair_text", mode=repair_mode_label, path=target_path)):
+            self.download_and_extract(
+                runtime.get("vendor") or item[1],
+                runtime.get("major") or item[0],
+                target_path,
+                is_repair=True,
+                preferred_registry_name=preferred_name,
+                package_type=runtime_update_package_type(runtime),
+            )
 
     def _set_update_row(self, item_id, latest_version, has_update_text):
         if item_id not in self.tree_up.get_children():
@@ -10462,7 +10585,11 @@ class JavaManagerApp:
             if not runtime:
                 return
             try:
-                info = JavaDownloadEngine.get_latest_download_info(runtime["vendor"], runtime["major"])
+                info = JavaDownloadEngine.get_latest_download_info(
+                    runtime["vendor"],
+                    runtime["major"],
+                    package_type=runtime_update_package_type(runtime),
+                )
                 if not info:
                     self.root.after(0, lambda iid=item_id: self._set_update_row(iid, "更新源不可用", "否"))
                     return
@@ -10486,14 +10613,21 @@ class JavaManagerApp:
         runtime = self.update_items.get(item_id)
         if not runtime:
             return
-        item = self.tree_up.item(item_id)["values"]
-        if not self._confirm_process_usage(runtime["java_home"], tr("perform_update")):
+        target_path = runtime_update_java_home(runtime)
+        if not self._confirm_process_usage(target_path, tr("perform_update")):
             return
         if messagebox.askyesno(
             tr("confirm_update_title"),
-            tr("confirm_update_text", path=item[1]),
+            tr("confirm_update_text", path=target_path),
         ):
-            self.download_and_extract(runtime["vendor"], runtime["major"], runtime["java_home"], is_repair=False, preferred_registry_name=runtime.get("registry_name"))
+            self.download_and_extract(
+                runtime["vendor"],
+                runtime["major"],
+                target_path,
+                is_repair=False,
+                preferred_registry_name=runtime.get("registry_name"),
+                package_type=runtime_update_package_type(runtime),
+            )
 
 
 if __name__ == "__main__":
