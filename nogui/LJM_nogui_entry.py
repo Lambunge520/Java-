@@ -3,7 +3,7 @@ import runpy
 import sys
 
 # Keep these imports visible to PyInstaller. The real implementation is loaded
-# dynamically from LJM_headless.pyw and LJM.pyw.
+# dynamically from LJM_nogui.pyw and LJM.pyw.
 import argparse
 import base64
 import concurrent.futures
@@ -40,7 +40,7 @@ def main():
         base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(sys.executable)))
     else:
         base_dir = os.path.dirname(os.path.abspath(__file__))
-    runpy.run_path(os.path.join(base_dir, "LJM_headless.pyw"), run_name="__main__")
+    runpy.run_path(os.path.join(base_dir, "LJM_nogui.pyw"), run_name="__main__")
 
 
 if __name__ == "__main__":

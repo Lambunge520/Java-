@@ -20,8 +20,8 @@ else:
     RESOURCE_DIR = APP_DIR
 
 CORE_PATH = os.path.join(RESOURCE_DIR, "LJM.pyw")
-DEFAULT_RESULT_FILE = os.path.join(APP_DIR, "ljm_headless_result.json")
-DEFAULT_LOG_FILE = os.path.join(APP_DIR, "ljm_headless.log")
+DEFAULT_RESULT_FILE = os.path.join(APP_DIR, "ljm_nogui_result.json")
+DEFAULT_LOG_FILE = os.path.join(APP_DIR, "ljm_nogui.log")
 
 
 def load_core():
@@ -51,7 +51,7 @@ def safe_print(message):
 
 def write_result(payload, output_path=DEFAULT_RESULT_FILE, emit_stdout=False):
     payload = {
-        "tool": "LJM Java Manager Headless",
+        "tool": "LJM Java Manager NoGUI",
         "desktop_version": getattr(core, "VERSION", "unknown"),
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         **payload,
@@ -130,7 +130,7 @@ def download_latest_jdk(vendor, major, log_prefix="download"):
 
 
 def extract_archive(info):
-    extract_dir = tempfile.mkdtemp(prefix="ljm_headless_extract_")
+    extract_dir = tempfile.mkdtemp(prefix="ljm_nogui_extract_")
     if info["archive_suffix"] == ".tar.gz":
         with tarfile.open(info["archive_path"], "r:gz") as tar_ref:
             core.safe_extract_tar(tar_ref, extract_dir)
@@ -321,7 +321,7 @@ def build_parser():
     common.add_argument("--stdout", action="store_true", default=argparse.SUPPRESS, help="also print JSON when running with python.exe")
 
     parser = argparse.ArgumentParser(
-        description="LJM Java Manager headless edition. No desktop window, no tray.",
+        description="LJM Java Manager nogui edition. No desktop window, no tray.",
         parents=[common],
     )
 

@@ -2,7 +2,7 @@
 Type=Application
 Name=LJM Java Manager
 Comment=Java core environment manager
-Exec=./LJM-Java-Manager
+Exec=./LJM-Java-Manager.run
 Icon=java
 Terminal=false
 Categories=Development;Utility;

@@ -11,12 +11,12 @@ python -m PyInstaller `
   --clean `
   --onefile `
   --console `
-  --name "LJM-Java-Manager-headless" `
+  --name "LJM-Java-Manager-nogui" `
   --icon "$Assets\java.ico" `
-  --add-data "$Src\LJM_headless.pyw;." `
+  --add-data "$Src\LJM_nogui.pyw;." `
   --add-data "$Src\LJM.pyw;." `
   --add-data "$Assets\java.ico;." `
   --add-data "$Deps;deps" `
-  "$Src\LJM_headless_entry.py"
+  "$Src\LJM_nogui_entry.py"
 
-Write-Host "Windows headless build finished: $Root\dist\LJM-Java-Manager-headless.exe"
+Write-Host "Windows nogui build finished: $Root\dist\LJM-Java-Manager-nogui.exe"

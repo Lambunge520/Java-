@@ -42,12 +42,14 @@ $patterns = @(
   "*.log",
   "*.tmp",
   "*.new",
-  "ljm_headless_result.json",
-  "headless_test_result*.json",
+  "ljm_nogui_result.json",
+  "nogui_test_result*.json",
   "LJM-Java-Manager*.zip",
   "LJM-Java-Manager*.tar.gz",
   "LJM-Java-Manager*.tgz",
   "LJM-Java-Manager*.exe",
+  "LJM-Java-Manager*.run",
+  "LJM-Java-Manager*.command",
   "SHA256SUMS*.txt"
 )
 

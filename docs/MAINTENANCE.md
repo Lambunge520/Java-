@@ -5,7 +5,7 @@
 ## 版本同步
 
 - 工具版本统一写在 `src/LJM.pyw` 的 `VERSION`。
-- 无桌面端 `src/LJM_headless.pyw` 会加载同一个核心文件，因此桌面端版本升级时无桌面端自动跟随同一版本。
+- 无桌面端 `src/LJM_nogui.pyw` 会加载同一个核心文件，因此桌面端版本升级时无桌面端自动跟随同一版本。
 - 修改 Java 检测、更新、下载、修复、镜像源、缓存、校验等核心逻辑时，必须确认无桌面端命令也能继续调用对应能力。
 
 ## 平台同步
@@ -13,13 +13,13 @@
 每次发布都默认维护以下产物：
 
 - Windows 桌面端：`scripts/build_windows.ps1`
-- Windows 无桌面端：`scripts/build_headless_windows.ps1`
+- Windows 无桌面端：`scripts/build_nogui_windows.ps1`
 - Linux 桌面端：`scripts/build_linux.sh`
-- Linux 无桌面端：`scripts/build_headless_linux.sh`
+- Linux 无桌面端：`scripts/build_nogui_linux.sh`
 - macOS 桌面端：`scripts/build_macos.sh`
-- macOS 无桌面端：`scripts/build_headless_macos.sh`
+- macOS 无桌面端：`scripts/build_nogui_macos.sh`
 
-GitHub Actions 中的 GUI 和 headless 工作流都会在 `v*` 标签发布时运行，并把产物上传到同一个 Release。
+GitHub Actions 中的 GUI 和 nogui 工作流都会在 `v*` 标签发布时运行，并把产物上传到同一个 Release。
 
 ## 收尾清理
 

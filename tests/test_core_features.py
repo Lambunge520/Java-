@@ -1,5 +1,6 @@
 import importlib.machinery
 import importlib.util
+import os
 import tempfile
 import time
 import unittest
@@ -18,11 +19,11 @@ def load_core():
     return module
 
 
-def load_headless():
+def load_nogui():
     root = Path(__file__).resolve().parents[1]
-    headless_path = root / "src" / "LJM_headless.pyw"
-    loader = importlib.machinery.SourceFileLoader("ljm_headless_test", str(headless_path))
-    spec = importlib.util.spec_from_file_location("ljm_headless_test", str(headless_path), loader=loader)
+    nogui_path = root / "src" / "LJM_nogui.pyw"
+    loader = importlib.machinery.SourceFileLoader("ljm_nogui_test", str(nogui_path))
+    spec = importlib.util.spec_from_file_location("ljm_nogui_test", str(nogui_path), loader=loader)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -33,9 +34,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_28(self):
-        self.assertEqual(self.core.VERSION, "2.8 Stable")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.8")
+    def test_version_and_user_agent_are_29(self):
+        self.assertEqual(self.core.VERSION, "2.9 Stable")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -44,7 +45,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("2.8 Stable", query["body"][0])
+        self.assertIn("2.9 Stable", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -136,6 +137,57 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(result["asset_name"], "jdk21-windows-x64.zip")
         self.assertIn("jdk21.zip", result["url"])
+
+    def test_adoptium_api_uses_feature_release_fallback(self):
+        calls = []
+        original_request = self.core.NetworkEngine.request_json
+
+        def fake_request(url, *_args, **_kwargs):
+            calls.append(url)
+            if "/v3/assets/latest/" in url:
+                raise RuntimeError("latest endpoint unavailable")
+            if "/v3/assets/feature_releases/" in url:
+                return [
+                    {
+                        "release_name": "jdk-21.0.3+9",
+                        "version_data": {"openjdk_version": "21.0.3+9"},
+                        "binaries": [
+                            {
+                                "image_type": "jdk",
+                                "jvm_impl": "hotspot",
+                                "package": {
+                                    "link": "https://download.example.invalid/temurin-21.zip",
+                                    "checksum": "a" * 64,
+                                    "checksum_link": "https://download.example.invalid/temurin-21.zip.sha256",
+                                    "name": "OpenJDK21U-jdk_x64_windows_hotspot_21.0.3_9.zip",
+                                },
+                            }
+                        ],
+                    }
+                ]
+            raise AssertionError(f"unexpected URL: {url}")
+
+        try:
+            self.core.NetworkEngine.request_json = staticmethod(fake_request)
+            result = self.core.JavaDownloadEngine._fetch_adoptium_api("21", "hotspot", "Eclipse Temurin")
+        finally:
+            self.core.NetworkEngine.request_json = original_request
+
+        self.assertIn("/v3/assets/latest/21/hotspot", calls[0])
+        self.assertIn("/v3/assets/feature_releases/21/ga", calls[1])
+        self.assertEqual(result["version"], "21.0.3+9")
+        self.assertEqual(result["url"], "https://download.example.invalid/temurin-21.zip")
+        self.assertEqual(result["source"], "Adoptium API feature_releases hotspot")
+
+    def test_standalone_nogui_core_keeps_updated_java_source_endpoints(self):
+        root = Path(__file__).resolve().parents[1]
+        desktop_core = (root / "src" / "LJM.pyw").read_text(encoding="utf-8")
+        standalone_core = (root / "nogui" / "LJM.pyw").read_text(encoding="utf-8")
+
+        for marker in ("ADOPTIUM_API_ENDPOINTS", "_adoptium_asset_entries", "feature_releases"):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, desktop_core)
+                self.assertIn(marker, standalone_core)
 
     def test_java_filter_matches_multiple_terms_across_fields(self):
         row = {
@@ -337,6 +389,98 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertEqual(result["source"], "Fallback")
         self.assertIn("21.0.2", result["latest_version"])
 
+    def test_download_and_install_repairs_unix_java_permissions_from_zip(self):
+        info = {
+            "vendor": "Eclipse Temurin",
+            "major_version": "21",
+            "version": "21.0.2",
+            "url": "https://download.invalid/jdk.zip",
+            "urls": ["https://download.invalid/jdk.zip"],
+            "source": "Test Zip",
+        }
+        previous_cache = self.core.APP_CONFIG.get("download_cache_enabled")
+        previous_verify = self.core.APP_CONFIG.get("verify_download_sha256")
+        original_latest = self.core.JavaDownloadEngine.get_latest_download_info
+        original_download = self.core.NetworkEngine.download_from_candidates
+        original_sync = self.core.JavaRegistryAdapter.sync_runtime_registration
+        original_is_win = self.core.IS_WIN
+        original_platform = self.core.sys.platform
+        original_chmod = self.core.os.chmod
+        chmod_calls = []
+
+        def fake_download(urls, dest, *_args, **_kwargs):
+            with zipfile.ZipFile(dest, "w") as archive:
+                archive.writestr("jdk-21/release", 'JAVA_VERSION="21.0.2"\nIMPLEMENTOR="Eclipse Temurin"\n')
+                archive.writestr("jdk-21/bin/java", "")
+                archive.writestr("jdk-21/lib/server/libjvm.so", "")
+            return urls[0]
+
+        def record_chmod(path, mode, *_args, **_kwargs):
+            chmod_calls.append((Path(path), mode))
+
+        try:
+            self.core.APP_CONFIG["download_cache_enabled"] = False
+            self.core.APP_CONFIG["verify_download_sha256"] = False
+            self.core.IS_WIN = False
+            self.core.sys.platform = "linux"
+            self.core.os.chmod = record_chmod
+            self.core.JavaDownloadEngine.get_latest_download_info = staticmethod(lambda vendor, major: dict(info))
+            self.core.NetworkEngine.download_from_candidates = staticmethod(fake_download)
+            self.core.JavaRegistryAdapter.sync_runtime_registration = staticmethod(lambda java_home, preferred_name=None: ["Temurin_21"])
+
+            with tempfile.TemporaryDirectory() as tmp:
+                result = self.core.download_and_install_java("Eclipse Temurin", "21", tmp)
+                installed_java = Path(result["java_home"]) / "bin" / "java"
+                self.assertTrue(installed_java.exists())
+                self.assertTrue(any(path == installed_java and mode & 0o111 for path, mode in chmod_calls))
+        finally:
+            self.core.APP_CONFIG["download_cache_enabled"] = previous_cache
+            self.core.APP_CONFIG["verify_download_sha256"] = previous_verify
+            self.core.IS_WIN = original_is_win
+            self.core.sys.platform = original_platform
+            self.core.os.chmod = original_chmod
+            self.core.JavaDownloadEngine.get_latest_download_info = original_latest
+            self.core.NetworkEngine.download_from_candidates = original_download
+            self.core.JavaRegistryAdapter.sync_runtime_registration = original_sync
+
+    def test_linux_packages_include_run_launcher_entries(self):
+        root = Path(__file__).resolve().parents[1]
+        gui_script = (root / "scripts" / "build_linux.sh").read_text(encoding="utf-8")
+        nogui_script = (root / "scripts" / "build_nogui_linux.sh").read_text(encoding="utf-8")
+        desktop_entry = (root / "assets" / "build" / "ljm-java-manager.desktop").read_text(encoding="utf-8")
+        gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
+        nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
+
+        self.assertIn("LJM-Java-Manager.run", gui_script)
+        self.assertIn("LJM-Java-Manager-nogui.run", nogui_script)
+        self.assertIn("LJM-Java-Manager.run", gui_workflow)
+        self.assertIn("LJM-Java-Manager-nogui.run", nogui_workflow)
+        self.assertIn("Exec=./LJM-Java-Manager.run", desktop_entry)
+
+    def test_macos_nogui_packages_include_command_launcher(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "scripts" / "build_nogui_macos.sh").read_text(encoding="utf-8")
+        standalone_script = (root / "nogui" / "build_macos.sh").read_text(encoding="utf-8")
+        workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
+
+        self.assertIn("LJM-Java-Manager-nogui.command", script)
+        self.assertIn("LJM-Java-Manager-nogui.command", standalone_script)
+        self.assertIn("LJM-Java-Manager-nogui.command", workflow)
+        self.assertIn("LJM-Java-Manager-nogui-macos", workflow)
+
+    def test_macos_gui_package_uses_app_bundle_launcher(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "scripts" / "build_macos.sh").read_text(encoding="utf-8")
+        workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
+        readme = (root / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn('--name "LJM-Java-Manager"', script)
+        self.assertIn("--windowed", script)
+        self.assertIn("LJM-Java-Manager.app/Contents/MacOS/LJM-Java-Manager", script)
+        self.assertIn("dist/LJM-Java-Manager.app", workflow)
+        self.assertIn("LJM-Java-Manager-macos.zip", workflow)
+        self.assertIn("LJM-Java-Manager.app", readme)
+
     def test_scroll_units_support_mousewheel_touchpad_and_linux_buttons(self):
         self.assertEqual(self.core.scroll_units_from_wheel_event(delta=120), -1)
         self.assertEqual(self.core.scroll_units_from_wheel_event(delta=-240), 2)
@@ -388,6 +532,89 @@ class CoreFeatureTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "inside source"):
                 self.core.validate_java_move_target(str(source), str(nested))
 
+    def test_move_java_home_commits_stage_without_shutil_move(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "jdk-21"
+            target = Path(tmp) / "moved" / "jdk-21"
+            bin_dir = source / "bin"
+            bin_dir.mkdir(parents=True)
+            (bin_dir / ("java.exe" if self.core.IS_WIN else "java")).write_text("", encoding="utf-8")
+            (source / "release").write_text('JAVA_VERSION="21.0.1"', encoding="utf-8")
+
+            original_move = self.core.shutil.move
+            original_find = self.core.JavaRegistryAdapter.find_version_names_by_home
+            original_unregister = self.core.JavaRegistryAdapter.unregister
+            original_sync = self.core.JavaRegistryAdapter.sync_runtime_registration
+            calls = {"unregistered": []}
+
+            def guarded_move(src, dst, *args, **kwargs):
+                if Path(src).name.startswith(".ljm_move_stage_"):
+                    raise PermissionError("stage directory should be committed without shutil.move")
+                return original_move(src, dst, *args, **kwargs)
+
+            try:
+                self.core.shutil.move = guarded_move
+                self.core.JavaRegistryAdapter.find_version_names_by_home = staticmethod(lambda _home: ["Temurin_21"])
+                self.core.JavaRegistryAdapter.unregister = staticmethod(lambda name: calls["unregistered"].append(name))
+                self.core.JavaRegistryAdapter.sync_runtime_registration = staticmethod(lambda home, preferred_name=None: [preferred_name or "Temurin_21"])
+
+                result = self.core.move_java_home(str(source), str(target), preferred_name="Temurin_21")
+            finally:
+                self.core.shutil.move = original_move
+                self.core.JavaRegistryAdapter.find_version_names_by_home = original_find
+                self.core.JavaRegistryAdapter.unregister = original_unregister
+                self.core.JavaRegistryAdapter.sync_runtime_registration = original_sync
+
+            self.assertFalse(source.exists())
+            self.assertTrue((target / "release").exists())
+            self.assertEqual(result["java_home"], str(target))
+            self.assertEqual(calls["unregistered"], ["Temurin_21"])
+
+    def test_write_linux_java_environment_includes_shell_and_desktop_targets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            java_home = Path(tmp) / "jdk-21"
+            java_home.mkdir()
+
+            written = self.core.write_unix_java_environment(
+                str(java_home),
+                platform_name="linux",
+                home_dir=str(home),
+                update_process_env=False,
+            )
+
+            expected = {
+                str(home / ".profile"),
+                str(home / ".xprofile"),
+                str(home / ".config" / "environment.d" / "ljm-java.conf"),
+            }
+            self.assertTrue(expected.issubset(set(written)))
+            profile_text = (home / ".profile").read_text(encoding="utf-8")
+            desktop_env = (home / ".config" / "environment.d" / "ljm-java.conf").read_text(encoding="utf-8")
+            self.assertIn("export JAVA_HOME=", profile_text)
+            self.assertIn(f"JAVA_HOME={java_home}", desktop_env)
+            self.assertIn(f"PATH={java_home}{os.sep}bin:${{PATH}}", desktop_env)
+
+    def test_write_macos_java_environment_includes_launch_agent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            java_home = Path(tmp) / "jdk-21"
+            java_home.mkdir()
+
+            written = self.core.write_unix_java_environment(
+                str(java_home),
+                platform_name="darwin",
+                home_dir=str(home),
+                update_process_env=False,
+            )
+
+            launch_agent = home / "Library" / "LaunchAgents" / "com.ljm.javamgr.java-environment.plist"
+            self.assertIn(str(home / ".zprofile"), written)
+            self.assertIn(str(launch_agent), written)
+            launch_text = launch_agent.read_text(encoding="utf-8")
+            self.assertIn(str(java_home), launch_text)
+            self.assertIn("launchctl", launch_text)
+
     def test_validate_java_delete_target_requires_java_home_shape(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(ValueError, "not look like a Java home"):
@@ -401,14 +628,77 @@ class CoreFeatureTests(unittest.TestCase):
 
             self.assertEqual(Path(self.core.validate_java_delete_target(str(java_home))).resolve(), java_home.resolve())
 
+    def test_delete_java_home_uses_permission_retry_removal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            java_home = Path(tmp) / "jdk-21"
+            bin_dir = java_home / "bin"
+            bin_dir.mkdir(parents=True)
+            (bin_dir / ("java.exe" if self.core.IS_WIN else "java")).write_text("", encoding="utf-8")
+            (java_home / "release").write_text('JAVA_VERSION="21.0.1"', encoding="utf-8")
 
-class HeadlessFeatureTests(unittest.TestCase):
+            original_rmtree = self.core.shutil.rmtree
+            original_find = self.core.JavaRegistryAdapter.find_version_names_by_home
+            original_unregister = self.core.JavaRegistryAdapter.unregister
+            calls = {"retried": False, "unregistered": []}
+
+            def guarded_rmtree(path, *args, **kwargs):
+                if kwargs.get("onerror") is None:
+                    raise PermissionError("delete should retry with writable permissions")
+                calls["retried"] = True
+                return original_rmtree(path, *args, **kwargs)
+
+            try:
+                self.core.shutil.rmtree = guarded_rmtree
+                self.core.JavaRegistryAdapter.find_version_names_by_home = staticmethod(lambda _home: ["Temurin_21"])
+                self.core.JavaRegistryAdapter.unregister = staticmethod(lambda name: calls["unregistered"].append(name))
+
+                result = self.core.delete_java_home(str(java_home), delete_files=True, preferred_name="Temurin_21")
+            finally:
+                self.core.shutil.rmtree = original_rmtree
+                self.core.JavaRegistryAdapter.find_version_names_by_home = original_find
+                self.core.JavaRegistryAdapter.unregister = original_unregister
+
+            self.assertTrue(calls["retried"])
+            self.assertFalse(java_home.exists())
+            self.assertTrue(result["deleted_files"])
+            self.assertEqual(calls["unregistered"], ["Temurin_21"])
+
+    def test_ensure_java_home_executables_repairs_unix_launchers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            java_home = Path(tmp) / "jdk-21"
+            bin_dir = java_home / "bin"
+            lib_dir = java_home / "lib"
+            bin_dir.mkdir(parents=True)
+            lib_dir.mkdir()
+            java_bin = bin_dir / "java"
+            javac_bin = bin_dir / "javac"
+            helper = lib_dir / "jspawnhelper"
+            for path in (java_bin, javac_bin, helper):
+                path.write_text("", encoding="utf-8")
+
+            original_chmod = self.core.os.chmod
+            chmod_calls = []
+
+            def record_chmod(path, mode):
+                chmod_calls.append((Path(path).name, mode))
+
+            try:
+                self.core.os.chmod = record_chmod
+                changed = self.core.ensure_java_home_executables(str(java_home), platform_name="linux")
+            finally:
+                self.core.os.chmod = original_chmod
+
+            self.assertEqual({Path(path).name for path in changed}, {"java", "javac", "jspawnhelper"})
+            self.assertEqual({name for name, _mode in chmod_calls}, {"java", "javac", "jspawnhelper"})
+            self.assertTrue(all(mode & 0o111 for _name, mode in chmod_calls))
+
+class NoguiFeatureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.headless = load_headless()
+        cls.nogui = load_nogui()
 
-    def test_headless_parser_has_download_move_delete_and_feedback_commands(self):
-        parser = self.headless.build_parser()
+    def test_nogui_parser_has_download_move_delete_and_feedback_commands(self):
+        parser = self.nogui.build_parser()
 
         download_args = parser.parse_args(["download", "Eclipse Temurin", "21", r"D:\Java"])
         move_args = parser.parse_args(["move", "Temurin_21", r"D:\Java\Temurin_21"])
@@ -417,32 +707,41 @@ class HeadlessFeatureTests(unittest.TestCase):
         feedback_args = parser.parse_args(["feedback", "--message", "OpenJ9 source is slow"])
 
         self.assertEqual(download_args.command, "download")
-        self.assertIs(download_args.func, self.headless.command_download)
+        self.assertIs(download_args.func, self.nogui.command_download)
         self.assertEqual(move_args.command, "move")
-        self.assertIs(move_args.func, self.headless.command_move)
+        self.assertIs(move_args.func, self.nogui.command_move)
         self.assertEqual(delete_args.command, "delete")
-        self.assertIs(delete_args.func, self.headless.command_delete)
+        self.assertIs(delete_args.func, self.nogui.command_delete)
         self.assertTrue(delete_args.files)
         self.assertTrue(delete_args.force)
         self.assertEqual(vendors_args.command, "vendors")
-        self.assertIs(vendors_args.func, self.headless.command_vendors)
+        self.assertIs(vendors_args.func, self.nogui.command_vendors)
         self.assertEqual(feedback_args.command, "feedback")
-        self.assertIs(feedback_args.func, self.headless.command_feedback)
+        self.assertIs(feedback_args.func, self.nogui.command_feedback)
 
-    def test_headless_feedback_exports_github_issue_url(self):
-        parser = self.headless.build_parser()
+    def test_nogui_feedback_exports_github_issue_url(self):
+        parser = self.nogui.build_parser()
         args = parser.parse_args(["feedback", "--message", "Java update list is blocked"])
 
-        payload = self.headless.command_feedback(args)
+        payload = self.nogui.command_feedback(args)
 
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("2.8 Stable", payload["body"])
+        self.assertIn("2.9 Stable", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
-    def test_headless_vendors_export_platform_guidance(self):
-        payload = self.headless.command_vendors(None)
+    def test_nogui_defaults_use_nogui_name(self):
+        self.assertEqual(Path(self.nogui.DEFAULT_RESULT_FILE).name, "ljm_nogui_result.json")
+        self.assertEqual(Path(self.nogui.DEFAULT_LOG_FILE).name, "ljm_nogui.log")
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "result.json"
+            payload = self.nogui.write_result({"ok": True}, output_path=str(output))
+
+        self.assertEqual(payload["tool"], "LJM Java Manager NoGUI")
+
+    def test_nogui_vendors_export_platform_guidance(self):
+        payload = self.nogui.command_vendors(None)
         vendors = {item["vendor"]: item for item in payload["items"]}
 
         self.assertGreaterEqual(len(vendors), 21)

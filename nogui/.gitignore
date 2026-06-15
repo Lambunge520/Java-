@@ -1,0 +1,34 @@
+# Local runtime logs and results
+*.log
+ljm_headless_result.json
+headless_test_result*.json
+javamanager_config.json
+java_virtual_registry.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*$py.class
+
+# PyInstaller output
+build/
+dist/
+*.spec
+
+# Packaged artifacts
+*.zip
+*.tar.gz
+*.exe
+
+# Temporary files
+*.tmp
+*.new
+deps_wheels_tmp/
+
+# IDE/editor noise
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store

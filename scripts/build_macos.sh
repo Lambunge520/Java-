@@ -18,4 +18,6 @@ python3 -m PyInstaller \
   --add-data "$DEPS:deps" \
   "$SRC/LJM.pyw"
 
+chmod +x "$ROOT/dist/LJM-Java-Manager.app/Contents/MacOS/LJM-Java-Manager"
+
 echo "macOS build finished: $ROOT/dist/LJM-Java-Manager.app"

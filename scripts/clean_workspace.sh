@@ -29,12 +29,14 @@ find "$ROOT" -path "$ROOT/.git" -prune -o -type f \( \
   -name "*.log" -o \
   -name "*.tmp" -o \
   -name "*.new" -o \
-  -name "ljm_headless_result.json" -o \
-  -name "headless_test_result*.json" -o \
+  -name "ljm_nogui_result.json" -o \
+  -name "nogui_test_result*.json" -o \
   -name "LJM-Java-Manager*.zip" -o \
   -name "LJM-Java-Manager*.tar.gz" -o \
   -name "LJM-Java-Manager*.tgz" -o \
   -name "LJM-Java-Manager*.exe" -o \
+  -name "LJM-Java-Manager*.run" -o \
+  -name "LJM-Java-Manager*.command" -o \
   -name "SHA256SUMS*.txt" \
 \) -exec rm -f {} +
 
