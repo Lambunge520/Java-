@@ -34,9 +34,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_hotfix_291(self):
-        self.assertEqual(self.core.VERSION, "2.9.1 Hotfix")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9.1")
+    def test_version_and_user_agent_are_292(self):
+        self.assertEqual(self.core.VERSION, "2.9.2")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9.2")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -45,7 +45,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("2.9.1 Hotfix", query["body"][0])
+        self.assertIn("2.9.2", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -98,6 +98,91 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertEqual(chain[0], self.core.JavaDownloadEngine._fetch_official)
         self.assertIn(self.core.JavaDownloadEngine._fetch_github_direct, chain)
         self.assertIn(self.core.JavaDownloadEngine._fetch_github_mirror, chain)
+
+    def test_new_user_download_source_prefers_mirrors_with_fallbacks(self):
+        self.assertEqual(self.core.DEFAULT_CONFIG["update_source"], "mirror")
+        self.assertTrue(self.core.DEFAULT_CONFIG["enable_mirror"])
+
+        previous_source = self.core.APP_CONFIG.get("update_source")
+        previous_mirror = self.core.APP_CONFIG.get("enable_mirror")
+        try:
+            self.core.APP_CONFIG["update_source"] = "mirror"
+            self.core.APP_CONFIG["enable_mirror"] = True
+
+            chain = self.core.JavaDownloadEngine._resolve_source_chain("Eclipse Temurin")
+        finally:
+            self.core.APP_CONFIG["update_source"] = previous_source
+            self.core.APP_CONFIG["enable_mirror"] = previous_mirror
+
+        self.assertEqual(chain[0], self.core.JavaDownloadEngine._fetch_github_mirror)
+        self.assertIn(self.core.JavaDownloadEngine._fetch_official, chain)
+        self.assertIn(self.core.JavaDownloadEngine._fetch_github_direct, chain)
+
+    def test_download_from_candidates_tries_next_url_before_slow_route_fallback(self):
+        first_url = "https://slow-mirror.invalid/jdk.zip"
+        second_url = "https://fast-mirror.invalid/jdk.zip"
+        calls = []
+        payload = b"download-ok"
+        original_detect = self.core.NetworkEngine.detect_environment
+        original_open = self.core.NetworkEngine.open_request_with_mode
+
+        class FakeResponse:
+            status = 200
+
+            def __init__(self, data):
+                self._data = data
+                self._offset = 0
+                self.headers = {"Content-Length": str(len(data))}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def getcode(self):
+                return 200
+
+            def read(self, size=-1):
+                if self._offset >= len(self._data):
+                    return b""
+                if size is None or size < 0:
+                    size = len(self._data) - self._offset
+                chunk = self._data[self._offset:self._offset + size]
+                self._offset += len(chunk)
+                return chunk
+
+        def fake_detect_environment(*_args, **_kwargs):
+            return {
+                "effective_direct": True,
+                "system_proxies": {},
+                "windows_proxy": {},
+            }
+
+        def fake_open_request(request_obj, timeout=10, mode="default", info=None):
+            calls.append((request_obj.full_url, mode))
+            if request_obj.full_url == first_url:
+                raise TimeoutError("slow mirror")
+            return FakeResponse(payload)
+
+        try:
+            self.core.NetworkEngine.detect_environment = staticmethod(fake_detect_environment)
+            self.core.NetworkEngine.open_request_with_mode = staticmethod(fake_open_request)
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = os.path.join(tmp, "jdk.zip")
+                result = self.core.NetworkEngine.download_from_candidates(
+                    [first_url, second_url],
+                    dest,
+                    lambda *_args: None,
+                    lambda *_args: None,
+                )
+        finally:
+            self.core.NetworkEngine.detect_environment = original_detect
+            self.core.NetworkEngine.open_request_with_mode = original_open
+
+        self.assertEqual(result, second_url)
+        self.assertEqual(calls[:2], [(first_url, "direct"), (second_url, "direct")])
+        self.assertEqual(len(calls), 2)
 
     def test_microsoft_github_mirror_uses_profile_release_source(self):
         calls = []
@@ -838,7 +923,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("2.9.1 Hotfix", payload["body"])
+        self.assertIn("2.9.2", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_defaults_use_nogui_name(self):

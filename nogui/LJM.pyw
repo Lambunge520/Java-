@@ -81,7 +81,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 
-VERSION = "2.9.1 Hotfix"
+VERSION = "2.9.2"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -3063,8 +3063,8 @@ DEFAULT_CONFIG = {
     "direct_mode_auto": True,
     "language": "auto",
     "theme": "暗粉色",
-    "update_source": "official",
-    "enable_mirror": False,
+    "update_source": "mirror",
+    "enable_mirror": True,
     "repair_mode": "smart",
     "backup_before_changes": True,
     "download_cache_enabled": True,
@@ -3345,8 +3345,8 @@ I18N_ZH_CN = {
     "update_source_priority": "更新源优先级（自动降级）",
     "source_official": "官方源 -> GitHub 直连 -> 镜像",
     "source_github": "GitHub 直连优先",
-    "source_mirror": "仅镜像源优先",
-    "mirror_fallback": "启用镜像兜底（直连或官方超时后自动尝试）",
+    "source_mirror": "镜像源优先（国内推荐）",
+    "mirror_fallback": "启用镜像兜底（官方/直连超时后自动尝试）",
     "mirror_speedtest": "立即测速并记忆最快镜像",
     "source_desc": "说明：自动模式会按当前环境决定优先路线；下载和检测时会自动在直连、系统代理和默认连接之间轮切兜底，适配国内网络、VPN、代理工具和 PAC。也可以关闭自动识别后手动固定优先策略。",
     "safety_download": "安全备份与下载加速",
@@ -3549,7 +3549,7 @@ I18N_EN_US = {
     "update_source_priority": "Update Source Priority (Auto Fallback)",
     "source_official": "Official -> GitHub direct -> Mirrors",
     "source_github": "GitHub direct first",
-    "source_mirror": "Mirror sources first",
+    "source_mirror": "Mirror sources first (recommended for China)",
     "mirror_fallback": "Enable mirror fallback after official/direct timeout",
     "mirror_speedtest": "Speed test and remember fastest mirror",
     "source_desc": "Auto mode chooses the preferred route from the current environment. Downloads and checks automatically rotate through direct, system proxy, and default routes for domestic networks, VPNs, proxy tools, and PAC. You can turn off auto-detect to pin the preferred route.",
@@ -3707,7 +3707,7 @@ def normalize_text(value):
 
 def default_headers():
     return {
-        "User-Agent": "JavaManager/2.9.1",
+        "User-Agent": "JavaManager/2.9.2",
         "Accept": "application/json, text/plain, */*",
     }
 
@@ -6427,8 +6427,8 @@ class NetworkEngine:
         last_error = None
         env_info = NetworkEngine.detect_environment()
         modes = NetworkEngine.connection_mode_candidates(env_info)
-        for url in normalized_urls:
-            for mode in modes:
+        for mode in modes:
+            for url in normalized_urls:
                 for attempt in range(retries):
                     try:
                         req = urllib.request.Request(url, headers=default_headers())
@@ -6474,8 +6474,8 @@ class NetworkEngine:
         last_error = None
         env_info = NetworkEngine.detect_environment()
         modes = NetworkEngine.connection_mode_candidates(env_info)
-        for url in normalized_urls:
-            for mode in modes:
+        for mode in modes:
+            for url in normalized_urls:
                 for attempt in range(retries):
                     try:
                         req = urllib.request.Request(url, headers=default_headers())
@@ -6555,6 +6555,11 @@ class NetworkEngine:
         return NetworkEngine.download_from_candidates([url], dest, progress_cb, status_cb, timeout=timeout, cancel_event=cancel_event, expected_sha256=expected_sha256, reuse_existing=reuse_existing)
 
     @staticmethod
+    def _download_part_path(dest, url):
+        digest = hashlib.sha256(normalize_text(url).encode("utf-8")).hexdigest()[:16]
+        return f"{dest}.{digest}.part"
+
+    @staticmethod
     def download_from_candidates(urls, dest, progress_cb, status_cb, timeout=18, cancel_event=None, expected_sha256="", reuse_existing=False):
         expected_sha256 = clean_sha256(expected_sha256)
         if reuse_existing and os.path.exists(dest) and os.path.getsize(dest) > 0:
@@ -6572,9 +6577,10 @@ class NetworkEngine:
         candidates = unique_sequence(urls)
         env_info = NetworkEngine.detect_environment()
         modes = NetworkEngine.connection_mode_candidates(env_info)
-        for index, url in enumerate(candidates, start=1):
-            for mode in modes:
-                part_path = dest + ".part"
+        part_paths = {url: NetworkEngine._download_part_path(dest, url) for url in candidates}
+        for mode in modes:
+            for index, url in enumerate(candidates, start=1):
+                part_path = part_paths[url]
                 try:
                     ensure_not_cancelled(cancel_event)
                     route_label = NetworkEngine.connection_mode_label(mode)
@@ -6622,8 +6628,8 @@ class NetworkEngine:
         candidates = unique_sequence(urls)
         env_info = NetworkEngine.detect_environment()
         modes = NetworkEngine.connection_mode_candidates(env_info)
-        for index, url in enumerate(candidates, start=1):
-            for mode in modes:
+        for mode in modes:
+            for index, url in enumerate(candidates, start=1):
                 try:
                     req = urllib.request.Request(url, headers=default_headers())
                     response = NetworkEngine.open_request_with_mode(req, timeout=timeout, mode=mode, info=env_info)
@@ -6646,8 +6652,8 @@ class NetworkEngine:
         candidates = unique_sequence(urls)
         env_info = NetworkEngine.detect_environment()
         modes = NetworkEngine.connection_mode_candidates(env_info)
-        for index, url in enumerate(candidates, start=1):
-            for mode in modes:
+        for mode in modes:
+            for index, url in enumerate(candidates, start=1):
                 try:
                     handlers = []
                     if mode == "direct":
@@ -6942,6 +6948,7 @@ class JavaDownloadEngine:
                 [
                     JavaDownloadEngine._fetch_github_mirror,
                     JavaDownloadEngine._fetch_official,
+                    JavaDownloadEngine._fetch_github_direct,
                 ]
             )
         elif source == "github":
@@ -9144,8 +9151,8 @@ class JavaManagerApp:
         lf3.pack(fill=tk.X, pady=(0, 10))
         tk.Radiobutton(lf3, text="官方源 -> GitHub 直连 -> 镜像", variable=var_update_source, value="official").pack(anchor="w", padx=10, pady=2)
         tk.Radiobutton(lf3, text="GitHub 直连优先", variable=var_update_source, value="github").pack(anchor="w", padx=10, pady=2)
-        tk.Radiobutton(lf3, text="仅镜像源优先", variable=var_update_source, value="mirror").pack(anchor="w", padx=10, pady=2)
-        tk.Checkbutton(lf3, text="启用镜像兜底 (直连或官方超时后自动尝试)", variable=var_enable_mirror).pack(anchor="w", padx=10, pady=5)
+        tk.Radiobutton(lf3, text="镜像源优先（国内推荐）", variable=var_update_source, value="mirror").pack(anchor="w", padx=10, pady=2)
+        tk.Checkbutton(lf3, text="启用镜像兜底 (官方/直连超时后自动尝试)", variable=var_enable_mirror).pack(anchor="w", padx=10, pady=5)
         tk.Label(
             lf3,
             text="说明: 自动模式下，如果检测到 Clash、V2Ray、WireGuard、OpenVPN 等代理/VPN 工具或系统代理/PAC，工具会自动开启直连；未检测到时自动关闭直连。你也可以关闭自动识别后手动固定为直连或非直连。",
