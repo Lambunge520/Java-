@@ -34,9 +34,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_292(self):
-        self.assertEqual(self.core.VERSION, "2.9.2")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9.2")
+    def test_version_and_user_agent_are_293(self):
+        self.assertEqual(self.core.VERSION, "2.9.3")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9.3")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -45,7 +45,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("2.9.2", query["body"][0])
+        self.assertIn("2.9.3", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -406,15 +406,74 @@ class CoreFeatureTests(unittest.TestCase):
                 self.assertTrue(profile["cons"])
                 self.assertTrue(profile["platforms"])
                 self.assertTrue(profile["minecraft"])
+                self.assertTrue(profile["minecraft_perf"])
 
     def test_minecraft_java_guidance_matches_major_versions(self):
         guidance_21 = self.core.minecraft_java_guidance("21", language="en_US")
         guidance_17 = self.core.minecraft_java_guidance("17", language="en_US")
         guidance_8 = self.core.minecraft_java_guidance("8", language="en_US")
+        guidance_25 = self.core.minecraft_java_guidance("25", language="en_US")
+        guidance_22_zh = self.core.minecraft_java_guidance("22", language="zh_CN")
 
         self.assertIn("1.20.5", guidance_21)
         self.assertIn("1.18", guidance_17)
         self.assertIn("1.16.5", guidance_8)
+        self.assertIn("Minecraft 26", guidance_25)
+        self.assertIn("Java 25", guidance_25)
+        self.assertIn("实验", guidance_22_zh)
+
+    def test_minecraft_vendor_advice_includes_performance_differences(self):
+        hotspot = self.core.java_vendor_profile("Eclipse Temurin", language="zh_CN")
+        openj9 = self.core.java_vendor_profile("IBM Semeru OpenJ9", language="zh_CN")
+        graal = self.core.java_vendor_profile("GraalVM", language="en_US")
+
+        self.assertIn("主流整合包", hotspot["minecraft"])
+        self.assertIn("性能差距", hotspot["minecraft_perf"])
+        self.assertIn("内存占用", openj9["minecraft_perf"])
+        self.assertIn("performance", graal["minecraft_perf"].lower())
+
+    def test_every_java_vendor_has_specific_minecraft_guidance(self):
+        for vendor, profile in self.core.JAVA_VENDOR_PROFILES.items():
+            with self.subTest(vendor=vendor):
+                self.assertTrue(profile.get("minecraft_zh"))
+                self.assertTrue(profile.get("minecraft_en"))
+                self.assertTrue(profile.get("minecraft_perf_zh"))
+                self.assertTrue(profile.get("minecraft_perf_en"))
+                self.assertIn("性能差距", profile["minecraft_perf_zh"])
+                self.assertIn("Performance gap", profile["minecraft_perf_en"])
+
+    def test_tray_tooltip_includes_work_status(self):
+        idle = self.core.tray_tooltip_text("2.9.3", active_tasks=0, background_running=False, language="zh_CN")
+        busy = self.core.tray_tooltip_text("2.9.3", active_tasks=2, background_running=False, language="zh_CN")
+        background = self.core.tray_tooltip_text("2.9.3", active_tasks=0, background_running=True, language="zh_CN")
+        english = self.core.tray_tooltip_text("2.9.3", active_tasks=1, background_running=False, language="en_US")
+
+        self.assertIn("工作状态", idle)
+        self.assertIn("空闲", idle)
+        self.assertIn("正在执行 2 个任务", busy)
+        self.assertIn("后台检查", background)
+        self.assertIn("Work status", english)
+        self.assertIn("running 1 task", english)
+        self.assertLessEqual(len(idle), 127)
+
+    def test_release_notes_and_workflows_are_bilingual(self):
+        root = Path(__file__).resolve().parents[1]
+        notes = (root / "docs" / "releases" / "RELEASE_NOTES_2.9.3.md").read_text(encoding="utf-8")
+        template = (root / "docs" / "releases" / "RELEASE_NOTES_TEMPLATE_BILINGUAL.md").read_text(encoding="utf-8")
+        gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
+        nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
+
+        self.assertIn("## 中文", notes)
+        self.assertIn("## English", notes)
+        self.assertIn("国内网络", notes)
+        self.assertIn("China network", notes)
+        self.assertIn("## 中文", template)
+        self.assertIn("## English", template)
+        for workflow in (gui_workflow, nogui_workflow):
+            self.assertIn("RELEASE_NOTES_FILE", workflow)
+            self.assertIn('RELEASE_VERSION="${RELEASE_TAG#v}"', workflow)
+            self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
+            self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
 
     def test_new_vendor_registry_tokens_are_clear(self):
         cases = [
@@ -923,7 +982,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("2.9.2", payload["body"])
+        self.assertIn("2.9.3", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_defaults_use_nogui_name(self):
@@ -943,6 +1002,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertIn("Oracle JDK", vendors)
         self.assertIn("Red Hat OpenJDK", vendors)
         self.assertTrue(vendors["Oracle JDK"]["platforms"])
+        self.assertTrue(vendors["Eclipse Temurin"]["minecraft_performance"])
         self.assertTrue(vendors["Red Hat OpenJDK"]["platforms"])
 
 

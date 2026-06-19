@@ -6,7 +6,7 @@ on:
       tag_name:
         description: "Release tag to create or update"
         required: false
-        default: "v2.9.2"
+        default: "v2.9.3"
   push:
     tags:
       - "v*"
@@ -99,9 +99,14 @@ jobs:
           cat SHA256SUMS-nogui.txt
       - name: Create or update GitHub Release
         run: |
+          RELEASE_VERSION="${RELEASE_TAG#v}"
+          RELEASE_NOTES_FILE="docs/releases/RELEASE_NOTES_${RELEASE_VERSION}.md"
+          if [ ! -f "$RELEASE_NOTES_FILE" ]; then
+            RELEASE_NOTES_FILE="docs/releases/RELEASE_NOTES_TEMPLATE_BILINGUAL.md"
+          fi
           gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
-            gh release create "$RELEASE_TAG" --title "LJM Java Manager $RELEASE_TAG" --notes-file docs/releases/RELEASE_NOTES_2.9.2.md || true
-          gh release edit "$RELEASE_TAG" --title "LJM Java Manager $RELEASE_TAG" --notes-file docs/releases/RELEASE_NOTES_2.9.2.md
+            gh release create "$RELEASE_TAG" --title "LJM Java Manager $RELEASE_TAG" --notes-file "$RELEASE_NOTES_FILE" || true
+          gh release edit "$RELEASE_TAG" --title "LJM Java Manager $RELEASE_TAG" --notes-file "$RELEASE_NOTES_FILE"
           gh release upload "$RELEASE_TAG" \
             release-assets/LJM-Java-Manager-nogui-windows/LJM-Java-Manager-nogui-windows.zip \
             release-assets/LJM-Java-Manager-nogui-linux/LJM-Java-Manager-nogui-linux.tar.gz \

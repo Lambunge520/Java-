@@ -279,6 +279,7 @@ def command_vendors(_args):
                 "scenario": profile.get("scenario"),
                 "platforms": profile.get("platforms"),
                 "minecraft": profile.get("minecraft"),
+                "minecraft_performance": profile.get("minecraft_perf"),
                 "pros": profile.get("pros"),
                 "cons": profile.get("cons"),
             }

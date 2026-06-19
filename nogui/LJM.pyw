@@ -81,7 +81,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 
-VERSION = "2.9.2"
+VERSION = "2.9.3"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -3248,6 +3248,16 @@ APP_CONFIG = load_config()
 I18N_ZH_CN = {
     "app_title": "Java 核心环境管家 - 版本 {version}",
     "tray_tooltip": "Java 核心环境管家 {version}",
+    "tray_status_idle": "工作状态: 空闲待命",
+    "tray_status_busy": "工作状态: 正在执行 {count} 个任务",
+    "tray_status_task": "工作状态: 正在{task}",
+    "tray_status_background": "工作状态: 后台检查 Java 更新",
+    "tray_task_download": "下载 Java",
+    "tray_task_move": "移动 Java",
+    "tray_task_delete": "删除/注销 Java",
+    "tray_task_update": "更新 Java",
+    "tray_task_repair": "修复 Java",
+    "tray_task_check_updates": "检查 Java 更新",
     "tab_registration": "注册管理",
     "tab_fix": "环境分析与修复",
     "tab_update": "云端更新引擎",
@@ -3285,7 +3295,7 @@ I18N_ZH_CN = {
     "download_parent": "下载/安装到父目录",
     "browse_folder": "浏览...",
     "download_platform": "当前系统自动匹配: {platform}",
-    "download_vendor_profile": "适合场景: {scenario}\n平台覆盖: {platforms}\nMinecraft: {minecraft}\n优点: {pros}\n缺点: {cons}",
+    "download_vendor_profile": "适合场景: {scenario}\n平台覆盖: {platforms}\nMC 游玩建议: {minecraft}\nMC 性能差距: {minecraft_perf}\n优点: {pros}\n缺点: {cons}",
     "download_preview": "预计安装目录: {path}",
     "download_start": "开始下载并注册 Java",
     "download_confirm_title": "确认下载 Java",
@@ -3452,6 +3462,16 @@ I18N_ZH_CN = {
 I18N_EN_US = {
     "app_title": "Java Core Environment Manager - Version {version}",
     "tray_tooltip": "Java Core Environment Manager {version}",
+    "tray_status_idle": "Work status: idle",
+    "tray_status_busy": "Work status: running {count} tasks",
+    "tray_status_task": "Work status: {task}",
+    "tray_status_background": "Work status: checking Java updates in background",
+    "tray_task_download": "downloading Java",
+    "tray_task_move": "moving Java",
+    "tray_task_delete": "deleting/unregistering Java",
+    "tray_task_update": "updating Java",
+    "tray_task_repair": "repairing Java",
+    "tray_task_check_updates": "checking Java updates",
     "tab_registration": "Registry",
     "tab_fix": "Analyze & Repair",
     "tab_update": "Cloud Update Engine",
@@ -3489,7 +3509,7 @@ I18N_EN_US = {
     "download_parent": "Download/install parent folder",
     "browse_folder": "Browse...",
     "download_platform": "Current system auto match: {platform}",
-    "download_vendor_profile": "Best for: {scenario}\nPlatform coverage: {platforms}\nMinecraft: {minecraft}\nPros: {pros}\nCons: {cons}",
+    "download_vendor_profile": "Best for: {scenario}\nPlatform coverage: {platforms}\nMinecraft play advice: {minecraft}\nMinecraft performance gap: {minecraft_perf}\nPros: {pros}\nCons: {cons}",
     "download_preview": "Planned install folder: {path}",
     "download_start": "Download and Register Java",
     "download_confirm_title": "Confirm Java Download",
@@ -3701,13 +3721,44 @@ def tr(key, **kwargs):
         return template
 
 
+def tr_for_language(key, language=None, **kwargs):
+    lang = language or active_language()
+    lang = "zh_CN" if str(lang).lower().startswith("zh") else "en_US"
+    template = I18N.get(lang, I18N_ZH_CN).get(key, I18N_ZH_CN.get(key, key))
+    try:
+        return template.format(**kwargs)
+    except Exception:
+        return template
+
+
+def tray_work_status_text(active_tasks=0, background_running=False, current_task="", language=None):
+    try:
+        task_count = max(0, int(active_tasks or 0))
+    except Exception:
+        task_count = 0
+    current_task = normalize_text(current_task)
+    if task_count > 0 and current_task and task_count == 1:
+        return tr_for_language("tray_status_task", language=language, task=current_task)
+    if task_count > 0:
+        return tr_for_language("tray_status_busy", language=language, count=task_count)
+    if background_running:
+        return tr_for_language("tray_status_background", language=language)
+    return tr_for_language("tray_status_idle", language=language)
+
+
+def tray_tooltip_text(version=VERSION, active_tasks=0, background_running=False, current_task="", language=None):
+    title = tr_for_language("tray_tooltip", language=language, version=version)
+    status = tray_work_status_text(active_tasks, background_running, current_task, language=language)
+    return f"{title} | {status}"[:127]
+
+
 def normalize_text(value):
     return str(value or "").strip().strip('"').strip("'")
 
 
 def default_headers():
     return {
-        "User-Agent": "JavaManager/2.9.2",
+        "User-Agent": f"JavaManager/{VERSION}",
         "Accept": "application/json, text/plain, */*",
     }
 
@@ -4863,22 +4914,51 @@ JAVA_VENDOR_DEFAULT_PLATFORMS = {
 }
 
 JAVA_VENDOR_DEFAULT_MINECRAFT = {
-    "zh": "Minecraft Java 版通用建议优先选 HotSpot 系发行版；Java 21 适合 1.20.5/1.21+，Java 17 适合 1.18-1.20.4，Java 8 适合 1.16.5 及更老版本。",
-    "en": "For Minecraft Java Edition, HotSpot-based builds are the safest default: Java 21 for 1.20.5/1.21+, Java 17 for 1.18-1.20.4, and Java 8 for 1.16.5 or older.",
+    "zh": "Minecraft Java 版通用建议优先选 HotSpot 系发行版；Java 25 适合 Minecraft 26+，Java 21 适合 1.20.5-1.21.x，Java 17 适合 1.18-1.20.4，Java 8 适合 1.16.5 及更老版本。",
+    "en": "For Minecraft Java Edition, HotSpot-based builds are the safest default: Java 25 for Minecraft 26+, Java 21 for 1.20.5-1.21.x, Java 17 for 1.18-1.20.4, and Java 8 for 1.16.5 or older.",
+}
+
+JAVA_VENDOR_DEFAULT_MINECRAFT_PERF = {
+    "zh": "性能差距：普通 HotSpot 发行版之间通常很接近，真正差距更多来自 MC 版本、模组、启动参数、显卡驱动和分配内存；不确定时优先 Temurin/Zulu/Microsoft/Corretto。",
+    "en": "Performance gap: ordinary HotSpot builds are usually close; Minecraft version, mods, JVM flags, GPU drivers, and memory allocation matter more. When unsure, prefer Temurin, Zulu, Microsoft, or Corretto.",
 }
 
 MINECRAFT_MAJOR_GUIDANCE = {
     "8": {
-        "zh": "Java 8 适合 Minecraft 1.16.5 及更老版本，兼容旧 Forge/老启动器最好；性能不如新 JVM，但稳定性强。",
+        "zh": "Java 8 适合 Minecraft 1.16.5 及更老版本，兼容旧 Forge、老 Fabric、老启动器最好；性能不如新 JVM，但旧整合包稳定性强。",
         "en": "Java 8 fits Minecraft 1.16.5 and older, with the best legacy Forge/launcher compatibility; performance is older, but stability is strong.",
     },
+    "11": {
+        "zh": "Java 11 主要适合少数旧服务端、代理端或插件生态需求；普通 MC 客户端不建议优先选它，通常改用 Java 8、17、21 或 25。",
+        "en": "Java 11 mainly fits some legacy servers, proxies, or plugin ecosystems; it is not a first-choice Minecraft client runtime compared with Java 8, 17, 21, or 25.",
+    },
     "17": {
-        "zh": "Java 17 适合 Minecraft 1.18 到 1.20.4，是现代整合包和服务器的稳定兼容选择。",
+        "zh": "Java 17 适合 Minecraft 1.18 到 1.20.4，是现代整合包、Fabric/Forge/NeoForge 和服务器的稳定兼容选择。",
         "en": "Java 17 fits Minecraft 1.18 through 1.20.4 and is the stable compatibility choice for modern modpacks and servers.",
     },
     "21": {
-        "zh": "Java 21 适合 Minecraft 1.20.5、1.21 及更新版本，当前性能、GC 和稳定性综合表现最好。",
-        "en": "Java 21 fits Minecraft 1.20.5, 1.21, and newer, with the best current balance of performance, GC behavior, and stability.",
+        "zh": "Java 21 适合 Minecraft 1.20.5 到 1.21.x，新版 MC、服务端和大多数当前整合包优先选它；GC、启动速度和兼容性综合表现稳。",
+        "en": "Java 21 fits Minecraft 1.20.5 through 1.21.x and is the preferred choice for current modpacks and servers, with stable GC, startup, and compatibility behavior.",
+    },
+    "22": {
+        "zh": "Java 22 属于实验选择；Minecraft 兼容性优先时不建议默认使用，除非启动器、服务端核心或模组明确要求。",
+        "en": "Java 22 is experimental for Minecraft; avoid it as the default unless your launcher, server core, or modpack explicitly requires it.",
+    },
+    "23": {
+        "zh": "Java 23 属于实验选择；适合测试 JVM 或特定服务端需求，不适合普通 MC 整合包默认使用。",
+        "en": "Java 23 is experimental; use it for JVM testing or specific server needs, not as the default for ordinary Minecraft modpacks.",
+    },
+    "24": {
+        "zh": "Java 24 属于实验选择；普通 MC 玩家建议优先 Java 25、21、17 或 8，避免模组兼容问题。",
+        "en": "Java 24 is experimental; most Minecraft players should prefer Java 25, 21, 17, or 8 to avoid mod compatibility issues.",
+    },
+    "25": {
+        "zh": "Java 25 适合 Minecraft 26 及更新版本；新版 Fabric/服务端 jar 手动启动时优先选它，旧版实例不要混用。",
+        "en": "Java 25 fits Minecraft 26 and newer; prefer it for new Fabric/server jar launches, but do not reuse it for older instances.",
+    },
+    "26": {
+        "zh": "Java 26 属于前沿测试选择；除非 MC 或服务端明确要求，否则不建议作为默认游玩环境。",
+        "en": "Java 26 is a bleeding-edge test choice; avoid it as a default Minecraft runtime unless MC or your server explicitly requires it.",
     },
 }
 
@@ -4889,11 +4969,13 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "通用开发、Minecraft、服务器和生产环境默认推荐。",
         "pros_zh": "开源、更新稳定、生态兼容性好，HotSpot 表现均衡。",
         "cons_zh": "没有额外商业增强，极致低内存或原生镜像场景不是强项。",
-        "minecraft_zh": "Minecraft 默认首选之一，Fabric/Forge/NeoForge 兼容性强；Java 21 跑新版 MC，Java 17 跑 1.18-1.20.4，Java 8 跑旧版最稳。",
+        "minecraft_zh": "Minecraft 默认首选之一，主流整合包、Fabric/Forge/NeoForge 兼容性强；Java 25 跑 Minecraft 26+，Java 21 跑 1.20.5-1.21.x，Java 17 跑 1.18-1.20.4，Java 8 跑旧版最稳。",
+        "minecraft_perf_zh": "性能差距：HotSpot 基准选择，FPS、加载速度和服务端 TPS 表现均衡；和 Zulu/Microsoft/Corretto 通常只差小幅体感，适合不想折腾的 MC 玩家。",
         "scenario_en": "General development, Minecraft, servers, and production defaults.",
         "pros_en": "Open source, stable updates, strong compatibility, and balanced HotSpot performance.",
         "cons_en": "No vendor-specific enterprise additions; not specialized for tiny memory or native-image use.",
-        "minecraft_en": "One of the safest Minecraft defaults with strong Fabric/Forge/NeoForge compatibility; use Java 21 for newer MC, Java 17 for 1.18-1.20.4, and Java 8 for legacy versions.",
+        "minecraft_en": "One of the safest Minecraft defaults for mainstream modpacks and Fabric/Forge/NeoForge; use Java 25 for Minecraft 26+, Java 21 for 1.20.5-1.21.x, Java 17 for 1.18-1.20.4, and Java 8 for legacy versions.",
+        "minecraft_perf_en": "Performance gap: the HotSpot baseline with balanced FPS, loading speed, and server TPS; usually only small practical differences versus Zulu, Microsoft, or Corretto.",
     },
     "IBM Semeru OpenJ9": {
         "foojay": "semeru",
@@ -4903,11 +4985,13 @@ JAVA_VENDOR_PROFILES = {
         "cons_zh": "少数依赖 HotSpot 内部行为的工具兼容性需要实测。",
         "platforms_zh": "Windows / Linux / macOS 主流架构优先，OpenJ9 包可用性随 Semeru 发布节奏变化。",
         "minecraft_zh": "OpenJ9 可能降低内存占用，但 FPS/模组兼容性不如 HotSpot 稳定；大型整合包建议先用 Temurin/Zulu/Microsoft，内存紧张时再实测 OpenJ9。",
+        "minecraft_perf_zh": "性能差距：常见优势是内存占用更低，服务端长时间运行可实测；客户端 FPS、加载速度和部分模组兼容可能弱于 HotSpot。",
         "scenario_en": "Memory-sensitive services, long-running processes, and OpenJ9 users.",
         "pros_en": "OpenJ9 can use less memory and has different runtime characteristics from HotSpot.",
         "cons_en": "Tools relying on HotSpot internals may need compatibility testing.",
         "platforms_en": "Mainstream Windows / Linux / macOS architectures first; OpenJ9 package availability follows Semeru releases.",
         "minecraft_en": "OpenJ9 may reduce memory usage, but FPS and mod compatibility are less predictable than HotSpot; try Temurin/Zulu/Microsoft first for large modpacks.",
+        "minecraft_perf_en": "Performance gap: often lower memory usage for long-running servers, but client FPS, loading speed, and some mod compatibility can trail HotSpot.",
     },
     "IBM Semeru Certified": {
         "foojay": "semeru_certified",
@@ -4916,10 +5000,14 @@ JAVA_VENDOR_PROFILES = {
         "pros_zh": "认证构建更适合企业合规和受控生产环境，OpenJ9 特性与 Semeru 生态一致。",
         "cons_zh": "当前 Foojay 上更偏 Linux，Windows/macOS 包可能缺失，检测不到时建议切 Semeru OpenJ9。",
         "platforms_zh": "Linux x64 覆盖更稳定；Windows/macOS 可用性有限，会自动轮切其它候选源。",
+        "minecraft_zh": "更偏企业 Linux/OpenJ9 服务端，不建议普通 MC 客户端首选；只有需要认证构建或低内存服务端时再试。",
+        "minecraft_perf_zh": "性能差距：内存表现可能接近 Semeru OpenJ9，但 MC 客户端兼容性和包覆盖不如主流 HotSpot。",
         "scenario_en": "IBM Semeru Certified builds, enterprise standard images, and Linux server workloads.",
         "pros_en": "Certified builds suit enterprise compliance and controlled production environments.",
         "cons_en": "Foojay coverage is currently Linux-heavy; use Semeru OpenJ9 when Windows/macOS packages are unavailable.",
         "platforms_en": "Linux x64 is more consistently covered; Windows/macOS availability is limited and candidate sources are rotated automatically.",
+        "minecraft_en": "Enterprise Linux/OpenJ9 server oriented; not a first-choice Minecraft client runtime unless you need certified builds or low-memory server testing.",
+        "minecraft_perf_en": "Performance gap: memory behavior may resemble Semeru OpenJ9, while Minecraft client compatibility and package coverage trail mainstream HotSpot.",
     },
     "Azul Zulu": {
         "foojay": "zulu",
@@ -4927,10 +5015,12 @@ JAVA_VENDOR_PROFILES = {
         "pros_zh": "版本覆盖广，构建稳定，Windows/Linux/macOS 包较全。",
         "cons_zh": "高级低延迟能力主要在商业 Zulu Prime 系列中。",
         "minecraft_zh": "Minecraft 兼容性和稳定性很好，尤其适合多版本共存、旧版本和启动器识别；性能表现接近 Temurin。",
+        "minecraft_perf_zh": "性能差距：HotSpot 主流梯队，FPS/TPS 通常接近 Temurin；版本覆盖广，适合多实例、多启动器玩家。",
         "scenario_en": "Desktop apps, servers, legacy compatibility, and stable long-term builds.",
         "pros_en": "Broad version coverage with stable builds across Windows, Linux, and macOS.",
         "cons_en": "Advanced low-latency features are mainly in commercial Zulu Prime builds.",
         "minecraft_en": "Strong Minecraft compatibility and stability, especially for multi-version setups and launcher detection; performance is close to Temurin.",
+        "minecraft_perf_en": "Performance gap: mainstream HotSpot tier with FPS/TPS usually close to Temurin; broad version coverage helps multi-instance players.",
     },
     "Alibaba Dragonwell": {
         "foojay": "dragonwell",
@@ -4938,9 +5028,13 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "国内云服务器、阿里生态、需要国内链路友好的服务端环境。",
         "pros_zh": "国内访问体验较好，面向服务端有一些优化思路。",
         "cons_zh": "非 LTS 或新大版本覆盖不一定和主流发行版同步。",
+        "minecraft_zh": "适合国内服务器、面板服和阿里云环境实测；普通客户端仍建议先选 Temurin/Zulu/Microsoft。",
+        "minecraft_perf_zh": "性能差距：服务端网络和国内下载体验友好，游戏 FPS 不一定明显领先 HotSpot 主流发行版。",
         "scenario_en": "China-based cloud servers, Alibaba ecosystem, and server workloads.",
         "pros_en": "Good domestic connectivity and server-oriented tuning focus.",
         "cons_en": "Coverage for non-LTS or newest majors may lag mainstream distributions.",
+        "minecraft_en": "Useful for China-hosted servers, panels, and Alibaba Cloud testing; ordinary clients should usually start with Temurin, Zulu, or Microsoft.",
+        "minecraft_perf_en": "Performance gap: domestic downloads and server deployment can feel smoother, but game FPS is not necessarily ahead of mainstream HotSpot builds.",
     },
     "GraalVM": {
         "foojay": "graalvm",
@@ -4949,10 +5043,12 @@ JAVA_VENDOR_PROFILES = {
         "pros_zh": "支持 Native Image，JIT/编译器能力强，适合高级优化。",
         "cons_zh": "体积和复杂度更高，部分原生镜像构建需要额外依赖。",
         "minecraft_zh": "GraalVM 对普通 Minecraft 不一定比 Temurin/Zulu 更稳；可用于折腾性能测试，但模组兼容优先时不建议默认选择。",
+        "minecraft_perf_zh": "性能差距：CPU 密集场景可能有惊喜，但启动、模组兼容和排错成本更高；整合包玩家建议当实验项。",
         "scenario_en": "High-performance services, polyglot workloads, Native Image, and AOT frameworks.",
         "pros_en": "Native Image support and strong compiler/runtime optimization capabilities.",
         "cons_en": "Larger and more complex; native-image builds may require extra toolchains.",
         "minecraft_en": "GraalVM is not always more stable for regular Minecraft than Temurin/Zulu; good for performance experiments, not the safest mod-compat default.",
+        "minecraft_perf_en": "Performance gap: CPU-heavy cases can improve, but startup, mod compatibility, and troubleshooting cost are higher; treat it as an experiment for modpacks.",
     },
     "GraalVM Community": {
         "foojay": "graalvm_community",
@@ -4960,9 +5056,13 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "想使用社区版 GraalVM/Native Image 的开发和测试环境。",
         "pros_zh": "社区版获取方便，适合学习、实验和开源项目。",
         "cons_zh": "版本节奏和支持边界与 Oracle GraalVM 不完全一致。",
+        "minecraft_zh": "适合 MC 性能折腾和服务端 JVM 对比，不建议给普通整合包默认使用。",
+        "minecraft_perf_zh": "性能差距：可能在少数 CPU 场景领先，但稳定性和模组兼容风险高于 Temurin/Zulu。",
         "scenario_en": "Development and testing with community GraalVM and Native Image.",
         "pros_en": "Easy to obtain and suitable for learning, experiments, and open-source projects.",
         "cons_en": "Release cadence and support boundaries differ from Oracle GraalVM.",
+        "minecraft_en": "Good for Minecraft JVM experiments and server comparisons, but not a default for ordinary modpacks.",
+        "minecraft_perf_en": "Performance gap: can win in some CPU-bound cases, with higher stability and mod-compat risk than Temurin or Zulu.",
     },
     "Microsoft Build of OpenJDK": {
         "foojay": "microsoft",
@@ -4970,11 +5070,13 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "Windows 桌面、Azure、微软生态或企业标准镜像。",
         "pros_zh": "微软维护，Windows/Azure 生态适配友好。",
         "cons_zh": "版本选择相对聚焦，不是所有历史版本都有包。",
-        "minecraft_zh": "Windows + 官方启动器/Minecraft 服务端场景很稳，Java 21/17 推荐优先级高，兼容性接近 Temurin。",
+        "minecraft_zh": "Windows + 官方启动器/Minecraft 服务端场景很稳，Java 25/21/17 推荐优先级高，兼容性接近 Temurin。",
+        "minecraft_perf_zh": "性能差距：Windows 玩家体感接近 Temurin，启动器识别和系统集成友好；适合桌面客户端和服务器两用。",
         "scenario_en": "Windows desktop, Azure, Microsoft ecosystem, and enterprise standard images.",
         "pros_en": "Maintained by Microsoft with friendly Windows and Azure integration.",
         "cons_en": "Version coverage is focused; not every historical major is available.",
-        "minecraft_en": "Very solid for Windows, the official launcher, and Minecraft servers; Java 21/17 are high-priority choices with Temurin-like compatibility.",
+        "minecraft_en": "Very solid for Windows, the official launcher, and Minecraft servers; Java 25/21/17 are high-priority choices with Temurin-like compatibility.",
+        "minecraft_perf_en": "Performance gap: close to Temurin for Windows players, with friendly launcher detection and system integration for both clients and servers.",
     },
     "Oracle Java": {
         "foojay": "oracle_open_jdk",
@@ -4983,10 +5085,14 @@ JAVA_VENDOR_PROFILES = {
         "pros_zh": "官方来源权威，版本语义清晰。",
         "cons_zh": "授权和商用合规需要用户自行确认。",
         "platforms_zh": "兼容入口，会优先走 Oracle OpenJDK，必要时回退 Oracle JDK；按当前系统自动匹配。",
+        "minecraft_zh": "Oracle Java 适合需要官方 Oracle 来源的玩家或服主；普通 MC 客户端和整合包通常优先 Temurin/Zulu/Microsoft，避免授权理解成本。",
+        "minecraft_perf_zh": "性能差距：同属 HotSpot 路线，MC FPS/TPS 通常接近 Temurin；主要差别在授权、包覆盖和官方来源可信度，不是明显游戏性能提升。",
         "scenario_en": "Oracle official builds, certification, or enterprise policy alignment.",
         "pros_en": "Authoritative official source with clear version semantics.",
         "cons_en": "Licensing and commercial compliance must be checked by the user.",
         "platforms_en": "Compatibility entry: tries Oracle OpenJDK first, then Oracle JDK fallback when needed.",
+        "minecraft_en": "Oracle Java fits players or server owners who specifically need an official Oracle source; most modded clients should start with Temurin, Zulu, or Microsoft to avoid licensing confusion.",
+        "minecraft_perf_en": "Performance gap: it is HotSpot-based, so Minecraft FPS/TPS is usually close to Temurin; licensing, package coverage, and official provenance matter more than game speed.",
     },
     "Oracle JDK": {
         "foojay": "oracle",
@@ -4994,10 +5100,14 @@ JAVA_VENDOR_PROFILES = {
         "pros_zh": "Oracle 官方 JDK 覆盖新版本积极，企业标准化场景识别度高。",
         "cons_zh": "授权、商用使用和长期支持策略需要用户自行确认。",
         "platforms_zh": "Windows / Linux / macOS 主流架构通常覆盖较好，具体以 Oracle 发布包为准。",
+        "minecraft_zh": "只在你明确需要 Oracle 官方 JDK、企业服规范或测试新版 Java 时选择；普通 MC 客户端不需要为了性能专门换 Oracle JDK。",
+        "minecraft_perf_zh": "性能差距：HotSpot 表现与 Temurin/Microsoft 接近，可能随版本拿到较新的 JVM 改动；实际游戏差异通常小于模组、光影和启动参数影响。",
         "scenario_en": "Oracle official JDK builds, enterprise certification, and Oracle-aligned production environments.",
         "pros_en": "Official Oracle JDK builds tend to cover new releases quickly and are recognizable in enterprise standards.",
         "cons_en": "Licensing, commercial use, and long-term support terms must be checked by the user.",
         "platforms_en": "Mainstream Windows / Linux / macOS architectures are usually well covered, subject to Oracle packages.",
+        "minecraft_en": "Choose it only when you explicitly need Oracle's official JDK, enterprise server policy alignment, or new-Java testing; normal clients do not need it for performance alone.",
+        "minecraft_perf_en": "Performance gap: HotSpot behavior is close to Temurin or Microsoft, sometimes with newer JVM changes; real game differences are usually smaller than mods, shaders, and JVM flags.",
     },
     "Oracle OpenJDK": {
         "foojay": "oracle_open_jdk",
@@ -5005,28 +5115,40 @@ JAVA_VENDOR_PROFILES = {
         "pros_zh": "官方 OpenJDK 来源清晰，适合验证上游行为和轻量使用。",
         "cons_zh": "长期支持和企业增强不如商业 JDK 明确，旧版本覆盖可能有限。",
         "platforms_zh": "Windows / Linux / macOS 主流架构按官方 OpenJDK 发布情况匹配。",
+        "minecraft_zh": "适合纯净端、服务端 jar 启动和验证上游 JVM 行为；大型整合包长期游玩建议优先 Temurin/Zulu 这类维护节奏更友好的发行版。",
+        "minecraft_perf_zh": "性能差距：上游 HotSpot 基线，性能很接近 Temurin；差异更多体现在旧版本可获得性、更新周期和启动器识别。",
         "scenario_en": "Oracle official OpenJDK builds, testing, learning, and upstream OpenJDK behavior checks.",
         "pros_en": "Clear official OpenJDK source, useful for validating upstream behavior.",
         "cons_en": "Long-term support and enterprise additions are less explicit than commercial JDK builds.",
         "platforms_en": "Mainstream Windows / Linux / macOS architectures are matched according to official OpenJDK releases.",
+        "minecraft_en": "Good for vanilla clients, server jar launches, and upstream JVM behavior checks; for long-term heavy modpacks, Temurin or Zulu is usually easier.",
+        "minecraft_perf_en": "Performance gap: upstream HotSpot baseline with performance very close to Temurin; older-version availability, updates, and launcher detection matter more.",
     },
     "Amazon Corretto": {
         "foojay": "corretto",
         "scenario_zh": "AWS、云服务器、容器镜像和长期稳定服务。",
         "pros_zh": "Amazon 长期维护，服务端和云环境表现稳。",
         "cons_zh": "桌面/GUI 专项特性不是重点。",
+        "minecraft_zh": "适合长期运行的 Minecraft 服务端、云服务器和容器部署；客户端也可用，但桌面玩家通常会觉得 Temurin/Zulu/Microsoft 更直接。",
+        "minecraft_perf_zh": "性能差距：HotSpot 服务端稳定派，TPS 和内存表现通常接近 Temurin；长期运行、云镜像和补丁维护是主要优势。",
         "scenario_en": "AWS, cloud servers, containers, and long-lived services.",
         "pros_en": "Long-term Amazon maintenance and stable server/cloud behavior.",
         "cons_en": "Desktop or GUI-specific features are not its focus.",
+        "minecraft_en": "Strong for long-running Minecraft servers, cloud hosts, and containers; clients work too, while desktop players often find Temurin, Zulu, or Microsoft simpler.",
+        "minecraft_perf_en": "Performance gap: stable HotSpot server behavior with TPS and memory usually close to Temurin; long-running deployments, cloud images, and maintenance are the main advantages.",
     },
     "BellSoft Liberica": {
         "foojay": "liberica",
         "scenario_zh": "桌面应用、嵌入式、需要 JavaFX 或更完整运行包的场景。",
         "pros_zh": "包类型丰富，跨平台覆盖好，适合桌面和嵌入式。",
         "cons_zh": "可选包较多，初次选择时需要看清 JDK/JRE/Full。",
+        "minecraft_zh": "适合需要 Full/JRE/JavaFX 包或跨平台桌面环境的玩家；多实例启动器场景可用，但下载时要选清 JDK/JRE/Full 类型。",
+        "minecraft_perf_zh": "性能差距：HotSpot 表现接近 Temurin/Zulu；优势在包形态丰富，不是明显提升 FPS，选错 Full/JRE 类型反而会增加体积或路径混乱。",
         "scenario_en": "Desktop apps, embedded use, JavaFX, or fuller runtime packages.",
         "pros_en": "Rich package choices with broad cross-platform coverage.",
         "cons_en": "Many variants exist, so users should distinguish JDK/JRE/Full builds.",
+        "minecraft_en": "Useful when players need Full/JRE/JavaFX packages or cross-platform desktop coverage; good for launchers, but choose JDK/JRE/Full variants carefully.",
+        "minecraft_perf_en": "Performance gap: HotSpot performance is close to Temurin or Zulu; package variety is the advantage, not a major FPS boost, and wrong Full/JRE choices can add size or path confusion.",
     },
     "SAP SapMachine": {
         "foojay": "sap_machine",
@@ -5034,18 +5156,26 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "SAP 生态、企业服务端和稳定 LTS 运行环境。",
         "pros_zh": "SAP 维护，企业服务端场景清晰。",
         "cons_zh": "面向通用桌面或游戏场景的资料相对少。",
+        "minecraft_zh": "适合企业 Linux 或 SAP 生态机器上跑 MC 服务端；普通玩家客户端资料较少，建议先选 Temurin/Zulu。",
+        "minecraft_perf_zh": "性能差距：HotSpot 服务端表现通常接近 Temurin，优势在企业维护和 Linux 服务端一致性；客户端 FPS 不会明显更强。",
         "scenario_en": "SAP ecosystem, enterprise servers, and stable LTS runtimes.",
         "pros_en": "Maintained by SAP with a clear enterprise-server focus.",
         "cons_en": "Less desktop or game-oriented guidance than mainstream builds.",
+        "minecraft_en": "Best for Minecraft servers on enterprise Linux or SAP-aligned machines; ordinary clients have less community guidance, so start with Temurin or Zulu.",
+        "minecraft_perf_en": "Performance gap: HotSpot server behavior is usually close to Temurin; enterprise maintenance and Linux consistency are the advantages, not stronger client FPS.",
     },
     "OpenLogic OpenJDK": {
         "foojay": "openlogic",
         "scenario_zh": "需要商业支持思路但仍使用 OpenJDK 的企业环境。",
         "pros_zh": "OpenLogic 维护，版本覆盖和企业支持定位明确。",
         "cons_zh": "个人用户通常优先选择 Temurin/Zulu 会更简单。",
+        "minecraft_zh": "适合需要商业支持思路的服主或企业服务器；普通 MC 玩家没有必要优先选择，Temurin/Zulu 更省心。",
+        "minecraft_perf_zh": "性能差距：HotSpot 性能接近主流发行版，差别主要在支持服务和版本覆盖；游戏帧率通常不会比 Temurin 明显更高。",
         "scenario_en": "Enterprise OpenJDK environments that value commercial support options.",
         "pros_en": "Maintained by OpenLogic with clear enterprise support positioning.",
         "cons_en": "Individual users may find Temurin or Zulu simpler.",
+        "minecraft_en": "Fits server owners or enterprises that value commercial support; ordinary Minecraft players usually have an easier time with Temurin or Zulu.",
+        "minecraft_perf_en": "Performance gap: HotSpot performance is close to mainstream builds; support model and version coverage differ more than game FPS.",
     },
     "Red Hat OpenJDK": {
         "foojay": "redhat",
@@ -5053,10 +5183,14 @@ JAVA_VENDOR_PROFILES = {
         "pros_zh": "适合 Red Hat 企业栈和受控服务器环境，旧 LTS 版本支持较清晰。",
         "cons_zh": "Foojay 上 Windows 包多集中在 8/11/17，macOS 和新大版本覆盖可能不足。",
         "platforms_zh": "Linux/RHEL 场景优先；Windows 主要覆盖部分 LTS，macOS/新版本可能无包。",
+        "minecraft_zh": "适合 RHEL/CentOS/Fedora 等 Linux 服务器上的 MC 服务端；桌面客户端和新 Java 大版本建议优先 Temurin/Zulu/Microsoft。",
+        "minecraft_perf_zh": "性能差距：Linux 服务端稳定性和系统集成较好，TPS 通常接近普通 HotSpot；Windows/macOS 包覆盖和新版可用性是主要限制。",
         "scenario_en": "Red Hat/RHEL ecosystems, enterprise Linux servers, and Red Hat OpenJDK-compatible environments.",
         "pros_en": "Fits Red Hat enterprise stacks and controlled server environments, especially older LTS lines.",
         "cons_en": "Foojay Windows packages are mostly older LTS lines such as 8/11/17; macOS/newer majors can be limited.",
         "platforms_en": "Linux/RHEL first; Windows mainly covers selected LTS lines, while macOS/newer majors may be unavailable.",
+        "minecraft_en": "Good for Minecraft servers on RHEL, CentOS, Fedora, or similar Linux systems; desktop clients and newer Java majors are usually easier with Temurin, Zulu, or Microsoft.",
+        "minecraft_perf_en": "Performance gap: Linux server stability and system integration are strong, with TPS usually close to ordinary HotSpot; Windows/macOS coverage and newer-major availability are the main limits.",
     },
     "JetBrains Runtime": {
         "foojay": "jetbrains",
@@ -5064,27 +5198,39 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "IntelliJ/IDEA、PyCharm、Android Studio 等 JetBrains/Swing 桌面工具。",
         "pros_zh": "针对 JetBrains IDE 和桌面 UI 做过适配优化。",
         "cons_zh": "不建议作为普通服务端默认 JDK，通用性需按项目验证。",
+        "minecraft_zh": "主要给 JetBrains IDE 和桌面 UI 使用，不建议作为 MC 客户端或服务端默认 Java；只有做模组开发、IDE 内运行测试时才有意义。",
+        "minecraft_perf_zh": "性能差距：UI/IDE 优化不等于 MC FPS 提升，模组兼容和服务端稳定性不如 Temurin/Zulu 路线清晰。",
         "scenario_en": "IntelliJ IDEA, PyCharm, Android Studio, and JetBrains/Swing desktop tools.",
         "pros_en": "Optimized for JetBrains IDEs and desktop UI workloads.",
         "cons_en": "Not the default choice for general server workloads; validate per project.",
+        "minecraft_en": "Primarily for JetBrains IDEs and desktop UI, not a default Minecraft client or server runtime; useful mainly for mod development and IDE-run tests.",
+        "minecraft_perf_en": "Performance gap: IDE/UI tuning does not translate into Minecraft FPS gains, and mod/server compatibility is less straightforward than Temurin or Zulu.",
     },
     "Tencent Kona": {
         "foojay": "kona",
         "scenario_zh": "腾讯云、国内服务端、希望使用国内厂商 OpenJDK 构建的环境。",
         "pros_zh": "国内厂商维护，适合国内云和服务端部署。",
         "cons_zh": "资料和社区案例少于 Temurin/Zulu。",
+        "minecraft_zh": "适合腾讯云、国内面板服和需要国产 OpenJDK 的 MC 服务端实测；普通客户端仍建议优先 Temurin/Zulu/Microsoft。",
+        "minecraft_perf_zh": "性能差距：国内服务器链路和云环境部署更友好，TPS 需按服务端核心实测；客户端 FPS 通常不比主流 HotSpot 明显更高。",
         "scenario_en": "Tencent Cloud, China-based servers, and domestic OpenJDK builds.",
         "pros_en": "Maintained by a domestic vendor and suitable for China-based deployments.",
         "cons_en": "Documentation and community examples are fewer than Temurin or Zulu.",
+        "minecraft_en": "Useful for Tencent Cloud, China-hosted panels, and domestic OpenJDK server testing; ordinary clients should still start with Temurin, Zulu, or Microsoft.",
+        "minecraft_perf_en": "Performance gap: domestic server routes and cloud deployment can be friendlier, while TPS should be tested per server core; client FPS is usually not clearly ahead of mainstream HotSpot.",
     },
     "Huawei Bi Sheng": {
         "foojay": "bisheng",
         "scenario_zh": "华为鲲鹏、Linux/aarch64 和国内服务器环境。",
         "pros_zh": "面向鲲鹏与服务端生态，适合国产化环境试用。",
         "cons_zh": "Windows/macOS 包覆盖有限，当前系统不一定有可下载包。",
+        "minecraft_zh": "适合华为云、鲲鹏/aarch64 Linux 服务端或国产化环境跑 MC 服务端；普通桌面玩家不建议优先选择。",
+        "minecraft_perf_zh": "性能差距：在鲲鹏和 ARM Linux 上更有适配意义，跨架构服务端表现要实测；桌面客户端和 x86 游戏性能优势不明显。",
         "scenario_en": "Huawei Kunpeng, Linux/aarch64, and China-based server environments.",
         "pros_en": "Targets Kunpeng and server ecosystems, useful for localization scenarios.",
         "cons_en": "Windows/macOS package coverage is limited and may not match the current system.",
+        "minecraft_en": "Fits Huawei Cloud, Kunpeng/aarch64 Linux servers, or localization environments for Minecraft servers; not a first pick for ordinary desktop players.",
+        "minecraft_perf_en": "Performance gap: most meaningful on Kunpeng and ARM Linux, where server behavior must be tested; desktop client and x86 game-speed advantages are not obvious.",
     },
     "Mandrel": {
         "foojay": "mandrel",
@@ -5092,36 +5238,52 @@ JAVA_VENDOR_PROFILES = {
         "scenario_zh": "Quarkus、容器原生和 GraalVM Native Image 构建。",
         "pros_zh": "面向云原生 Native Image，适合 Quarkus 体系。",
         "cons_zh": "不是普通 Java 运行环境首选，版本通常跟随特定生态。",
+        "minecraft_zh": "不建议作为 MC 游玩 Java；它更适合 Native Image/Quarkus 构建，除非你在做服务端工具链或插件周边实验。",
+        "minecraft_perf_zh": "性能差距：对普通 Minecraft 客户端/服务端几乎没有直接 FPS/TPS 收益，重点是原生镜像构建能力而不是运行 MC。",
         "scenario_en": "Quarkus, cloud-native containers, and GraalVM Native Image builds.",
         "pros_en": "Focused on cloud-native Native Image workflows, especially Quarkus.",
         "cons_en": "Not the first choice for ordinary Java runtimes; versions follow its ecosystem.",
+        "minecraft_en": "Not recommended as a Minecraft play runtime; it is for Native Image and Quarkus builds unless you are experimenting with server tooling or plugin-adjacent workflows.",
+        "minecraft_perf_en": "Performance gap: it brings almost no direct Minecraft client/server FPS or TPS benefit; native-image build capability is the point, not running MC.",
     },
     "Liberica Native Image Kit": {
         "foojay": "liberica_native",
         "scenario_zh": "需要 BellSoft Native Image Kit、完整原生镜像工具链的项目。",
         "pros_zh": "把 Liberica 与 Native Image 能力打包在一起，便于原生构建。",
         "cons_zh": "包体更大，适合构建机，不适合只运行普通 Java 程序。",
+        "minecraft_zh": "不适合作为普通 MC 启动器 Java；它更像构建机工具，只有开发原生工具、启动器周边或服务端辅助程序时才考虑。",
+        "minecraft_perf_zh": "性能差距：不会直接提高 Minecraft FPS/TPS，包体更大；价值在 Native Image 构建链而非游戏运行。",
         "scenario_en": "Projects needing BellSoft Native Image Kit and a bundled native-image toolchain.",
         "pros_en": "Combines Liberica with Native Image capabilities for native builds.",
         "cons_en": "Larger packages; better for build machines than simple runtime use.",
+        "minecraft_en": "Not suitable as a normal Minecraft launcher runtime; it is more of a build-machine toolkit for native tools, launcher-adjacent work, or server utilities.",
+        "minecraft_perf_en": "Performance gap: it does not directly improve Minecraft FPS/TPS and is larger; its value is the Native Image build chain, not game runtime.",
     },
     "Gluon GraalVM": {
         "foojay": "gluon_graalvm",
         "scenario_zh": "Gluon/JavaFX、移动端或桌面原生镜像实验。",
         "pros_zh": "适合 JavaFX/Gluon 生态的原生镜像方向。",
         "cons_zh": "版本和系统覆盖较窄，不适合作为通用默认 JDK。",
+        "minecraft_zh": "不建议给普通 MC 客户端或服务端默认使用；适合 JavaFX/Gluon、移动端或启动器周边原生镜像实验。",
+        "minecraft_perf_zh": "性能差距：对 MC 游戏帧率和服务端 TPS 没有稳定优势，兼容面也较窄；只在原生镜像实验时有价值。",
         "scenario_en": "Gluon/JavaFX, mobile, or desktop native-image experiments.",
         "pros_en": "Useful for JavaFX/Gluon native-image workflows.",
         "cons_en": "Narrower version and OS coverage; not a general default JDK.",
+        "minecraft_en": "Do not use it as a normal Minecraft client or server default; it fits JavaFX/Gluon, mobile, or launcher-adjacent native-image experiments.",
+        "minecraft_perf_en": "Performance gap: no stable advantage for Minecraft FPS or server TPS, with narrower compatibility; valuable only for native-image experiments.",
     },
     "Generic OpenJDK": {
         "foojay": "temurin",
         "scenario_zh": "不知道选什么时的通用 OpenJDK 入口。",
         "pros_zh": "会走稳定通用链路，兼容性优先。",
         "cons_zh": "类型名称不如具体发行商明确，建议优先选择具体发行版。",
+        "minecraft_zh": "不知道怎么选时的保底入口；MC 玩家建议再明确选择 Temurin、Zulu、Microsoft 或 Corretto，便于版本管理和排查问题。",
+        "minecraft_perf_zh": "性能差距：会按通用 HotSpot 路线处理，性能通常接近主流发行版；真正差别在具体发行商、版本和包类型。",
         "scenario_en": "Generic OpenJDK entry when the user is unsure.",
         "pros_en": "Uses a stable general-purpose chain with compatibility first.",
         "cons_en": "Less explicit than a concrete vendor; prefer a named distribution when possible.",
+        "minecraft_en": "A fallback when the user is unsure; Minecraft players should still choose Temurin, Zulu, Microsoft, or Corretto explicitly for easier version management and troubleshooting.",
+        "minecraft_perf_en": "Performance gap: it follows a generic HotSpot path and is usually close to mainstream builds; concrete vendor, version, and package type make the real difference.",
     },
 }
 
@@ -5166,6 +5328,12 @@ def java_vendor_profile(vendor, language=None):
         or profile.get("minecraft_zh")
         or JAVA_VENDOR_DEFAULT_MINECRAFT.get(suffix)
         or JAVA_VENDOR_DEFAULT_MINECRAFT["zh"]
+    )
+    result["minecraft_perf"] = (
+        profile.get(f"minecraft_perf_{suffix}")
+        or profile.get("minecraft_perf_zh")
+        or JAVA_VENDOR_DEFAULT_MINECRAFT_PERF.get(suffix)
+        or JAVA_VENDOR_DEFAULT_MINECRAFT_PERF["zh"]
     )
     return result
 
@@ -5810,6 +5978,13 @@ class WindowsTrayIcon:
         if ctypes.windll.shell32.Shell_NotifyIconW(op, ctypes.byref(data)):
             self.visible = True
 
+    def set_tooltip(self, tooltip):
+        self.tooltip = normalize_text(tooltip)[:127]
+        if not IS_WIN or not self.hwnd or not self.visible:
+            return
+        data = self._notify_data()
+        ctypes.windll.shell32.Shell_NotifyIconW(self.NIM_MODIFY, ctypes.byref(data))
+
     def remove(self):
         if not IS_WIN or not self.hwnd or not self.visible:
             return
@@ -5911,7 +6086,7 @@ class WindowsTrayIcon:
 class PystrayTrayIcon:
     def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
-        self.tooltip = tooltip
+        self.tooltip = normalize_text(tooltip)
         self.icon_path = icon_path
         self.on_show = on_show
         self.on_exit = on_exit
@@ -5976,6 +6151,15 @@ class PystrayTrayIcon:
             return
         self.visible = True
         threading.Thread(target=self.icon.run, daemon=True).start()
+
+    def set_tooltip(self, tooltip):
+        self.tooltip = normalize_text(tooltip)[:127]
+        if not self.icon:
+            return
+        try:
+            self.icon.title = self.tooltip
+        except Exception as exc:
+            logging.debug("更新跨平台托盘提示失败: %s", exc)
 
     def remove(self):
         if self.icon and self.visible:
@@ -7637,6 +7821,7 @@ class JavaManagerApp:
         self._window_has_focus = False
         self._focus_refresh_job = None
         self._active_transfer_count = 0
+        self._current_tray_task = ""
         self.tray_icon = None
         self._allow_close = False
         self._minimize_to_tray_job = None
@@ -8255,6 +8440,7 @@ class JavaManagerApp:
         if self._background_interval_seconds() <= 0:
             return
         self._background_update_running = True
+        self._refresh_tray_tooltip()
 
         def worker():
             updates = []
@@ -8285,6 +8471,7 @@ class JavaManagerApp:
                 logging.warning("后台 Java 更新提醒失败: %s", exc)
             finally:
                 self._background_update_running = False
+                self.root.after(0, self._refresh_tray_tooltip)
                 self.root.after(0, lambda: self._schedule_background_update_check(initial=False))
 
         threading.Thread(target=worker, daemon=True).start()
@@ -8301,11 +8488,33 @@ class JavaManagerApp:
             tr("process_usage_text", path=target_path, detail=detail, action=action_text),
         )
 
-    def _begin_active_transfer(self):
+    def _current_tray_tooltip(self):
+        return tray_tooltip_text(
+            VERSION,
+            active_tasks=self._active_transfer_count,
+            background_running=self._background_update_running,
+            current_task=self._current_tray_task,
+        )
+
+    def _refresh_tray_tooltip(self):
+        if not self.tray_icon:
+            return
+        try:
+            self.tray_icon.set_tooltip(self._current_tray_tooltip())
+        except Exception as exc:
+            logging.debug("刷新托盘工作状态失败: %s", exc)
+
+    def _begin_active_transfer(self, task_name=""):
         self._active_transfer_count += 1
+        if task_name:
+            self._current_tray_task = normalize_text(task_name)
+        self._refresh_tray_tooltip()
 
     def _end_active_transfer(self):
         self._active_transfer_count = max(0, self._active_transfer_count - 1)
+        if self._active_transfer_count <= 0:
+            self._current_tray_task = ""
+        self._refresh_tray_tooltip()
 
     def _on_root_focus_out(self, _event=None):
         self._window_has_focus = False
@@ -8349,7 +8558,7 @@ class JavaManagerApp:
         tray_class = WindowsTrayIcon if IS_WIN else PystrayTrayIcon
         self.tray_icon = tray_class(
             self.root,
-            tr("tray_tooltip", version=VERSION),
+            self._current_tray_tooltip(),
             self._tray_icon_path(),
             self.show_from_tray,
             self.exit_from_tray,
@@ -8812,6 +9021,7 @@ class JavaManagerApp:
                         scenario=profile.get("scenario", ""),
                         platforms=profile.get("platforms", ""),
                         minecraft=minecraft_text,
+                        minecraft_perf=profile.get("minecraft_perf", ""),
                         pros=profile.get("pros", ""),
                         cons=profile.get("cons", ""),
                     ),
@@ -8887,7 +9097,7 @@ class JavaManagerApp:
         top = tk.Toplevel(self.root)
         self._configure_popup(top, tr("transfer_title_download"), 540, 220, min_w=440, min_h=190, max_w_ratio=0.76, max_h_ratio=0.42, resizable=False)
         top.grab_set()
-        self._begin_active_transfer()
+        self._begin_active_transfer(tr("tray_task_download"))
 
         cancel_event = threading.Event()
         finished_state = {"done": False}
@@ -8976,7 +9186,7 @@ class JavaManagerApp:
         top = tk.Toplevel(self.root)
         self._configure_popup(top, tr("transfer_title_move"), 500, 180, min_w=420, min_h=160, max_w_ratio=0.72, max_h_ratio=0.36, resizable=False)
         top.grab_set()
-        self._begin_active_transfer()
+        self._begin_active_transfer(tr("tray_task_move"))
 
         cancel_event = threading.Event()
         finished_state = {"done": False}
@@ -9050,6 +9260,7 @@ class JavaManagerApp:
 
     def run_delete_java(self, meta, delete_files=False):
         java_home = meta.get("java_home")
+        self._begin_active_transfer(tr("tray_task_delete"))
         try:
             result = delete_java_home(java_home, delete_files=delete_files, preferred_name=meta.get("registry_name"))
             names = ", ".join(result.get("removed_registry_names") or []) or "-"
@@ -9059,6 +9270,8 @@ class JavaManagerApp:
         except Exception as exc:
             logging.error("Java 删除/注销失败: %s\n%s", exc, traceback.format_exc())
             messagebox.showerror(tr("task_interrupted_title"), str(exc))
+        finally:
+            self._end_active_transfer()
 
     def reset_and_retry(self):
         JavaDownloadEngine.clear_cache()
@@ -10370,7 +10583,7 @@ class JavaManagerApp:
         title = tr("transfer_title_repair") if is_repair else tr("transfer_title_update")
         self._configure_popup(top, title, 540, 220, min_w=440, min_h=190, max_w_ratio=0.76, max_h_ratio=0.42, resizable=False)
         top.grab_set()
-        self._begin_active_transfer()
+        self._begin_active_transfer(tr("tray_task_repair") if is_repair else tr("tray_task_update"))
 
         cancel_event = threading.Event()
         finished_state = {"done": False}
@@ -10587,11 +10800,23 @@ class JavaManagerApp:
         for item_id in item_ids:
             self._set_update_row(item_id, "数据获取中...", "")
 
+        self._begin_active_transfer(tr("tray_task_check_updates"))
+        remaining = {"count": len(item_ids)}
+        remaining_lock = threading.Lock()
+
+        def mark_worker_done():
+            finished = False
+            with remaining_lock:
+                remaining["count"] = max(0, remaining["count"] - 1)
+                finished = remaining["count"] == 0
+            if finished:
+                self.root.after(0, self._end_active_transfer)
+
         def worker(item_id):
-            runtime = self.update_items.get(item_id)
-            if not runtime:
-                return
             try:
+                runtime = self.update_items.get(item_id)
+                if not runtime:
+                    return
                 info = JavaDownloadEngine.get_latest_download_info(
                     runtime["vendor"],
                     runtime["major"],
@@ -10606,6 +10831,8 @@ class JavaManagerApp:
             except Exception as exc:
                 logging.error("更新检测线程异常: %s", exc)
                 self.root.after(0, lambda iid=item_id: self._set_update_row(iid, "网络错误", "否"))
+            finally:
+                mark_worker_done()
 
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=min(6, len(item_ids)))
         for item_id in item_ids:
