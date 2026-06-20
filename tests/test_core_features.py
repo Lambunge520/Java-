@@ -1,6 +1,8 @@
 import importlib.machinery
 import importlib.util
+import json
 import os
+import re
 import tempfile
 import time
 import unittest
@@ -34,9 +36,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_293(self):
-        self.assertEqual(self.core.VERSION, "2.9.3")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9.3")
+    def test_version_and_user_agent_are_294(self):
+        self.assertEqual(self.core.VERSION, "2.9.4")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9.4")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -45,7 +47,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("2.9.3", query["body"][0])
+        self.assertIn("2.9.4", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -443,10 +445,10 @@ class CoreFeatureTests(unittest.TestCase):
                 self.assertIn("Performance gap", profile["minecraft_perf_en"])
 
     def test_tray_tooltip_includes_work_status(self):
-        idle = self.core.tray_tooltip_text("2.9.3", active_tasks=0, background_running=False, language="zh_CN")
-        busy = self.core.tray_tooltip_text("2.9.3", active_tasks=2, background_running=False, language="zh_CN")
-        background = self.core.tray_tooltip_text("2.9.3", active_tasks=0, background_running=True, language="zh_CN")
-        english = self.core.tray_tooltip_text("2.9.3", active_tasks=1, background_running=False, language="en_US")
+        idle = self.core.tray_tooltip_text("2.9.4", active_tasks=0, background_running=False, language="zh_CN")
+        busy = self.core.tray_tooltip_text("2.9.4", active_tasks=2, background_running=False, language="zh_CN")
+        background = self.core.tray_tooltip_text("2.9.4", active_tasks=0, background_running=True, language="zh_CN")
+        english = self.core.tray_tooltip_text("2.9.4", active_tasks=1, background_running=False, language="en_US")
 
         self.assertIn("工作状态", idle)
         self.assertIn("空闲", idle)
@@ -456,17 +458,74 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("running 1 task", english)
         self.assertLessEqual(len(idle), 127)
 
+    def test_management_tabs_have_motion_header_animation(self):
+        self.assertEqual(self.core.blend_color("#000000", "#ffffff", 0.5), "#808080")
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "LJM.pyw").read_text(encoding="utf-8")
+
+        self.assertIn("TAB_MOTION_INTERVAL_MS = 18", source)
+        self.assertIn("def _animate_tab_motion_header", source)
+        for function_name in (
+            "setup_reg_tab",
+            "setup_fix_tab",
+            "setup_fix_tab_enhanced",
+            "setup_update_tab",
+            "setup_download_tab",
+            "setup_move_tab",
+            "setup_delete_tab",
+        ):
+            match = re.search(rf"    def {function_name}\(self\):\n(?P<body>.*?)(?=\n    def |\nclass |\Z)", source, re.S)
+            self.assertIsNotNone(match, function_name)
+            self.assertIn("_create_tab_motion_header", match.group("body"), function_name)
+
+    def test_unregister_selected_uses_equivalent_java_home_cleanup(self):
+        calls = []
+
+        class Listbox:
+            def curselection(self):
+                return (0, 1)
+
+            def get(self, index):
+                return (
+                    "[OK] Root  [C:\\Java\\jdk8]",
+                    "[!] MissingNameOnly",
+                )[index]
+
+        app = type("App", (), {})()
+        app.lb_reg = Listbox()
+        app.refresh_all_data = lambda: calls.append(("refresh",))
+
+        original_unregister_home = self.core.unregister_java_home
+        original_unregister = self.core.JavaRegistryAdapter.unregister
+        try:
+            self.core.unregister_java_home = lambda path, preferred_name=None: calls.append(("home", path, preferred_name))
+            self.core.JavaRegistryAdapter.unregister = staticmethod(lambda name: calls.append(("name", name)))
+
+            self.core.JavaManagerApp.unregister_selected(app)
+        finally:
+            self.core.unregister_java_home = original_unregister_home
+            self.core.JavaRegistryAdapter.unregister = original_unregister
+
+        self.assertEqual(
+            calls,
+            [
+                ("home", "C:\\Java\\jdk8", "Root"),
+                ("name", "MissingNameOnly"),
+                ("refresh",),
+            ],
+        )
+
     def test_release_notes_and_workflows_are_bilingual(self):
         root = Path(__file__).resolve().parents[1]
-        notes = (root / "docs" / "releases" / "RELEASE_NOTES_2.9.3.md").read_text(encoding="utf-8")
+        notes = (root / "docs" / "releases" / "RELEASE_NOTES_2.9.4.md").read_text(encoding="utf-8")
         template = (root / "docs" / "releases" / "RELEASE_NOTES_TEMPLATE_BILINGUAL.md").read_text(encoding="utf-8")
         gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
         nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
 
         self.assertIn("## 中文", notes)
         self.assertIn("## English", notes)
-        self.assertIn("国内网络", notes)
-        self.assertIn("China network", notes)
+        self.assertIn("取消托盘图标左键单击恢复窗口", notes)
+        self.assertIn("Tray single-left-click restore is disabled", notes)
         self.assertIn("## 中文", template)
         self.assertIn("## English", template)
         for workflow in (gui_workflow, nogui_workflow):
@@ -474,6 +533,28 @@ class CoreFeatureTests(unittest.TestCase):
             self.assertIn('RELEASE_VERSION="${RELEASE_TAG#v}"', workflow)
             self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
             self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
+
+    def test_nogui_usage_docs_are_bilingual_and_asset_focused(self):
+        root = Path(__file__).resolve().parents[1]
+        docs = (root / "docs" / "NOGUI_USAGE.md").read_text(encoding="utf-8")
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        standalone = (root / "nogui" / "README.md").read_text(encoding="utf-8")
+
+        for text in (docs, standalone):
+            self.assertIn("## 中文", text)
+            self.assertIn("## English", text)
+        for marker in (
+            "LJM-Java-Manager-nogui-windows.zip",
+            "LJM-Java-Manager-nogui-linux.tar.gz",
+            "LJM-Java-Manager-nogui-macos.zip",
+            "SHA256SUMS-nogui.txt",
+            "LJM-Java-Manager-nogui.run",
+            "LJM-Java-Manager-nogui.command",
+        ):
+            self.assertIn(marker, docs)
+        self.assertIn("docs/NOGUI_USAGE.md", readme)
+        self.assertIn("Current version: `2.9.4`", readme)
+        self.assertIn("../docs/NOGUI_USAGE.md", standalone)
 
     def test_new_vendor_registry_tokens_are_clear(self):
         cases = [
@@ -917,6 +998,331 @@ class CoreFeatureTests(unittest.TestCase):
             self.assertTrue(result["deleted_files"])
             self.assertEqual(calls["unregistered"], ["Temurin_21"])
 
+    def test_unregister_java_home_removes_equivalent_jdk_jre_and_bin_entries(self):
+        self.assertEqual(self.core.java_home_equivalent_paths(""), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            java_home = Path(tmp) / "jdk8"
+            (java_home / "bin").mkdir(parents=True)
+            (java_home / "jre" / "bin").mkdir(parents=True)
+            java_exe = "java.exe" if self.core.IS_WIN else "java"
+            javac_exe = "javac.exe" if self.core.IS_WIN else "javac"
+            (java_home / "bin" / java_exe).write_text("", encoding="utf-8")
+            (java_home / "bin" / javac_exe).write_text("", encoding="utf-8")
+            (java_home / "jre" / "bin" / java_exe).write_text("", encoding="utf-8")
+            (java_home / "release").write_text('JAVA_VERSION="1.8.0_402"', encoding="utf-8")
+            other_home = Path(tmp) / "jdk17"
+            other_home.mkdir()
+
+            registry = {
+                "Root": str(java_home),
+                "NestedJre": str(java_home / "jre"),
+                "BinPath": str(java_home / "bin"),
+                "Other": str(other_home),
+            }
+            removed = []
+            original_get_all = self.core.JavaRegistryAdapter.get_all
+            original_unregister = self.core.JavaRegistryAdapter.unregister
+            try:
+                self.core.JavaRegistryAdapter.get_all = staticmethod(lambda: list(registry.items()))
+                self.core.JavaRegistryAdapter.unregister = staticmethod(lambda name: removed.append(name))
+
+                names = self.core.unregister_java_home(str(java_home), preferred_name="Root")
+            finally:
+                self.core.JavaRegistryAdapter.get_all = original_get_all
+                self.core.JavaRegistryAdapter.unregister = original_unregister
+
+            self.assertEqual(names, ["Root", "NestedJre", "BinPath"])
+            self.assertEqual(removed, ["Root", "NestedJre", "BinPath"])
+
+    def test_delete_java_home_removes_related_backups_to_stop_launcher_rescan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "state"
+            backup_root = state_dir / "backups"
+            java_home = Path(tmp) / "jdk-21"
+            (java_home / "bin").mkdir(parents=True)
+            java_exe = "java.exe" if self.core.IS_WIN else "java"
+            (java_home / "bin" / java_exe).write_text("", encoding="utf-8")
+            (java_home / "release").write_text('JAVA_VERSION="21.0.1"', encoding="utf-8")
+            related_backup = backup_root / "20260620_jdk-21"
+            unrelated_backup = backup_root / "20260620_jdk-17"
+            (related_backup / "java_home" / "bin").mkdir(parents=True)
+            (unrelated_backup / "java_home").mkdir(parents=True)
+            (related_backup / "manifest.json").write_text(
+                '{"target_path": "' + str(java_home).replace("\\", "\\\\") + '"}',
+                encoding="utf-8",
+            )
+            (unrelated_backup / "manifest.json").write_text(
+                '{"target_path": "' + str(Path(tmp) / "jdk-17").replace("\\", "\\\\") + '"}',
+                encoding="utf-8",
+            )
+
+            original_backup_root = self.core.backup_root_dir
+            original_find = self.core.JavaRegistryAdapter.find_version_names_by_home
+            original_unregister = self.core.JavaRegistryAdapter.unregister
+            try:
+                self.core.backup_root_dir = lambda: str(backup_root)
+                self.core.JavaRegistryAdapter.find_version_names_by_home = staticmethod(lambda _home: ["Temurin_21"])
+                self.core.JavaRegistryAdapter.unregister = staticmethod(lambda _name: None)
+
+                result = self.core.delete_java_home(str(java_home), delete_files=True, preferred_name="Temurin_21")
+            finally:
+                self.core.backup_root_dir = original_backup_root
+                self.core.JavaRegistryAdapter.find_version_names_by_home = original_find
+                self.core.JavaRegistryAdapter.unregister = original_unregister
+
+            self.assertTrue(result["deleted_files"])
+            self.assertFalse(java_home.exists())
+            self.assertFalse(related_backup.exists())
+            self.assertTrue(unrelated_backup.exists())
+
+    def test_backup_management_records_include_size_and_can_delete_backup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backup_root = Path(tmp) / "backups"
+            backup_dir = backup_root / "20260620_jdk-21"
+            java_home = backup_dir / "java_home"
+            java_home.mkdir(parents=True)
+            (java_home / "release").write_text('JAVA_VERSION="21.0.1"', encoding="utf-8")
+            (backup_dir / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "created_at": 10,
+                        "created_text": "2026-06-20 12:00:00",
+                        "operation": "update",
+                        "target_path": str(Path(tmp) / "jdk-21"),
+                        "entries": ["release"],
+                        "registry_names": ["Temurin_21"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            original_backup_root = self.core.backup_root_dir
+            try:
+                self.core.backup_root_dir = lambda: str(backup_root)
+
+                records = self.core.list_java_backup_records()
+                deleted = self.core.delete_java_backup(str(backup_dir))
+            finally:
+                self.core.backup_root_dir = original_backup_root
+
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["operation"], "update")
+            self.assertEqual(records[0]["registry_names"], ["Temurin_21"])
+            self.assertGreater(records[0]["size_bytes"], 0)
+            self.assertTrue(deleted["deleted"])
+            self.assertFalse(backup_dir.exists())
+
+    def test_download_cache_management_stats_and_clear_contents(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cache_dir = Path(tmp) / "downloads"
+            nested = cache_dir / "nested"
+            nested.mkdir(parents=True)
+            (cache_dir / "jdk.zip").write_bytes(b"12345")
+            (nested / "part.tmp").write_bytes(b"12")
+            original_cache_dir = self.core.download_cache_dir
+            original_engine_cache = dict(self.core.JavaDownloadEngine._cache)
+            try:
+                self.core.download_cache_dir = lambda: str(cache_dir)
+                self.core.JavaDownloadEngine._cache["sample"] = {"time": 1, "data": {}}
+
+                stats = self.core.download_cache_stats()
+                result = self.core.clear_download_cache()
+            finally:
+                self.core.download_cache_dir = original_cache_dir
+                self.core.JavaDownloadEngine._cache.clear()
+                self.core.JavaDownloadEngine._cache.update(original_engine_cache)
+
+            self.assertEqual(stats["file_count"], 2)
+            self.assertEqual(stats["size_bytes"], 7)
+            self.assertEqual(result["file_count"], 2)
+            self.assertEqual(result["size_bytes"], 7)
+            self.assertTrue(cache_dir.exists())
+            self.assertEqual(list(cache_dir.iterdir()), [])
+            self.assertNotIn("sample", self.core.JavaDownloadEngine._cache)
+
+    def test_registry_cleanup_prunes_missing_and_ljm_backup_entries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backup_root = Path(tmp) / "backups"
+            backup_java = backup_root / "20260620_jdk" / "java_home"
+            backup_java.mkdir(parents=True)
+            live_java = Path(tmp) / "jdk-21"
+            live_java.mkdir()
+            registry = {
+                "Empty": "",
+                "Missing": str(Path(tmp) / "missing-jdk"),
+                "Backup": str(backup_java),
+                "Live": str(live_java),
+            }
+            removed = []
+            original_get_all = self.core.JavaRegistryAdapter.get_all
+            original_unregister = self.core.JavaRegistryAdapter.unregister
+            original_backup_root = self.core.backup_root_dir
+            try:
+                self.core.JavaRegistryAdapter.get_all = staticmethod(lambda: list(registry.items()))
+                self.core.JavaRegistryAdapter.unregister = staticmethod(lambda name: removed.append(name))
+                self.core.backup_root_dir = lambda: str(backup_root)
+
+                removed_names = self.core.cleanup_stale_java_registrations()
+            finally:
+                self.core.JavaRegistryAdapter.get_all = original_get_all
+                self.core.JavaRegistryAdapter.unregister = original_unregister
+                self.core.backup_root_dir = original_backup_root
+
+            self.assertEqual(removed_names, ["Empty", "Missing", "Backup"])
+            self.assertEqual(removed, ["Empty", "Missing", "Backup"])
+
+    def test_windows_tray_left_click_does_not_restore_window(self):
+        events = []
+
+        class Root:
+            def after(self, delay, callback):
+                events.append(("after", delay))
+                callback()
+
+        tray = self.core.WindowsTrayIcon(Root(), "tooltip", "", lambda: events.append("show"), lambda: None)
+
+        result = tray._wndproc(None, tray.WM_TRAYICON, None, tray.WM_LBUTTONUP)
+
+        self.assertEqual(result, 0)
+        self.assertNotIn("show", events)
+        self.assertNotIn(("after", 0), events)
+
+    def test_windows_tray_double_click_shows_window(self):
+        events = []
+
+        class Root:
+            def after(self, delay, callback):
+                events.append(("after", delay))
+                callback()
+
+        tray = self.core.WindowsTrayIcon(Root(), "tooltip", "", lambda: events.append("show"), lambda: None)
+
+        result = tray._wndproc(None, tray.WM_TRAYICON, None, tray.WM_LBUTTONDBLCLK)
+
+        self.assertEqual(result, 0)
+        self.assertIn("show", events)
+
+    def test_windows_tray_double_click_callback_is_guarded(self):
+        events = []
+
+        class Root:
+            def after(self, delay, callback):
+                events.append(("after", delay))
+                callback()
+
+        def broken_show():
+            events.append("show")
+            raise RuntimeError("restore failed")
+
+        tray = self.core.WindowsTrayIcon(Root(), "tooltip", "", broken_show, lambda: None)
+
+        result = tray._wndproc(None, tray.WM_TRAYICON, None, tray.WM_LBUTTONDBLCLK)
+
+        self.assertEqual(result, 0)
+        self.assertIn("show", events)
+
+    def test_pystray_menu_does_not_make_show_item_left_click_default(self):
+        source = Path("src/LJM.pyw").read_text(encoding="utf-8")
+        match = re.search(r"class PystrayTrayIcon:\n(?P<body>.*?)(?=\n\nclass JavaRegistryAdapter:)", source, re.S)
+
+        self.assertIsNotNone(match)
+        self.assertNotIn("default=True", match.group("body"))
+
+    def test_windows_tray_uses_dedicated_message_window(self):
+        source = Path("src/LJM.pyw").read_text(encoding="utf-8")
+        match = re.search(r"class WindowsTrayIcon:\n(?P<body>.*?)(?=\n\nclass PystrayTrayIcon:)", source, re.S)
+
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        self.assertIn("def _create_message_window", body)
+        self.assertIn("CreateWindowExW", body)
+        self.assertNotIn("SetWindowLongPtrW", body)
+
+    def test_show_from_tray_restores_visible_window_without_zero_alpha(self):
+        events = []
+        app = object.__new__(self.core.JavaManagerApp)
+
+        class Tray:
+            def show(self):
+                events.append("tray-show")
+
+        class Root:
+            def winfo_exists(self):
+                return True
+
+            def deiconify(self):
+                events.append("deiconify")
+
+            def state(self, value):
+                events.append(("state", value))
+
+            def lift(self):
+                events.append("lift")
+
+            def focus_force(self):
+                events.append("focus")
+
+            def update_idletasks(self):
+                events.append("update")
+
+        app.root = Root()
+        app.tray_icon = Tray()
+        app._cancel_window_fade = lambda window: events.append("cancel-fade")
+        app._set_window_alpha = lambda window, alpha: events.append(("alpha", alpha)) or True
+        app._force_show_root_window = lambda: events.append("force-show")
+        app._fade_in_window = lambda *args, **kwargs: events.append("fade-in")
+
+        self.core.JavaManagerApp.show_from_tray(app)
+
+        self.assertIn("deiconify", events)
+        self.assertIn(("state", "normal"), events)
+        self.assertIn("force-show", events)
+        self.assertNotIn(("alpha", 0.0), events)
+        self.assertNotIn("fade-in", events)
+
+    def test_tab_change_uses_tab_animation_without_root_alpha_fade(self):
+        source = Path("src/LJM.pyw").read_text(encoding="utf-8")
+        match = re.search(r"    def on_tab_changed\(self, event\):\n(?P<body>(?:        .*\n)+)", source)
+
+        self.assertIsNotNone(match)
+        self.assertIn("_animate_selected_tab_motion_header()", match.group("body"))
+        self.assertNotIn("_fade_in_window(self.root", match.group("body"))
+
+    def test_window_fade_cancels_previous_pending_job(self):
+        app = object.__new__(self.core.JavaManagerApp)
+        app._window_fade_jobs = {}
+        alpha_values = []
+
+        def set_alpha(_window, alpha):
+            alpha_values.append(alpha)
+            return True
+
+        app._set_window_alpha = set_alpha
+
+        class Window:
+            def __init__(self):
+                self.cancelled = []
+                self.jobs = []
+
+            def winfo_exists(self):
+                return True
+
+            def after(self, _delay, callback):
+                job = f"job-{len(self.jobs) + 1}"
+                self.jobs.append((job, callback))
+                return job
+
+            def after_cancel(self, job):
+                self.cancelled.append(job)
+
+        window = Window()
+
+        app._fade_in_window(window, duration=100, steps=2, start_alpha=0.0)
+        first_job = window.jobs[-1][0]
+        app._fade_out_window(window, duration=100, steps=2)
+
+        self.assertIn(first_job, window.cancelled)
+        self.assertEqual(app._window_fade_jobs[str(window)], window.jobs[-1][0])
+
     def test_ensure_java_home_executables_repairs_unix_launchers(self):
         with tempfile.TemporaryDirectory() as tmp:
             java_home = Path(tmp) / "jdk-21"
@@ -945,6 +1351,19 @@ class CoreFeatureTests(unittest.TestCase):
             self.assertEqual({Path(path).name for path in changed}, {"java", "javac", "jspawnhelper"})
             self.assertEqual({name for name, _mode in chmod_calls}, {"java", "javac", "jspawnhelper"})
             self.assertTrue(all(mode & 0o111 for _name, mode in chmod_calls))
+
+    def test_backup_tab_and_settings_cache_management_ui_are_wired(self):
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "LJM.pyw").read_text(encoding="utf-8")
+
+        self.assertIn('"tab_backup"', source)
+        self.assertIn("def setup_backup_tab", source)
+        self.assertIn("def refresh_backup_tab", source)
+        self.assertIn("def restore_selected_backup", source)
+        self.assertIn("def delete_selected_backup", source)
+        self.assertIn("def clear_download_cache_from_settings", source)
+        self.assertIn("download_cache_status", source)
+        self.assertIn("_create_tab_motion_header(self.tab_backup", source)
 
 class NoguiFeatureTests(unittest.TestCase):
     @classmethod
@@ -982,7 +1401,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("2.9.3", payload["body"])
+        self.assertIn("2.9.4", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_defaults_use_nogui_name(self):
@@ -993,6 +1412,44 @@ class NoguiFeatureTests(unittest.TestCase):
             payload = self.nogui.write_result({"ok": True}, output_path=str(output))
 
         self.assertEqual(payload["tool"], "LJM Java Manager NoGUI")
+
+    def test_nogui_registry_rows_prunes_stale_entries_before_listing(self):
+        calls = []
+        original_cleanup = self.nogui.core.cleanup_stale_java_registrations
+        original_get_all = self.nogui.core.JavaRegistryAdapter.get_all
+        original_runtime = self.nogui.core.read_java_runtime_info
+        original_health = self.nogui.core.get_java_health_report
+        original_update_home = self.nogui.core.runtime_update_java_home
+        original_version_text = self.nogui.core.version_display_text
+        try:
+            self.nogui.core.cleanup_stale_java_registrations = lambda: calls.append("cleanup")
+            self.nogui.core.JavaRegistryAdapter.get_all = staticmethod(lambda: [("Temurin_21", r"C:\Java\jdk21")])
+            self.nogui.core.read_java_runtime_info = lambda _path: {
+                "vendor": "Eclipse Temurin",
+                "major": "21",
+                "package_type": "jdk",
+                "nested_jre_home": "",
+                "version": "21.0.2",
+            }
+            self.nogui.core.get_java_health_report = lambda _path: {
+                "status": "OK",
+                "healthy": True,
+                "usable": True,
+            }
+            self.nogui.core.runtime_update_java_home = lambda _runtime: r"C:\Java\jdk21"
+            self.nogui.core.version_display_text = lambda version: version
+
+            rows = self.nogui.registry_rows()
+        finally:
+            self.nogui.core.cleanup_stale_java_registrations = original_cleanup
+            self.nogui.core.JavaRegistryAdapter.get_all = original_get_all
+            self.nogui.core.read_java_runtime_info = original_runtime
+            self.nogui.core.get_java_health_report = original_health
+            self.nogui.core.runtime_update_java_home = original_update_home
+            self.nogui.core.version_display_text = original_version_text
+
+        self.assertEqual(calls, ["cleanup"])
+        self.assertEqual(rows[0]["registry_name"], "Temurin_21")
 
     def test_nogui_vendors_export_platform_guidance(self):
         payload = self.nogui.command_vendors(None)

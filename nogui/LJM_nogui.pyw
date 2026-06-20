@@ -77,6 +77,8 @@ def progress_logger(prefix):
 
 
 def registry_rows():
+    if hasattr(core, "cleanup_stale_java_registrations"):
+        core.cleanup_stale_java_registrations()
     rows = []
     for version_name, java_home in core.JavaRegistryAdapter.get_all():
         runtime = core.read_java_runtime_info(java_home)

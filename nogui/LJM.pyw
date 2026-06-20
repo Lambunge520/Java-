@@ -81,7 +81,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 
-VERSION = "2.9.3"
+VERSION = "2.9.4"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -99,6 +99,8 @@ GITHUB_MIRROR_PREFIXES = (
 )
 ADOPTIUM_API_ENDPOINTS = ("latest", "feature_releases")
 JAVA_PACKAGE_TYPES = ("jdk", "jre")
+TAB_MOTION_STEPS = 12
+TAB_MOTION_INTERVAL_MS = 18
 
 JAVA_BLACK_ICON = (
     b"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAwVpQ"
@@ -3264,6 +3266,7 @@ I18N_ZH_CN = {
     "tab_download": "Java 下载",
     "tab_move": "Java 移动",
     "tab_delete": "Java 卸载/删除",
+    "tab_backup": "备份管理",
     "toolbar_search_label": "搜索/筛选 Java:",
     "toolbar_clear_filter": "清空筛选",
     "toolbar_settings": "系统设置 & 工具更新",
@@ -3334,6 +3337,25 @@ I18N_ZH_CN = {
     "delete_done_text": "已处理:\n{path}\n\n删除文件: {deleted}\n注销项: {names}",
     "delete_yes": "是",
     "delete_no": "否",
+    "backup_col_time": "备份时间",
+    "backup_col_operation": "来源",
+    "backup_col_target": "目标 Java",
+    "backup_col_size": "大小",
+    "backup_col_entries": "内容",
+    "backup_col_names": "注册项",
+    "backup_refresh": "刷新备份列表",
+    "backup_restore": "恢复选中备份",
+    "backup_delete": "删除选中备份",
+    "backup_open_dir": "打开备份目录",
+    "backup_empty": "暂无可用备份",
+    "backup_no_selection_title": "未选择备份",
+    "backup_no_selection_text": "请先选择一个备份记录。",
+    "backup_restore_confirm_title": "确认恢复备份",
+    "backup_restore_confirm_text": "即将把 Java 环境恢复到备份状态:\n{target}\n\n备份时间: {time}\n备份目录: {backup_dir}\n\n是否继续？",
+    "backup_restore_done": "备份恢复完成",
+    "backup_delete_confirm_title": "确认删除备份",
+    "backup_delete_confirm_text": "即将删除备份:\n{backup_dir}\n\n此操作不会删除当前 Java，但备份无法再用于回滚。是否继续？",
+    "backup_delete_done": "备份已删除",
     "settings_title": "系统核心设置",
     "language_section": "界面语言",
     "language_auto": "自动跟随系统语言",
@@ -3364,6 +3386,15 @@ I18N_ZH_CN = {
     "download_cache": "启用下载缓存与断点续传，重复修复优先复用本地 JDK 包",
     "sha256_verify": "启用 SHA256 校验（源提供校验值时强校验，未提供时做压缩包结构检查）",
     "cache_backup_dirs": "下载缓存目录: {cache_dir}\n备份目录: {backup_dir}",
+    "download_cache_status": "下载缓存: {size}，{count} 个文件\n目录: {path}",
+    "download_cache_clear": "清空下载缓存",
+    "download_cache_open": "打开下载缓存目录",
+    "download_cache_clear_confirm_title": "确认清空下载缓存",
+    "download_cache_clear_confirm": "即将清空下载缓存目录:\n{path}\n\n会删除 {count} 个文件，释放约 {size}。是否继续？",
+    "download_cache_cleared_title": "下载缓存已清空",
+    "download_cache_cleared_text": "已清空下载缓存，释放约 {size}。",
+    "open_folder_failed_title": "无法打开目录",
+    "open_folder_failed_text": "无法自动打开目录，请手动访问:\n{path}",
     "background_reminder": "后台托盘更新提醒",
     "bg_off": "关闭后台提醒",
     "bg_daily": "每天提醒检查一次",
@@ -3478,6 +3509,7 @@ I18N_EN_US = {
     "tab_download": "Java Download",
     "tab_move": "Java Move",
     "tab_delete": "Java Uninstall/Delete",
+    "tab_backup": "Backup Manager",
     "toolbar_search_label": "Search/Filter Java:",
     "toolbar_clear_filter": "Clear",
     "toolbar_settings": "Settings & Updates",
@@ -3548,6 +3580,25 @@ I18N_EN_US = {
     "delete_done_text": "Processed:\n{path}\n\nDeleted files: {deleted}\nRemoved entries: {names}",
     "delete_yes": "yes",
     "delete_no": "no",
+    "backup_col_time": "Backup Time",
+    "backup_col_operation": "Source",
+    "backup_col_target": "Target Java",
+    "backup_col_size": "Size",
+    "backup_col_entries": "Contents",
+    "backup_col_names": "Registry Entries",
+    "backup_refresh": "Refresh Backups",
+    "backup_restore": "Restore Selected Backup",
+    "backup_delete": "Delete Selected Backup",
+    "backup_open_dir": "Open Backup Folder",
+    "backup_empty": "No backups available",
+    "backup_no_selection_title": "No Backup Selected",
+    "backup_no_selection_text": "Select a backup record first.",
+    "backup_restore_confirm_title": "Confirm Backup Restore",
+    "backup_restore_confirm_text": "The Java runtime will be restored from this backup:\n{target}\n\nBackup time: {time}\nBackup folder: {backup_dir}\n\nContinue?",
+    "backup_restore_done": "Backup Restored",
+    "backup_delete_confirm_title": "Confirm Backup Delete",
+    "backup_delete_confirm_text": "The backup will be deleted:\n{backup_dir}\n\nCurrent Java files are not deleted, but this backup can no longer be used for rollback. Continue?",
+    "backup_delete_done": "Backup Deleted",
     "settings_title": "Core Settings",
     "language_section": "Interface Language",
     "language_auto": "Follow system language",
@@ -3578,6 +3629,15 @@ I18N_EN_US = {
     "download_cache": "Enable download cache and resume; reuse local JDK archives for repeated repairs",
     "sha256_verify": "Enable SHA256 verification when available; otherwise validate archive structure",
     "cache_backup_dirs": "Download cache: {cache_dir}\nBackups: {backup_dir}",
+    "download_cache_status": "Download cache: {size}, {count} files\nFolder: {path}",
+    "download_cache_clear": "Clear Download Cache",
+    "download_cache_open": "Open Download Cache Folder",
+    "download_cache_clear_confirm_title": "Confirm Download Cache Clear",
+    "download_cache_clear_confirm": "The download cache folder will be cleared:\n{path}\n\nThis removes {count} files and frees about {size}. Continue?",
+    "download_cache_cleared_title": "Download Cache Cleared",
+    "download_cache_cleared_text": "Download cache was cleared, freeing about {size}.",
+    "open_folder_failed_title": "Could Not Open Folder",
+    "open_folder_failed_text": "The folder could not be opened automatically. Open it manually:\n{path}",
     "background_reminder": "Background Tray Update Reminder",
     "bg_off": "Disable reminders",
     "bg_daily": "Remind once per day",
@@ -3754,6 +3814,18 @@ def tray_tooltip_text(version=VERSION, active_tasks=0, background_running=False,
 
 def normalize_text(value):
     return str(value or "").strip().strip('"').strip("'")
+
+
+def blend_color(start, end, progress):
+    progress = max(0.0, min(1.0, float(progress)))
+    start = normalize_text(start)
+    end = normalize_text(end)
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", start) or not re.fullmatch(r"#[0-9a-fA-F]{6}", end):
+        return end if progress >= 0.5 else start
+    start_values = tuple(int(start[index:index + 2], 16) for index in (1, 3, 5))
+    end_values = tuple(int(end[index:index + 2], 16) for index in (1, 3, 5))
+    mixed = tuple(round(a + (b - a) * progress) for a, b in zip(start_values, end_values))
+    return f"#{mixed[0]:02x}{mixed[1]:02x}{mixed[2]:02x}"
 
 
 def default_headers():
@@ -3934,6 +4006,67 @@ def backup_root_dir():
     return app_state_dir("backups")
 
 
+def directory_size_and_file_count(path):
+    root_path = os.path.abspath(os.path.expanduser(normalize_text(path)))
+    total_size = 0
+    file_count = 0
+    if not os.path.exists(root_path):
+        return total_size, file_count
+    if os.path.isfile(root_path):
+        try:
+            return os.path.getsize(root_path), 1
+        except OSError:
+            return 0, 1
+    for current_root, _dirs, files in os.walk(root_path):
+        for filename in files:
+            file_count += 1
+            try:
+                total_size += os.path.getsize(os.path.join(current_root, filename))
+            except OSError:
+                pass
+    return total_size, file_count
+
+
+def format_file_size(size_bytes):
+    size = float(max(0, int(size_bytes or 0)))
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} B"
+        size /= 1024
+    return f"{size:.1f} GB"
+
+
+def download_cache_stats():
+    cache_dir = download_cache_dir()
+    size_bytes, file_count = directory_size_and_file_count(cache_dir)
+    return {
+        "path": cache_dir,
+        "size_bytes": size_bytes,
+        "file_count": file_count,
+        "size_text": format_file_size(size_bytes),
+    }
+
+
+def clear_download_cache():
+    stats = download_cache_stats()
+    cache_dir = stats["path"]
+    os.makedirs(cache_dir, exist_ok=True)
+    for name in os.listdir(cache_dir):
+        child = os.path.join(cache_dir, name)
+        try:
+            if os.path.isdir(child) and not os.path.islink(child):
+                force_remove_tree(child)
+            else:
+                os.remove(child)
+        except FileNotFoundError:
+            pass
+    try:
+        JavaDownloadEngine.clear_cache()
+    except Exception:
+        pass
+    return stats
+
+
 def clean_sha256(value):
     text = normalize_text(value).lower()
     match = re.search(r"\b([a-f0-9]{64})\b", text)
@@ -3978,6 +4111,32 @@ def verify_file_sha256(path, expected_sha256, cancel_event=None):
 
 def normalize_path(path):
     return os.path.normcase(os.path.abspath(os.path.expanduser(normalize_text(path))))
+
+
+def java_home_equivalent_paths(java_home):
+    raw_home = normalize_text(java_home)
+    if not raw_home:
+        return []
+    home = os.path.abspath(os.path.expanduser(raw_home))
+    candidates = [home]
+    base = os.path.basename(home).lower()
+    if base == "bin":
+        candidates.append(os.path.dirname(home))
+    if base == "jre":
+        candidates.append(os.path.dirname(home))
+
+    for candidate in list(candidates):
+        candidates.append(os.path.join(candidate, "bin"))
+        candidates.append(os.path.join(candidate, "jre"))
+        if os.path.basename(candidate).lower() == "jre":
+            candidates.append(os.path.dirname(candidate))
+    return unique_sequence(normalize_path(candidate) for candidate in candidates if normalize_text(candidate))
+
+
+def java_home_matches_registered_path(target_home, registered_home):
+    target_paths = set(java_home_equivalent_paths(target_home))
+    registered_paths = set(java_home_equivalent_paths(registered_home))
+    return bool(target_paths.intersection(registered_paths))
 
 
 def candidate_java_search_roots():
@@ -5769,6 +5928,69 @@ def list_java_backups(target_path=None):
     return backups
 
 
+def list_java_backup_records(target_path=None):
+    records = []
+    for created_at, backup_dir, manifest in list_java_backups(target_path):
+        size_bytes, file_count = directory_size_and_file_count(backup_dir)
+        records.append(
+            {
+                "created_at": created_at,
+                "created_text": normalize_text(manifest.get("created_text")) or time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(created_at or 0)),
+                "operation": normalize_text(manifest.get("operation")) or "-",
+                "target_path": normalize_text(manifest.get("target_path")),
+                "entries": list(manifest.get("entries") or []),
+                "registry_names": list(manifest.get("registry_names") or []),
+                "backup_dir": backup_dir,
+                "size_bytes": size_bytes,
+                "size_text": format_file_size(size_bytes),
+                "file_count": file_count,
+            }
+        )
+    return records
+
+
+def delete_java_backup(backup_dir):
+    backup_path = os.path.abspath(os.path.expanduser(normalize_text(backup_dir)))
+    root_dir = os.path.abspath(backup_root_dir())
+    if not backup_path or normalize_path(backup_path) == normalize_path(root_dir) or not is_within_directory(root_dir, backup_path):
+        raise ValueError("backup path is outside LJM backup directory")
+    if not os.path.exists(backup_path):
+        return {"backup_dir": backup_path, "deleted": False}
+    if not os.path.exists(os.path.join(backup_path, "manifest.json")):
+        raise ValueError("backup manifest is missing")
+    force_remove_tree(backup_path)
+    return {"backup_dir": backup_path, "deleted": True}
+
+
+def is_ljm_backup_path(path):
+    try:
+        raw_path = normalize_text(path)
+        if not raw_path:
+            return False
+        return is_within_directory(backup_root_dir(), os.path.abspath(os.path.expanduser(raw_path)))
+    except Exception:
+        return False
+
+
+def remove_related_java_backups(target_path):
+    removed = []
+    for _created_at, backup_dir, manifest in list_java_backups():
+        if java_home_matches_registered_path(target_path, manifest.get("target_path")):
+            force_remove_tree(backup_dir)
+            removed.append(backup_dir)
+    return removed
+
+
+def cleanup_stale_java_registrations():
+    removed = []
+    for version_name, java_home in JavaRegistryAdapter.get_all():
+        raw_home = normalize_text(java_home)
+        if not raw_home or is_ljm_backup_path(raw_home) or not os.path.exists(os.path.abspath(os.path.expanduser(raw_home))):
+            JavaRegistryAdapter.unregister(version_name)
+            removed.append(version_name)
+    return removed
+
+
 def restore_java_backup(backup_dir, cancel_event=None):
     manifest = read_backup_manifest(backup_dir)
     target_raw = normalize_text(manifest.get("target_path"))
@@ -5845,6 +6067,7 @@ def find_processes_using_java_home(java_home):
 
 class WindowsTrayIcon:
     WM_TRAYICON = 0x8000 + 44
+    WM_LBUTTONUP = 0x0202
     WM_LBUTTONDBLCLK = 0x0203
     WM_RBUTTONUP = 0x0205
     WM_COMMAND = 0x0111
@@ -5858,6 +6081,8 @@ class WindowsTrayIcon:
     IMAGE_ICON = 1
     LR_LOADFROMFILE = 0x00000010
     LR_DEFAULTSIZE = 0x00000040
+    SW_SHOW = 5
+    SW_RESTORE = 9
     TPM_RIGHTBUTTON = 0x0002
     TPM_BOTTOMALIGN = 0x0020
     MF_STRING = 0x0000
@@ -5873,8 +6098,9 @@ class WindowsTrayIcon:
     ID_REPO = 1009
     ID_FEEDBACK = 1010
     ID_TAB_DELETE = 1011
+    ID_TAB_BACKUP = 1012
 
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_settings=None, on_repo=None, on_feedback=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_tab_backup=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
         self.tooltip = tooltip[:127]
         self.icon_path = icon_path
@@ -5886,14 +6112,94 @@ class WindowsTrayIcon:
         self.on_tab_download = on_tab_download
         self.on_tab_move = on_tab_move
         self.on_tab_delete = on_tab_delete
+        self.on_tab_backup = on_tab_backup
         self.on_settings = on_settings
         self.on_repo = on_repo
         self.on_feedback = on_feedback
         self.hwnd = None
+        self.root_hwnd = None
         self.hicon = None
         self.visible = False
-        self._old_wndproc = None
         self._new_wndproc = None
+        self._hinstance = None
+        self._window_class_name = None
+
+    def _queue_ui_call(self, callback):
+        if not callback:
+            return
+
+        def guarded_callback():
+            try:
+                callback()
+            except Exception as exc:
+                logging.error("托盘回调执行失败: %s", exc, exc_info=True)
+
+        try:
+            self.root.after(0, guarded_callback)
+        except Exception as exc:
+            logging.error("托盘回调调度失败: %s", exc, exc_info=True)
+
+    def _create_message_window(self):
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+        self._hinstance = kernel32.GetModuleHandleW(None)
+        self._window_class_name = f"LJMJavaManagerTray_{os.getpid()}_{id(self)}"
+
+        class WNDCLASSW(ctypes.Structure):
+            _fields_ = [
+                ("style", wintypes.UINT),
+                ("lpfnWndProc", ctypes.c_void_p),
+                ("cbClsExtra", ctypes.c_int),
+                ("cbWndExtra", ctypes.c_int),
+                ("hInstance", wintypes.HINSTANCE),
+                ("hIcon", wintypes.HICON),
+                ("hCursor", wintypes.HCURSOR),
+                ("hbrBackground", wintypes.HBRUSH),
+                ("lpszMenuName", wintypes.LPCWSTR),
+                ("lpszClassName", wintypes.LPCWSTR),
+            ]
+
+        wndclass = WNDCLASSW()
+        wndclass.lpfnWndProc = ctypes.cast(self._new_wndproc, ctypes.c_void_p)
+        wndclass.hInstance = self._hinstance
+        wndclass.lpszClassName = self._window_class_name
+
+        atom_type = getattr(wintypes, "ATOM", wintypes.WORD)
+        user32.RegisterClassW.argtypes = [ctypes.POINTER(WNDCLASSW)]
+        user32.RegisterClassW.restype = atom_type
+        if not user32.RegisterClassW(ctypes.byref(wndclass)):
+            return False
+
+        user32.CreateWindowExW.argtypes = [
+            wintypes.DWORD,
+            wintypes.LPCWSTR,
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            wintypes.HWND,
+            wintypes.HMENU,
+            wintypes.HINSTANCE,
+            ctypes.c_void_p,
+        ]
+        user32.CreateWindowExW.restype = wintypes.HWND
+        self.hwnd = user32.CreateWindowExW(
+            0,
+            self._window_class_name,
+            self._window_class_name,
+            0,
+            0,
+            0,
+            0,
+            0,
+            None,
+            None,
+            self._hinstance,
+            None,
+        )
+        return bool(self.hwnd)
 
     def install(self):
         if not IS_WIN:
@@ -5901,9 +6207,8 @@ class WindowsTrayIcon:
         try:
             self.root.update_idletasks()
             user32 = ctypes.windll.user32
-            self.hwnd = user32.GetParent(self.root.winfo_id()) or self.root.winfo_id()
+            self.root_hwnd = user32.GetParent(self.root.winfo_id()) or self.root.winfo_id()
             lresult_type = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
-            pointer_type = ctypes.c_void_p
             self._new_wndproc = ctypes.WINFUNCTYPE(
                 lresult_type,
                 wintypes.HWND,
@@ -5912,19 +6217,11 @@ class WindowsTrayIcon:
                 wintypes.LPARAM,
             )(self._wndproc)
 
-            user32.CallWindowProcW.argtypes = [pointer_type, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
-            user32.CallWindowProcW.restype = lresult_type
             user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             user32.DefWindowProcW.restype = lresult_type
-
-            setter = user32.SetWindowLongPtrW if hasattr(user32, "SetWindowLongPtrW") else user32.SetWindowLongW
-            getter = user32.GetWindowLongPtrW if hasattr(user32, "GetWindowLongPtrW") else user32.GetWindowLongW
-            setter.argtypes = [wintypes.HWND, ctypes.c_int, pointer_type]
-            setter.restype = pointer_type
-            getter.argtypes = [wintypes.HWND, ctypes.c_int]
-            getter.restype = pointer_type
-            self._old_wndproc = getter(self.hwnd, -4)
-            setter(self.hwnd, -4, ctypes.cast(self._new_wndproc, pointer_type))
+            if not self._create_message_window():
+                logging.error("托盘隐藏消息窗口创建失败")
+                return False
             self.hicon = self._load_icon()
             return True
         except Exception as exc:
@@ -5994,16 +6291,23 @@ class WindowsTrayIcon:
 
     def destroy(self):
         self.remove()
-        if not IS_WIN or not self.hwnd or not self._old_wndproc:
+        if not IS_WIN:
             return
         try:
             user32 = ctypes.windll.user32
-            setter = user32.SetWindowLongPtrW if hasattr(user32, "SetWindowLongPtrW") else user32.SetWindowLongW
-            setter(self.hwnd, -4, ctypes.c_void_p(self._old_wndproc))
+            if self.hwnd:
+                user32.DestroyWindow(self.hwnd)
+            if self._window_class_name and self._hinstance:
+                try:
+                    user32.UnregisterClassW(self._window_class_name, self._hinstance)
+                except Exception:
+                    pass
         except Exception as exc:
-            logging.debug("恢复窗口过程失败: %s", exc)
+            logging.debug("销毁托盘隐藏消息窗口失败: %s", exc)
         finally:
-            self._old_wndproc = None
+            self.hwnd = None
+            self._new_wndproc = None
+            self._window_class_name = None
 
     def _show_menu(self):
         user32 = ctypes.windll.user32
@@ -6019,6 +6323,7 @@ class WindowsTrayIcon:
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_DOWNLOAD, "切换到 Java 下载")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_MOVE, "切换到 Java 移动")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_DELETE, "切换到 Java 卸载/删除")
+            user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_BACKUP, "切换到备份管理")
             user32.AppendMenuW(menu, self.MF_SEPARATOR, 0, None)
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_SETTINGS, "系统设置")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_REPO, "切换到开源项目地址")
@@ -6027,15 +6332,17 @@ class WindowsTrayIcon:
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_EXIT, "退出")
             point = wintypes.POINT()
             user32.GetCursorPos(ctypes.byref(point))
-            user32.SetForegroundWindow(self.hwnd)
+            user32.SetForegroundWindow(self.root_hwnd or self.hwnd)
             user32.TrackPopupMenu(menu, self.TPM_RIGHTBUTTON | self.TPM_BOTTOMALIGN, point.x, point.y, 0, self.hwnd, None)
         finally:
             user32.DestroyMenu(menu)
 
     def _wndproc(self, hwnd, msg, wparam, lparam):
         if msg == self.WM_TRAYICON:
+            if int(lparam) == self.WM_LBUTTONUP:
+                return 0
             if int(lparam) == self.WM_LBUTTONDBLCLK:
-                self.root.after(0, self.on_show)
+                self._queue_ui_call(self.on_show)
                 return 0
             if int(lparam) == self.WM_RBUTTONUP:
                 self._show_menu()
@@ -6043,48 +6350,49 @@ class WindowsTrayIcon:
         elif msg == self.WM_COMMAND:
             command_id = int(wparam) & 0xFFFF
             if command_id == self.ID_SHOW:
-                self.root.after(0, self.on_show)
+                self._queue_ui_call(self.on_show)
                 return 0
             if command_id == self.ID_TAB_REG and self.on_tab_reg:
-                self.root.after(0, self.on_tab_reg)
+                self._queue_ui_call(self.on_tab_reg)
                 return 0
             if command_id == self.ID_TAB_FIX and self.on_tab_fix:
-                self.root.after(0, self.on_tab_fix)
+                self._queue_ui_call(self.on_tab_fix)
                 return 0
             if command_id == self.ID_TAB_UPDATE and self.on_tab_update:
-                self.root.after(0, self.on_tab_update)
+                self._queue_ui_call(self.on_tab_update)
                 return 0
             if command_id == self.ID_TAB_DOWNLOAD and self.on_tab_download:
-                self.root.after(0, self.on_tab_download)
+                self._queue_ui_call(self.on_tab_download)
                 return 0
             if command_id == self.ID_TAB_MOVE and self.on_tab_move:
-                self.root.after(0, self.on_tab_move)
+                self._queue_ui_call(self.on_tab_move)
                 return 0
             if command_id == self.ID_TAB_DELETE and self.on_tab_delete:
-                self.root.after(0, self.on_tab_delete)
+                self._queue_ui_call(self.on_tab_delete)
+                return 0
+            if command_id == self.ID_TAB_BACKUP and self.on_tab_backup:
+                self._queue_ui_call(self.on_tab_backup)
                 return 0
             if command_id == self.ID_SETTINGS and self.on_settings:
-                self.root.after(0, self.on_settings)
+                self._queue_ui_call(self.on_settings)
                 return 0
             if command_id == self.ID_REPO and self.on_repo:
-                self.root.after(0, self.on_repo)
+                self._queue_ui_call(self.on_repo)
                 return 0
             if command_id == self.ID_FEEDBACK and self.on_feedback:
-                self.root.after(0, self.on_feedback)
+                self._queue_ui_call(self.on_feedback)
                 return 0
             if command_id == self.ID_EXIT:
-                self.root.after(0, self.on_exit)
+                self._queue_ui_call(self.on_exit)
                 return 0
         elif msg == self.WM_DESTROY:
             self.remove()
 
-        if self._old_wndproc:
-            return ctypes.windll.user32.CallWindowProcW(ctypes.c_void_p(self._old_wndproc), hwnd, msg, wparam, lparam)
         return ctypes.windll.user32.DefWindowProcW(hwnd, msg, wparam, lparam)
 
 
 class PystrayTrayIcon:
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_settings=None, on_repo=None, on_feedback=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_tab_backup=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
         self.tooltip = normalize_text(tooltip)
         self.icon_path = icon_path
@@ -6096,11 +6404,27 @@ class PystrayTrayIcon:
         self.on_tab_download = on_tab_download
         self.on_tab_move = on_tab_move
         self.on_tab_delete = on_tab_delete
+        self.on_tab_backup = on_tab_backup
         self.on_settings = on_settings
         self.on_repo = on_repo
         self.on_feedback = on_feedback
         self.icon = None
         self.visible = False
+
+    def _queue_ui_call(self, callback):
+        if not callback:
+            return
+
+        def guarded_callback():
+            try:
+                callback()
+            except Exception as exc:
+                logging.error("跨平台托盘回调执行失败: %s", exc, exc_info=True)
+
+        try:
+            self.root.after(0, guarded_callback)
+        except Exception as exc:
+            logging.error("跨平台托盘回调调度失败: %s", exc, exc_info=True)
 
     def install(self):
         try:
@@ -6122,26 +6446,23 @@ class PystrayTrayIcon:
             logging.warning("跨平台托盘图标不存在: %s", self.icon_path)
             return False
 
-        def ui_call(callback):
-            if callback:
-                self.root.after(0, callback)
-
         image = Image.open(self.icon_path)
         menu = pystray.Menu(
-            pystray.MenuItem("显示主窗口", lambda _icon, _item: ui_call(self.on_show), default=True),
+            pystray.MenuItem("显示主窗口", lambda _icon, _item: self._queue_ui_call(self.on_show)),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("切换到注册管理", lambda _icon, _item: ui_call(self.on_tab_reg)),
-            pystray.MenuItem("切换到环境分析与修复", lambda _icon, _item: ui_call(self.on_tab_fix)),
-            pystray.MenuItem("切换到云端更新引擎", lambda _icon, _item: ui_call(self.on_tab_update)),
-            pystray.MenuItem("切换到 Java 下载", lambda _icon, _item: ui_call(self.on_tab_download)),
-            pystray.MenuItem("切换到 Java 移动", lambda _icon, _item: ui_call(self.on_tab_move)),
-            pystray.MenuItem("切换到 Java 卸载/删除", lambda _icon, _item: ui_call(self.on_tab_delete)),
+            pystray.MenuItem("切换到注册管理", lambda _icon, _item: self._queue_ui_call(self.on_tab_reg)),
+            pystray.MenuItem("切换到环境分析与修复", lambda _icon, _item: self._queue_ui_call(self.on_tab_fix)),
+            pystray.MenuItem("切换到云端更新引擎", lambda _icon, _item: self._queue_ui_call(self.on_tab_update)),
+            pystray.MenuItem("切换到 Java 下载", lambda _icon, _item: self._queue_ui_call(self.on_tab_download)),
+            pystray.MenuItem("切换到 Java 移动", lambda _icon, _item: self._queue_ui_call(self.on_tab_move)),
+            pystray.MenuItem("切换到 Java 卸载/删除", lambda _icon, _item: self._queue_ui_call(self.on_tab_delete)),
+            pystray.MenuItem("切换到备份管理", lambda _icon, _item: self._queue_ui_call(self.on_tab_backup)),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("系统设置", lambda _icon, _item: ui_call(self.on_settings)),
-            pystray.MenuItem("切换到开源项目地址", lambda _icon, _item: ui_call(self.on_repo)),
-            pystray.MenuItem("提交 GitHub 反馈", lambda _icon, _item: ui_call(self.on_feedback)),
+            pystray.MenuItem("系统设置", lambda _icon, _item: self._queue_ui_call(self.on_settings)),
+            pystray.MenuItem("切换到开源项目地址", lambda _icon, _item: self._queue_ui_call(self.on_repo)),
+            pystray.MenuItem("提交 GitHub 反馈", lambda _icon, _item: self._queue_ui_call(self.on_feedback)),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("退出", lambda _icon, _item: ui_call(self.on_exit)),
+            pystray.MenuItem("退出", lambda _icon, _item: self._queue_ui_call(self.on_exit)),
         )
         self.icon = pystray.Icon("LJMJavaManager", image, self.tooltip, menu)
         return True
@@ -6282,11 +6603,9 @@ class JavaRegistryAdapter:
 
     @staticmethod
     def find_version_names_by_home(java_home):
-        java_home_norm = os.path.normcase(os.path.abspath(java_home))
         matches = []
         for version_name, registered_home in JavaRegistryAdapter.get_all():
-            registered_norm = os.path.normcase(os.path.abspath(registered_home))
-            if registered_norm == java_home_norm:
+            if java_home_matches_registered_path(java_home, registered_home):
                 matches.append(version_name)
         return matches
 
@@ -7785,6 +8104,7 @@ def delete_java_home(java_home, delete_files=False, preferred_name=None, cancel_
     if delete_files:
         source = validate_java_delete_target(source)
         force_remove_tree(source)
+        remove_related_java_backups(source)
         deleted = True
 
     ensure_not_cancelled(cancel_event)
@@ -7805,6 +8125,7 @@ class JavaManagerApp:
         self.update_items = {}
         self.move_items = {}
         self.delete_items = {}
+        self.backup_items = {}
         self._java_rows = []
         self.search_var = None
         self.download_vendor_var = None
@@ -7818,6 +8139,7 @@ class JavaManagerApp:
         self._last_move_source = ""
         self.repair_mode_status_var = None
         self.repair_action_text_var = None
+        self.backup_status_var = None
         self._window_has_focus = False
         self._focus_refresh_job = None
         self._active_transfer_count = 0
@@ -7827,7 +8149,10 @@ class JavaManagerApp:
         self._minimize_to_tray_job = None
         self._background_update_job = None
         self._background_update_running = False
+        self._window_fade_jobs = {}
         self._ui_ready_for_tab_fade = False
+        self._tab_motion_headers = {}
+        self._tab_motion_jobs = {}
         self.single_instance_guard = None
 
         self._set_window_alpha(self.root, 0.0)
@@ -7856,7 +8181,7 @@ class JavaManagerApp:
         self.root.bind("<FocusIn>", self._on_root_focus_in, add="+")
         self.root.bind("<FocusOut>", self._on_root_focus_out, add="+")
         self.apply_theme(APP_CONFIG.get("theme", "暗粉色"))
-        self.refresh_all_data()
+        self.root.after(90, self.refresh_all_data)
         self._schedule_background_update_check(initial=True)
         NetworkEngine.maybe_refresh_mirror_speed_order_async()
         self._ui_ready_for_tab_fade = True
@@ -7882,6 +8207,8 @@ class JavaManagerApp:
         style.configure("TLabelframe", background=bg_color, foreground=fg_color)
         style.configure("TLabelframe.Label", background=bg_color, foreground=fg_color, font=("", 10, "bold"))
         self._traverse_and_paint(self.root)
+        for canvas in getattr(self, "_tab_motion_headers", {}).values():
+            self._draw_tab_motion_header(canvas, 1.0)
 
     def _traverse_and_paint(self, widget):
         try:
@@ -7928,6 +8255,25 @@ class JavaManagerApp:
         for child in widget.winfo_children():
             self._traverse_and_paint(child)
 
+    def _window_fade_key(self, window):
+        return str(window)
+
+    def _cancel_window_fade(self, window):
+        job = getattr(self, "_window_fade_jobs", {}).pop(self._window_fade_key(window), None)
+        if not job:
+            return
+        try:
+            window.after_cancel(job)
+        except Exception:
+            pass
+
+    def _remember_window_fade_job(self, window, job):
+        if job:
+            self._window_fade_jobs[self._window_fade_key(window)] = job
+
+    def _clear_window_fade_job(self, window):
+        getattr(self, "_window_fade_jobs", {}).pop(self._window_fade_key(window), None)
+
     def _set_window_alpha(self, window, alpha):
         try:
             window.attributes("-alpha", max(0.0, min(float(alpha), 1.0)))
@@ -7936,6 +8282,7 @@ class JavaManagerApp:
             return False
 
     def _fade_in_window(self, window, duration=320, steps=12, start_alpha=0.0):
+        self._cancel_window_fade(window)
         try:
             if not window.winfo_exists():
                 return
@@ -7954,15 +8301,19 @@ class JavaManagerApp:
                 alpha = start_alpha + ((1.0 - start_alpha) * index / max(1, steps))
                 self._set_window_alpha(window, alpha)
                 if index < steps:
-                    window.after(interval, lambda: tick(index + 1))
+                    job = window.after(interval, lambda: tick(index + 1))
+                    self._remember_window_fade_job(window, job)
                 else:
                     self._set_window_alpha(window, 1.0)
+                    self._clear_window_fade_job(window)
             except Exception:
+                self._clear_window_fade_job(window)
                 pass
 
-        window.after(interval, tick)
+        self._remember_window_fade_job(window, window.after(interval, tick))
 
     def _fade_out_window(self, window, on_done=None, duration=220, steps=10):
+        self._cancel_window_fade(window)
         try:
             if not window.winfo_exists():
                 return
@@ -7971,6 +8322,7 @@ class JavaManagerApp:
         interval = max(10, int(duration / max(1, steps)))
 
         def finish():
+            self._clear_window_fade_job(window)
             try:
                 if on_done:
                     on_done()
@@ -7986,7 +8338,8 @@ class JavaManagerApp:
                     finish()
                     return
                 if index > 1:
-                    window.after(interval, lambda: tick(index - 1))
+                    job = window.after(interval, lambda: tick(index - 1))
+                    self._remember_window_fade_job(window, job)
                 else:
                     finish()
             except Exception:
@@ -8356,6 +8709,88 @@ class JavaManagerApp:
         parent.after(0, sync_scroll_region)
         return content, canvas
 
+    def _cancel_tab_motion_jobs(self):
+        for canvas, job in list(getattr(self, "_tab_motion_jobs", {}).items()):
+            try:
+                canvas.after_cancel(job)
+            except Exception:
+                pass
+        self._tab_motion_jobs.clear()
+
+    def _create_tab_motion_header(self, tab_widget, parent, title_key):
+        canvas = tk.Canvas(parent, height=40, bd=0, highlightthickness=0, bg=self.current_bg)
+        canvas.pack(fill=tk.X, padx=10, pady=(10, 2))
+        canvas._ljm_title_key = title_key
+        canvas.bind("<Configure>", lambda _event, item=canvas: self._draw_tab_motion_header(item, 1.0))
+        self._tab_motion_headers[tab_widget] = canvas
+        self._draw_tab_motion_header(canvas, 1.0)
+        return canvas
+
+    def _draw_tab_motion_header(self, canvas, progress):
+        try:
+            if not canvas.winfo_exists():
+                return
+            width = max(int(canvas.winfo_width()), 1)
+        except Exception:
+            return
+
+        progress = max(0.0, min(1.0, float(progress)))
+        bg = self.current_bg
+        fg = self.current_fg
+        accent = self.current_btn
+        surface = self.current_field
+        title = tr(getattr(canvas, "_ljm_title_key", "tab_registration"))
+        line_color = blend_color(bg, accent, 0.4 + 0.45 * progress)
+        pulse_color = blend_color(bg, accent, 0.18 + 0.22 * progress)
+        text_color = blend_color(bg, fg, 0.5 + 0.5 * progress)
+        muted_color = blend_color(bg, surface, 0.42)
+        bar_width = max(36, int(width * (0.18 + 0.78 * progress)))
+        pulse_x = int((width + 80) * progress) - 80
+
+        try:
+            canvas.configure(bg=bg)
+            canvas.delete("all")
+            canvas.create_line(0, 34, width, 34, fill=muted_color, width=1)
+            canvas.create_oval(pulse_x, 8, pulse_x + 58, 30, fill=pulse_color, outline="")
+            canvas.create_text(12, 18, anchor="w", text=title, fill=text_color, font=("", 11, "bold"))
+            if width > 280:
+                canvas.create_text(width - 14, 18, anchor="e", text=f"v{VERSION}", fill=blend_color(bg, fg, 0.55), font=("", 9))
+            canvas.create_rectangle(0, 35, bar_width, 39, fill=line_color, outline="")
+        except Exception:
+            pass
+
+    def _animate_tab_motion_header(self, canvas, step=0):
+        try:
+            if not canvas or not canvas.winfo_exists():
+                return
+        except Exception:
+            return
+        if step == 0 and canvas in self._tab_motion_jobs:
+            try:
+                canvas.after_cancel(self._tab_motion_jobs.pop(canvas))
+            except Exception:
+                pass
+
+        progress = step / max(1, TAB_MOTION_STEPS)
+        self._draw_tab_motion_header(canvas, progress)
+        if step >= TAB_MOTION_STEPS:
+            self._tab_motion_jobs.pop(canvas, None)
+            return
+        self._tab_motion_jobs[canvas] = canvas.after(
+            TAB_MOTION_INTERVAL_MS,
+            lambda: self._animate_tab_motion_header(canvas, step + 1),
+        )
+
+    def _animate_selected_tab_motion_header(self):
+        try:
+            selected_tab = self.notebook.select()
+        except Exception:
+            return
+        for tab_widget, canvas in self._tab_motion_headers.items():
+            if str(tab_widget) == selected_tab:
+                self._animate_tab_motion_header(canvas)
+                return
+
     def _repair_mode_label(self, mode=None):
         mode = mode or APP_CONFIG.get("repair_mode", "smart")
         return tr("repair_label_smart") if mode == "smart" else tr("repair_label_full")
@@ -8568,6 +9003,7 @@ class JavaManagerApp:
             self.show_download_tab,
             self.show_move_tab,
             self.show_delete_tab,
+            self.show_backup_tab,
             self.open_settings_from_tray,
             self.open_repository,
             self.open_feedback,
@@ -8596,15 +9032,52 @@ class JavaManagerApp:
         else:
             self.root.iconify()
 
+    def _force_show_root_window(self):
+        if not IS_WIN:
+            return
+        try:
+            user32 = ctypes.windll.user32
+            hwnd = user32.GetParent(self.root.winfo_id()) or self.root.winfo_id()
+            if not hwnd:
+                return
+            user32.ShowWindow(hwnd, WindowsTrayIcon.SW_RESTORE)
+            user32.ShowWindow(hwnd, WindowsTrayIcon.SW_SHOW)
+            user32.BringWindowToTop(hwnd)
+            user32.SetForegroundWindow(hwnd)
+        except Exception as exc:
+            logging.debug("Windows 前台恢复窗口失败: %s", exc)
+
     def show_from_tray(self):
-        if self.tray_icon:
-            self.tray_icon.show()
-        self._set_window_alpha(self.root, 0.0)
-        self.root.deiconify()
-        self.root.state("normal")
-        self.root.lift()
-        self.root.focus_force()
-        self._fade_in_window(self.root, duration=300, steps=12, start_alpha=0.0)
+        try:
+            if self.tray_icon:
+                self.tray_icon.show()
+            self._cancel_window_fade(self.root)
+            if not self.root.winfo_exists():
+                return
+            self._set_window_alpha(self.root, 1.0)
+            self.root.deiconify()
+            self.root.state("normal")
+            try:
+                self.root.update_idletasks()
+            except Exception:
+                pass
+            self.root.lift()
+            self._force_show_root_window()
+            try:
+                self.root.focus_force()
+            except Exception as exc:
+                logging.debug("托盘恢复窗口聚焦失败: %s", exc)
+            try:
+                self.root.attributes("-topmost", True)
+                self.root.after(180, lambda: self.root.attributes("-topmost", False))
+            except Exception:
+                pass
+        except Exception as exc:
+            logging.error("托盘恢复窗口失败: %s", exc, exc_info=True)
+            try:
+                self._set_window_alpha(self.root, 1.0)
+            except Exception:
+                pass
 
     def bring_to_front(self):
         self.show_from_tray()
@@ -8638,6 +9111,9 @@ class JavaManagerApp:
     def show_delete_tab(self):
         self.show_tab(self.tab_delete)
 
+    def show_backup_tab(self):
+        self.show_tab(self.tab_backup)
+
     def open_settings_from_tray(self):
         self.show_from_tray()
         self.open_settings()
@@ -8653,6 +9129,22 @@ class JavaManagerApp:
             opened = False
         if not opened:
             messagebox.showinfo(tr("feedback_open_failed_title"), tr("feedback_open_failed_text", url=url))
+
+    def open_directory(self, path):
+        folder = os.path.abspath(os.path.expanduser(normalize_text(path)))
+        os.makedirs(folder, exist_ok=True)
+        try:
+            if IS_WIN:
+                os.startfile(folder)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", folder])
+            else:
+                subprocess.Popen(["xdg-open", folder])
+            return True
+        except Exception as exc:
+            logging.error("打开目录失败: %s", exc)
+            messagebox.showinfo(tr("open_folder_failed_title"), tr("open_folder_failed_text", path=folder))
+            return False
 
     def exit_from_tray(self):
         self._allow_close = True
@@ -8676,6 +9168,8 @@ class JavaManagerApp:
             logging.debug("最小化到托盘失败: %s", exc)
 
     def setup_ui(self):
+        self._cancel_tab_motion_jobs()
+        self._tab_motion_headers.clear()
         toolbar = tk.Frame(self.root)
         toolbar.pack(side=tk.TOP, fill=tk.X)
         tk.Label(toolbar, text=tr("toolbar_search_label")).pack(side=tk.LEFT, padx=(10, 4), pady=5)
@@ -8698,12 +9192,14 @@ class JavaManagerApp:
         self.tab_download = ttk.Frame(self.notebook)
         self.tab_move = ttk.Frame(self.notebook)
         self.tab_delete = ttk.Frame(self.notebook)
+        self.tab_backup = ttk.Frame(self.notebook)
         self.tab_reg_body, self.tab_reg_canvas = self._create_scrollable_area(self.tab_reg)
         self.tab_fix_body, self.tab_fix_canvas = self._create_scrollable_area(self.tab_fix)
         self.tab_update_body, self.tab_update_canvas = self._create_scrollable_area(self.tab_update)
         self.tab_download_body, self.tab_download_canvas = self._create_scrollable_area(self.tab_download)
         self.tab_move_body, self.tab_move_canvas = self._create_scrollable_area(self.tab_move)
         self.tab_delete_body, self.tab_delete_canvas = self._create_scrollable_area(self.tab_delete)
+        self.tab_backup_body, self.tab_backup_canvas = self._create_scrollable_area(self.tab_backup)
 
         self.notebook.add(self.tab_reg, text=tr("tab_registration"))
         self.notebook.add(self.tab_fix, text=tr("tab_fix"))
@@ -8711,6 +9207,7 @@ class JavaManagerApp:
         self.notebook.add(self.tab_download, text=tr("tab_download"))
         self.notebook.add(self.tab_move, text=tr("tab_move"))
         self.notebook.add(self.tab_delete, text=tr("tab_delete"))
+        self.notebook.add(self.tab_backup, text=tr("tab_backup"))
 
         self.setup_reg_tab()
         self.setup_fix_tab_enhanced()
@@ -8718,6 +9215,7 @@ class JavaManagerApp:
         self.setup_download_tab()
         self.setup_move_tab()
         self.setup_delete_tab()
+        self.setup_backup_tab()
         for scope, canvas in (
             (self.tab_reg_body, self.tab_reg_canvas),
             (self.tab_fix_body, self.tab_fix_canvas),
@@ -8725,6 +9223,7 @@ class JavaManagerApp:
             (self.tab_download_body, self.tab_download_canvas),
             (self.tab_move_body, self.tab_move_canvas),
             (self.tab_delete_body, self.tab_delete_canvas),
+            (self.tab_backup_body, self.tab_backup_canvas),
         ):
             self._install_mousewheel_scroll(scope, canvas)
 
@@ -8745,6 +9244,7 @@ class JavaManagerApp:
         self.update_items.clear()
         self.move_items.clear()
         self.delete_items.clear()
+        self.backup_items.clear()
         self.search_var = None
         self.setup_ui()
         self._setup_tray_icon()
@@ -8758,11 +9258,13 @@ class JavaManagerApp:
             self.check_all_updates()
         elif tab_text == tr("tab_move"):
             self.refresh_move_target_preview()
-        if getattr(self, "_ui_ready_for_tab_fade", False):
-            self._fade_in_window(self.root, duration=180, steps=7, start_alpha=0.86)
+        elif tab_text == tr("tab_backup"):
+            self.refresh_backup_tab()
+        self._animate_selected_tab_motion_header()
 
     def setup_reg_tab(self):
         parent = getattr(self, "tab_reg_body", self.tab_reg)
+        self._create_tab_motion_header(self.tab_reg, parent, "tab_registration")
         tk.Button(parent, text=tr("scan_register_local_java"), command=self.scan_folder, height=2).pack(fill=tk.X, padx=10, pady=5)
         list_frame = tk.Frame(parent)
         list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
@@ -8779,6 +9281,7 @@ class JavaManagerApp:
 
     def setup_fix_tab(self):
         parent = getattr(self, "tab_fix_body", self.tab_fix)
+        self._create_tab_motion_header(self.tab_fix, parent, "tab_fix")
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         self.tree_fix = ttk.Treeview(table_frame, columns=("ver", "vendor", "path", "status"), show="headings")
@@ -8810,6 +9313,7 @@ class JavaManagerApp:
 
     def setup_fix_tab_enhanced(self):
         parent = getattr(self, "tab_fix_body", self.tab_fix)
+        self._create_tab_motion_header(self.tab_fix, parent, "tab_fix")
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         self.tree_fix = ttk.Treeview(table_frame, columns=("ver", "vendor", "path", "status"), show="headings")
@@ -8850,6 +9354,7 @@ class JavaManagerApp:
 
     def setup_update_tab(self):
         parent = getattr(self, "tab_update_body", self.tab_update)
+        self._create_tab_motion_header(self.tab_update, parent, "tab_update")
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
@@ -8885,6 +9390,7 @@ class JavaManagerApp:
 
     def setup_download_tab(self):
         parent = getattr(self, "tab_download_body", self.tab_download)
+        self._create_tab_motion_header(self.tab_download, parent, "tab_download")
         main = ttk.LabelFrame(parent, text=tr("download_java_section"))
         main.pack(fill=tk.X, padx=12, pady=12)
 
@@ -8922,6 +9428,7 @@ class JavaManagerApp:
 
     def setup_move_tab(self):
         parent = getattr(self, "tab_move_body", self.tab_move)
+        self._create_tab_motion_header(self.tab_move, parent, "tab_move")
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
 
@@ -8970,6 +9477,7 @@ class JavaManagerApp:
 
     def setup_delete_tab(self):
         parent = getattr(self, "tab_delete_body", self.tab_delete)
+        self._create_tab_motion_header(self.tab_delete, parent, "tab_delete")
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
 
@@ -8999,6 +9507,111 @@ class JavaManagerApp:
         tk.Button(buttons, text=tr("delete_refresh"), command=self.refresh_all_data).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 4))
         tk.Button(buttons, text=tr("delete_unregister_only"), command=lambda: self.start_delete_java(delete_files=False)).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=4)
         tk.Button(buttons, text=tr("delete_files"), command=lambda: self.start_delete_java(delete_files=True)).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(4, 0))
+
+    def setup_backup_tab(self):
+        parent = getattr(self, "tab_backup_body", self.tab_backup)
+        self._create_tab_motion_header(self.tab_backup, parent, "tab_backup")
+        table_frame = tk.Frame(parent)
+        table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
+
+        self.tree_backup = ttk.Treeview(
+            table_frame,
+            columns=("time", "operation", "target", "size", "entries", "names"),
+            show="headings",
+        )
+        self.tree_backup.heading("time", text=tr("backup_col_time"))
+        self.tree_backup.heading("operation", text=tr("backup_col_operation"))
+        self.tree_backup.heading("target", text=tr("backup_col_target"))
+        self.tree_backup.heading("size", text=tr("backup_col_size"))
+        self.tree_backup.heading("entries", text=tr("backup_col_entries"))
+        self.tree_backup.heading("names", text=tr("backup_col_names"))
+        self.tree_backup.column("time", width=150, minwidth=135, anchor=tk.CENTER, stretch=False)
+        self.tree_backup.column("operation", width=90, minwidth=80, anchor=tk.CENTER, stretch=False)
+        self.tree_backup.column("target", width=360, minwidth=260, stretch=True)
+        self.tree_backup.column("size", width=100, minwidth=90, anchor=tk.CENTER, stretch=False)
+        self.tree_backup.column("entries", width=130, minwidth=110, anchor=tk.CENTER, stretch=False)
+        self.tree_backup.column("names", width=180, minwidth=140, stretch=True)
+        y_scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree_backup.yview)
+        x_scroll = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.tree_backup.xview)
+        self.tree_backup.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        self.tree_backup.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
+
+        action = ttk.LabelFrame(parent, text=tr("tab_backup"))
+        action.pack(fill=tk.X, padx=10, pady=(5, 10))
+        self.backup_status_var = tk.StringVar()
+        tk.Label(action, textvariable=self.backup_status_var, justify="left", anchor="w").pack(fill=tk.X, padx=10, pady=(10, 4))
+        buttons = tk.Frame(action)
+        buttons.pack(fill=tk.X, padx=10, pady=(4, 12))
+        tk.Button(buttons, text=tr("backup_refresh"), command=self.refresh_backup_tab).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 4))
+        tk.Button(buttons, text=tr("backup_restore"), command=self.restore_selected_backup).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=4)
+        tk.Button(buttons, text=tr("backup_delete"), command=self.delete_selected_backup).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=4)
+        tk.Button(buttons, text=tr("backup_open_dir"), command=lambda: self.open_directory(backup_root_dir())).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(4, 0))
+        self.refresh_backup_tab()
+
+    def selected_backup_record(self):
+        if not hasattr(self, "tree_backup"):
+            return None
+        selected = self.tree_backup.selection()
+        if not selected:
+            return None
+        return self.backup_items.get(selected[0])
+
+    def refresh_backup_tab(self):
+        if not hasattr(self, "tree_backup"):
+            return
+        for item_id in self.tree_backup.get_children():
+            self.tree_backup.delete(item_id)
+        self.backup_items.clear()
+        records = list_java_backup_records()
+        if self.backup_status_var is not None:
+            self.backup_status_var.set(tr("backup_empty") if not records else f"{len(records)} {tr('tab_backup')}")
+        for record in records:
+            item_id = self.tree_backup.insert(
+                "",
+                tk.END,
+                values=(
+                    record["created_text"],
+                    record["operation"],
+                    record["target_path"],
+                    record["size_text"],
+                    ", ".join(record["entries"]) or "-",
+                    ", ".join(record["registry_names"]) or "-",
+                ),
+            )
+            self.backup_items[item_id] = record
+
+    def restore_selected_backup(self):
+        record = self.selected_backup_record()
+        if not record:
+            return messagebox.showwarning(tr("backup_no_selection_title"), tr("backup_no_selection_text"))
+        target = record.get("target_path") or "-"
+        if not messagebox.askyesno(
+            tr("backup_restore_confirm_title"),
+            tr("backup_restore_confirm_text", target=target, time=record.get("created_text"), backup_dir=record.get("backup_dir")),
+        ):
+            return
+        restore_java_backup(record["backup_dir"])
+        messagebox.showinfo(tr("backup_restore_done"), target)
+        self.refresh_all_data()
+        self.refresh_backup_tab()
+
+    def delete_selected_backup(self):
+        record = self.selected_backup_record()
+        if not record:
+            return messagebox.showwarning(tr("backup_no_selection_title"), tr("backup_no_selection_text"))
+        backup_dir = record.get("backup_dir")
+        if not messagebox.askyesno(
+            tr("backup_delete_confirm_title"),
+            tr("backup_delete_confirm_text", backup_dir=backup_dir),
+        ):
+            return
+        delete_java_backup(backup_dir)
+        messagebox.showinfo(tr("backup_delete_done"), backup_dir)
+        self.refresh_backup_tab()
 
     def browse_download_parent(self):
         folder = filedialog.askdirectory(title=tr("download_parent"))
@@ -9279,6 +9892,31 @@ class JavaManagerApp:
         messagebox.showinfo(tr("reset_done_title"), tr("reset_done_text"))
         self.check_all_updates()
 
+    def download_cache_status_text(self):
+        stats = download_cache_stats()
+        return tr("download_cache_status", size=stats["size_text"], count=stats["file_count"], path=stats["path"])
+
+    def open_download_cache_folder(self):
+        return self.open_directory(download_cache_dir())
+
+    def clear_download_cache_from_settings(self, status_var=None, parent=None):
+        stats = download_cache_stats()
+        if not messagebox.askyesno(
+            tr("download_cache_clear_confirm_title"),
+            tr("download_cache_clear_confirm", path=stats["path"], count=stats["file_count"], size=stats["size_text"]),
+            parent=parent,
+        ):
+            return False
+        result = clear_download_cache()
+        if status_var is not None:
+            status_var.set(self.download_cache_status_text())
+        messagebox.showinfo(
+            tr("download_cache_cleared_title"),
+            tr("download_cache_cleared_text", size=result["size_text"]),
+            parent=parent,
+        )
+        return True
+
     def open_settings(self):
         return self.open_settings_panel()
         top = tk.Toplevel(self.root)
@@ -9419,6 +10057,7 @@ class JavaManagerApp:
         network_status_var = tk.StringVar(value=NetworkEngine.describe_environment())
         screen_status_var = tk.StringVar(value=self._screen_summary_text())
         mirror_status_var = tk.StringVar(value=self._mirror_speed_summary_text())
+        download_cache_status_var = tk.StringVar(value=self.download_cache_status_text())
         wrap_widgets = []
 
         def refresh_network_status():
@@ -9616,6 +10255,19 @@ class JavaManagerApp:
                 anchor="w",
             )
         ).pack(anchor="w", fill=tk.X, padx=10, pady=(2, 10))
+        register_wrap(
+            tk.Label(
+                lf_safe,
+                textvariable=download_cache_status_var,
+                font=("", 9),
+                justify="left",
+                anchor="w",
+            )
+        ).pack(anchor="w", fill=tk.X, padx=10, pady=(0, 6))
+        cache_buttons = tk.Frame(lf_safe, bg=self.current_bg)
+        cache_buttons.pack(fill=tk.X, padx=10, pady=(0, 10))
+        tk.Button(cache_buttons, text=tr("download_cache_clear"), command=lambda: self.clear_download_cache_from_settings(download_cache_status_var, top)).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 4))
+        tk.Button(cache_buttons, text=tr("download_cache_open"), command=self.open_download_cache_folder).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(4, 0))
 
         lf_background = ttk.LabelFrame(main_frame, text=tr("background_reminder"))
         lf_background.pack(fill=tk.X, pady=(0, 10))
@@ -10225,6 +10877,7 @@ class JavaManagerApp:
             self.refresh_move_target_preview()
 
     def refresh_all_data(self):
+        cleanup_stale_java_registrations()
         rows = []
         for version_name, java_home in JavaRegistryAdapter.get_all():
             report = get_java_health_report(java_home)
@@ -10244,6 +10897,7 @@ class JavaManagerApp:
             )
         self._java_rows = rows
         self.apply_java_filter()
+        self.refresh_backup_tab()
 
     def scan_folder(self):
         folder_path = filedialog.askdirectory(title="选择包含若干 Java 的父级大文件夹")
@@ -10269,7 +10923,12 @@ class JavaManagerApp:
         for index in indices:
             raw = self.lb_reg.get(index)
             version_name = raw.split("  [", 1)[0].replace("[OK]", "").replace("[!]", "").replace("[X]", "").strip()
-            JavaRegistryAdapter.unregister(version_name)
+            path_parts = raw.rsplit("  [", 1)
+            java_home = path_parts[1].rstrip("]") if len(path_parts) == 2 else ""
+            if java_home:
+                unregister_java_home(java_home, preferred_name=version_name)
+            else:
+                JavaRegistryAdapter.unregister(version_name)
         self.refresh_all_data()
 
     def env_button_text(self):

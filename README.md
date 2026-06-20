@@ -1,39 +1,43 @@
-# LJM(local Java manager) Java 核心环境管家
+# LJM Java Manager
 
-LJM 是一个跨平台 Java 环境管理工具，用来扫描、注册、下载、修复、更新、移动和删除本机 Java，适合 Minecraft、IDE、启动器、服务端和脚本环境使用。
+LJM is a cross-platform Java runtime manager for desktop users, Minecraft players, launchers, IDEs, servers, scripts, and NoGUI environments.
 
-## 下载
+Current version: `2.9.4`
 
-请前往 [Releases](https://github.com/Lambunge520/Java-/releases) 下载最新版本。
+## Download / 下载
 
-当前版本：`2.9.2`
+Download from [GitHub Releases](https://github.com/Lambunge520/Java-/releases).
 
-## 选哪个包
+- Desktop Windows: `LJM-Java-Manager-windows.zip`
+- Desktop Linux: `LJM-Java-Manager-linux.tar.gz`, then run `LJM-Java-Manager.run`
+- Desktop macOS: `LJM-Java-Manager-macos.zip`, then run `LJM-Java-Manager.app`
+- NoGUI / 无桌面版: choose assets with `nogui` in the name. Linux uses `.run`; macOS uses `.command`.
+- Checksums / 校验: `SHA256SUMS-gui.txt` and `SHA256SUMS-nogui.txt`
 
-- Windows 桌面端：`LJM-Java-Manager-windows.zip`
-- Linux 桌面端：`LJM-Java-Manager-linux.tar.gz`，解压后运行 `LJM-Java-Manager.run`
-- macOS 桌面端：`LJM-Java-Manager-macos.zip`，解压后运行 `LJM-Java-Manager.app`
-- 无桌面端：选择名称带 `nogui` 的压缩包；Linux 运行 `.run`，macOS 运行 `.command`
+NoGUI documentation: [docs/NOGUI_USAGE.md](docs/NOGUI_USAGE.md)
 
-## 主要功能
+## Features / 功能
 
-- 扫描、注册、注销 Java，并设置默认 `JAVA_HOME`。
-- 下载、更新和修复 Java，支持多发行商、多版本和 Windows/Linux/macOS 自动匹配。
-- 移动 Java 目录或删除 Java 文件时会处理常见权限问题。
-- Linux/macOS 自动补齐 Java 启动器可执行权限，减少手动 `chmod`。
-- 下载源会在官方源、GitHub 直连和镜像源之间自动降级；Adoptium 源已补齐 `latest` 与 `feature_releases` 双接口兜底。
-- 桌面端提供图形界面和反馈入口；`nogui` 端适合脚本批处理、服务器和无桌面环境。
+- Scan, register, unregister, move, delete, repair, and update local Java runtimes.
+- Download JDK/JRE packages from multiple vendors and automatically fall back between official, GitHub, and mirror sources.
+- Give Minecraft-oriented Java recommendations by version, vendor, runtime type, and performance profile.
+- Repair launcher-visible stale registrations for PCL/HMCL-style repeated install/uninstall workflows.
+- Automatically fix common Linux/macOS executable permission issues for downloaded Java runtimes.
+- Desktop edition includes UI, tray, backup manager, cache manager, and feedback entry.
+- NoGUI edition is designed for scripts, servers, scheduled tasks, CI, and other headless environments.
 
-## 源码运行
+## Run From Source / 从源码运行
 
 ```powershell
 python .\src\LJM.pyw
-python .\src\LJM_nogui.pyw
-python .\src\LJM_nogui.pyw feedback --stdout --message "这里写反馈内容"
-python .\src\LJM_nogui.pyw delete Temurin_21 --files --force
+python .\src\LJM_nogui.pyw list --stdout
 ```
 
-## 本地打包
+```bash
+python3 ./src/LJM_nogui.pyw list --stdout
+```
+
+## Build / 本地打包
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\build_windows.ps1
@@ -47,4 +51,6 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_nogui_windows.ps1
 ./scripts/build_nogui_macos.sh
 ```
 
-打包产物输出到 `dist/` 或 GitHub Actions 资产。桌面端和 `nogui` 共用 `src/LJM.pyw` 核心逻辑；维护约定见 `docs/MAINTENANCE.md`。
+Build outputs are written to `dist/`. GitHub Actions builds and uploads both desktop and NoGUI assets on `v*` tags.
+
+Maintenance notes: [docs/MAINTENANCE.md](docs/MAINTENANCE.md)
