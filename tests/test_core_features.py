@@ -553,7 +553,8 @@ class CoreFeatureTests(unittest.TestCase):
         ):
             self.assertIn(marker, docs)
         self.assertIn("docs/NOGUI_USAGE.md", readme)
-        self.assertIn("Current version: `2.9.4`", readme)
+        self.assertIn("当前版本：`2.9.4`", readme)
+        self.assertNotIn("Current version:", readme)
         self.assertIn("../docs/NOGUI_USAGE.md", standalone)
 
     def test_new_vendor_registry_tokens_are_clear(self):
