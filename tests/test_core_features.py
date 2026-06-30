@@ -36,9 +36,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_294(self):
-        self.assertEqual(self.core.VERSION, "2.9.4")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/2.9.4")
+    def test_version_and_user_agent_are_30(self):
+        self.assertEqual(self.core.VERSION, "3.0")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.0")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -47,7 +47,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("2.9.4", query["body"][0])
+        self.assertIn("3.0", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -424,6 +424,250 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("Java 25", guidance_25)
         self.assertIn("实验", guidance_22_zh)
 
+    def test_minecraft_jvm_profile_splits_launcher_argument_fields(self):
+        pclce = self.core.build_minecraft_jvm_profile(
+            launcher="PCLCE",
+            profile="balanced",
+            java_major="17",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.20.1",
+            system_memory_mb=16384,
+            cpu_count=8,
+            os_name="Windows",
+            language="en_US",
+        )
+        pcl2 = self.core.build_minecraft_jvm_profile(
+            launcher="PCL2",
+            profile="balanced",
+            java_major="17",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.20.1",
+            system_memory_mb=16384,
+            cpu_count=8,
+            os_name="Windows",
+            language="en_US",
+        )
+        hmcl = self.core.build_minecraft_jvm_profile(
+            launcher="HMCL",
+            profile="balanced",
+            java_major="17",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.20.1",
+            system_memory_mb=16384,
+            cpu_count=8,
+            os_name="Windows",
+            language="en_US",
+        )
+
+        self.assertEqual(pclce["launcher"], "PCLCE")
+        self.assertEqual(pclce["output_mode"], "split")
+        self.assertIn("-Xms", pclce["head_args"])
+        self.assertIn("-Xmx", pclce["head_args"])
+        self.assertIn("-XX:+UseG1GC", pclce["tail_args"])
+        self.assertEqual(pclce["combined_args"], f"{pclce['head_args']} {pclce['tail_args']}".strip())
+        self.assertIn("PCLCE", pclce["copy_hint"])
+        self.assertGreaterEqual(pclce["memory_mb"], 4096)
+        self.assertLessEqual(pclce["memory_mb"], 8192)
+
+        self.assertEqual(pcl2["launcher"], "PCL2")
+        self.assertEqual(pcl2["output_mode"], "combined")
+        self.assertEqual(pcl2["head_args"], "")
+        self.assertEqual(pcl2["tail_args"], "")
+        self.assertIn("-Xmx", pcl2["combined_args"])
+        self.assertIn("-XX:+UseG1GC", pcl2["combined_args"])
+        self.assertEqual(pcl2["combined_label"], "PCL2 combined JVM arguments")
+
+        self.assertEqual(hmcl["launcher"], "HMCL")
+        self.assertEqual(hmcl["output_mode"], "combined")
+        self.assertEqual(hmcl["head_args"], "")
+        self.assertEqual(hmcl["tail_args"], "")
+        self.assertIn("-Xmx", hmcl["combined_args"])
+        self.assertIn("-XX:+UseG1GC", hmcl["combined_args"])
+        self.assertIn("HMCL", hmcl["copy_hint"])
+        self.assertEqual(hmcl["combined_label"], "HMCL combined JVM arguments")
+
+    def test_minecraft_jvm_profile_respects_java_and_mc_version_bands(self):
+        legacy = self.core.build_minecraft_jvm_profile(
+            launcher="PCL Community",
+            profile="stable",
+            java_major="8",
+            java_vendor="Azul Zulu",
+            minecraft_version="1.12.2",
+            system_memory_mb=8192,
+            cpu_count=4,
+            os_name="Linux",
+            language="en_US",
+        )
+        modern_perf = self.core.build_minecraft_jvm_profile(
+            launcher="PCL",
+            profile="performance",
+            java_major="21",
+            java_vendor="GraalVM",
+            minecraft_version="1.21.1",
+            system_memory_mb=32768,
+            cpu_count=16,
+            os_name="Linux",
+            language="en_US",
+        )
+
+        legacy_args = f"{legacy['head_args']} {legacy['tail_args']} {legacy['combined_args']}"
+        modern_args = f"{modern_perf['head_args']} {modern_perf['tail_args']} {modern_perf['combined_args']}"
+        self.assertIn("legacy", legacy["minecraft_band"])
+        self.assertIn("-XX:+UseG1GC", legacy_args)
+        self.assertNotIn("UseZGC", legacy_args)
+        self.assertNotIn("MaxRAMPercentage", legacy_args)
+        self.assertLessEqual(legacy["memory_mb"], 4096)
+
+        self.assertIn("modern", modern_perf["minecraft_band"])
+        self.assertIn("-XX:+UseZGC", modern_args)
+        self.assertIn("unstable", " ".join(modern_perf["warnings"]).lower())
+        self.assertGreaterEqual(modern_perf["memory_mb"], 8192)
+        self.assertLessEqual(modern_perf["memory_mb"], 12288)
+
+    def test_minecraft_jvm_profile_uses_modern_gc_without_blind_flag_copying(self):
+        perf21 = self.core.build_minecraft_jvm_profile(
+            launcher="PCL2",
+            profile="performance",
+            java_major="21",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.21.11",
+            system_memory_mb=16384,
+            cpu_count=12,
+            os_name="Windows",
+            language="en_US",
+        )
+        perf17 = self.core.build_minecraft_jvm_profile(
+            launcher="PCL2",
+            profile="performance",
+            java_major="17",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.20.1",
+            system_memory_mb=16384,
+            cpu_count=12,
+            os_name="Windows",
+            language="en_US",
+        )
+        balanced17 = self.core.build_minecraft_jvm_profile(
+            launcher="PCL2",
+            profile="balanced",
+            java_major="17",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.20.1",
+            system_memory_mb=16384,
+            cpu_count=12,
+            os_name="Windows",
+            language="en_US",
+        )
+
+        self.assertIn("-XX:+UseZGC", perf21["combined_args"])
+        self.assertIn("-XX:+ZGenerational", perf21["combined_args"])
+        self.assertIn(f"-Xms{perf21['memory_mb']}M", perf21["combined_args"])
+        self.assertIn(f"-Xmx{perf21['memory_mb']}M", perf21["combined_args"])
+
+        self.assertIn("-XX:+UseZGC", perf17["combined_args"])
+        self.assertNotIn("-XX:+ZGenerational", perf17["combined_args"])
+
+        self.assertIn("-XX:+UseG1GC", balanced17["combined_args"])
+        self.assertIn("-XX:+UnlockExperimentalVMOptions", balanced17["combined_args"])
+        self.assertIn("-XX:G1NewSizePercent=30", balanced17["combined_args"])
+        self.assertIn("-XX:MaxGCPauseMillis=20", balanced17["combined_args"])
+        self.assertEqual(balanced17["combined_args"].count("-XX:G1ReservePercent="), 1)
+
+    def test_minecraft_jvm_profile_uses_selected_device_config_without_gpu_detection(self):
+        profile = self.core.build_minecraft_jvm_profile(
+            launcher="PCL2",
+            profile="balanced",
+            java_major="21",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.21.1",
+            system_memory_mb=32768,
+            cpu_count=12,
+            os_name="Windows 11",
+            gpu_vram_mb=8192,
+            language="en_US",
+        )
+        low_vram = self.core.build_minecraft_jvm_profile(
+            launcher="PCL2",
+            profile="performance",
+            java_major="21",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.21.1",
+            system_memory_mb=8192,
+            cpu_count=8,
+            os_name="Linux",
+            gpu_vram_mb=1024,
+            language="en_US",
+        )
+
+        self.assertEqual(profile["system_memory_mb"], 32768)
+        self.assertEqual(profile["gpu_vram_mb"], 8192)
+        self.assertNotIn("gpu_name", profile)
+        self.assertIn("Windows 11", profile["summary"])
+        self.assertIn("32 GB RAM", profile["summary"])
+        self.assertIn("8 GB VRAM", profile["summary"])
+        self.assertIn("VRAM", " ".join(low_vram["warnings"]))
+        self.assertEqual(self.core.MINECRAFT_DEVICE_VRAM_PRESETS[0], "auto")
+        self.assertEqual(self.core.selected_device_memory_mb("20 GB"), 20480)
+        self.assertEqual(self.core.selected_device_memory_mb("16"), 16384)
+        self.assertEqual(self.core.selected_device_memory_mb("8"), 8192)
+        self.assertEqual(self.core.parse_gpu_vram_mb("6"), 6144)
+        self.assertIsNone(self.core.parse_gpu_vram_mb("auto"))
+        typed_profile = self.core.build_minecraft_jvm_profile(
+            launcher="PCL2",
+            profile="performance",
+            java_major="17",
+            java_vendor="Eclipse Temurin",
+            minecraft_version="1.21.1",
+            system_memory_mb="16",
+            cpu_count=8,
+            os_name="Windows",
+            gpu_vram_mb="6",
+            language="en_US",
+        )
+        original_detect_vram = self.core.detect_system_vram_mb
+        try:
+            self.core.detect_system_vram_mb = lambda force_refresh=False: 6144
+            auto_vram_profile = self.core.build_minecraft_jvm_profile(
+                launcher="PCL2",
+                profile="balanced",
+                java_major="21",
+                java_vendor="Eclipse Temurin",
+                minecraft_version="1.21.1",
+                system_memory_mb="16",
+                cpu_count=8,
+                os_name="Windows",
+                gpu_vram_mb="auto",
+                language="en_US",
+            )
+            auto_vram_profile_zh = self.core.build_minecraft_jvm_profile(
+                launcher="PCL2",
+                profile="balanced",
+                java_major="21",
+                java_vendor="Eclipse Temurin",
+                minecraft_version="1.21.1",
+                system_memory_mb="16",
+                cpu_count=8,
+                os_name="Windows",
+                gpu_vram_mb="自动",
+                language="zh_CN",
+            )
+        finally:
+            self.core.detect_system_vram_mb = original_detect_vram
+        self.assertEqual(typed_profile["system_memory_mb"], 16384)
+        self.assertEqual(typed_profile["gpu_vram_mb"], 6144)
+        self.assertNotIn("0.0 GB RAM", typed_profile["summary"])
+        self.assertIn("16 GB RAM", typed_profile["summary"])
+        self.assertIn("6 GB VRAM", typed_profile["summary"])
+        self.assertEqual(auto_vram_profile["gpu_vram_mb"], 6144)
+        self.assertIn("6 GB VRAM", auto_vram_profile["summary"])
+        self.assertNotIn("Current device VRAM", auto_vram_profile["summary"])
+        self.assertNotIn("Auto VRAM", auto_vram_profile["summary"])
+        self.assertNotIn("unknown VRAM", auto_vram_profile["summary"])
+        self.assertEqual(auto_vram_profile_zh["gpu_vram_mb"], 6144)
+        self.assertIn("6 GB VRAM", auto_vram_profile_zh["summary"])
+        self.assertNotIn("当前设备显存", auto_vram_profile_zh["summary"])
+        self.assertNotIn("显存自动", auto_vram_profile_zh["summary"])
+
     def test_minecraft_vendor_advice_includes_performance_differences(self):
         hotspot = self.core.java_vendor_profile("Eclipse Temurin", language="zh_CN")
         openj9 = self.core.java_vendor_profile("IBM Semeru OpenJ9", language="zh_CN")
@@ -517,15 +761,16 @@ class CoreFeatureTests(unittest.TestCase):
 
     def test_release_notes_and_workflows_are_bilingual(self):
         root = Path(__file__).resolve().parents[1]
-        notes = (root / "docs" / "releases" / "RELEASE_NOTES_2.9.4.md").read_text(encoding="utf-8")
+        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.0.md").read_text(encoding="utf-8")
         template = (root / "docs" / "releases" / "RELEASE_NOTES_TEMPLATE_BILINGUAL.md").read_text(encoding="utf-8")
         gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
         nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
 
         self.assertIn("## 中文", notes)
         self.assertIn("## English", notes)
-        self.assertIn("取消托盘图标左键单击恢复窗口", notes)
-        self.assertIn("Tray single-left-click restore is disabled", notes)
+        self.assertIn("JVM", notes)
+        self.assertIn("Minecraft", notes)
+        self.assertLessEqual(len(notes.splitlines()), 32)
         self.assertIn("## 中文", template)
         self.assertIn("## English", template)
         for workflow in (gui_workflow, nogui_workflow):
@@ -533,6 +778,8 @@ class CoreFeatureTests(unittest.TestCase):
             self.assertIn('RELEASE_VERSION="${RELEASE_TAG#v}"', workflow)
             self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
             self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
+            self.assertIn("python-source.zip", workflow)
+            self.assertIn("src/LJM.pyw", workflow)
 
     def test_nogui_usage_docs_are_bilingual_and_asset_focused(self):
         root = Path(__file__).resolve().parents[1]
@@ -553,9 +800,30 @@ class CoreFeatureTests(unittest.TestCase):
         ):
             self.assertIn(marker, docs)
         self.assertIn("docs/NOGUI_USAGE.md", readme)
-        self.assertIn("当前版本：`2.9.4`", readme)
+        self.assertIn("当前版本：`3.0`", readme)
         self.assertNotIn("Current version:", readme)
         self.assertIn("../docs/NOGUI_USAGE.md", standalone)
+
+    def test_windows_self_update_script_retries_locked_old_executable_and_skips_payload_copy(self):
+        app = object.__new__(self.core.JavaManagerApp)
+        original_path = self.core.APP_EXECUTABLE_PATH
+        try:
+            self.core.APP_EXECUTABLE_PATH = r"C:\LJM\LJM-Java-Manager.exe"
+            script = app._windows_self_update_script(
+                temp_new=r"C:\LJM\LJM-Java-Manager.exe.new",
+                bundle_dir=r"C:\Temp\ljm-update\bundle",
+                cleanup_dir=r"C:\Temp\ljm-update",
+                target_dir=r"C:\LJM",
+                launch_command=r'"C:\LJM\LJM-Java-Manager.exe"',
+            )
+        finally:
+            self.core.APP_EXECUTABLE_PATH = original_path
+
+        self.assertIn(":replace_self_update", script)
+        self.assertIn("if errorlevel 1", script)
+        self.assertIn('/XF "LJM-Java-Manager.exe"', script)
+        self.assertIn("robocopy", script.lower())
+        self.assertNotIn("xcopy", script.lower())
 
     def test_new_vendor_registry_tokens_are_clear(self):
         cases = [
@@ -1366,6 +1634,54 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("download_cache_status", source)
         self.assertIn("_create_tab_motion_header(self.tab_backup", source)
 
+    def test_jvm_args_tab_ui_is_wired(self):
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "LJM.pyw").read_text(encoding="utf-8")
+
+        self.assertIn('"tab_jvm_args"', source)
+        self.assertIn("def setup_jvm_args_tab", source)
+        self.assertIn("def refresh_jvm_args_preview", source)
+        self.assertIn("def copy_jvm_args", source)
+        self.assertIn("MINECRAFT_VERSION_PRESETS", source)
+        self.assertIn("jvm_mc_version_box", source)
+        self.assertIn('self.jvm_mc_version_box.bind("<<ComboboxSelected>>"', source)
+        self.assertIn("jvm_head_label_var", source)
+        self.assertIn("jvm_combined_label_var", source)
+        self.assertIn("def apply_jvm_output_mode", source)
+        self.assertIn("grid_remove", source)
+        self.assertNotIn("tr(\"jvm_generate\")", source)
+        self.assertNotIn("请先生成", source)
+        self.assertNotIn("Generate them first", source)
+        self.assertIn("MINECRAFT_DEVICE_MEMORY_PRESETS", source)
+        self.assertIn("MINECRAFT_DEVICE_OS_PRESETS", source)
+        self.assertIn("MINECRAFT_DEVICE_VRAM_PRESETS", source)
+        self.assertIn("jvm_os_var", source)
+        self.assertIn("jvm_vram_var", source)
+        self.assertIn('vram_values = ("自动",)', source)
+        self.assertIn('vram_values = ("Auto",)', source)
+        self.assertNotIn('vram_values = ("未指定",)', source)
+        self.assertNotIn('vram_values = ("Unknown",)', source)
+        self.assertIn('ttk.Combobox(main, textvariable=self.jvm_memory_var, values=memory_values, width=18)', source)
+        self.assertIn('ttk.Combobox(main, textvariable=self.jvm_vram_var, values=vram_values, width=18)', source)
+        self.assertNotIn('textvariable=self.jvm_memory_var, values=memory_values, state="readonly"', source)
+        self.assertNotIn('textvariable=self.jvm_vram_var, values=vram_values, state="readonly"', source)
+        self.assertIn("detect_system_vram_mb", source)
+        self.assertNotIn("detect_primary_gpu_info", source)
+        self.assertNotIn("_detect_windows_gpu_info", source)
+        self.assertNotIn("gpu_name", source)
+        self.assertNotIn("Chipset Model", source)
+        self.assertIn("width=18", source)
+        self.assertIn('copy_button.grid(row=row * 2, column=1, sticky="w"', source)
+        self.assertIn("_create_tab_motion_header(self.tab_jvm_args", source)
+        self.assertIn("self.notebook.add(self.tab_jvm_args", source)
+        self.assertIn("show_tab(self.tab_jvm_args", source)
+
+    def test_minecraft_version_presets_include_common_user_shortcuts(self):
+        for version in ("1.12.2", "1.16.5", "1.20.1", "1.21.11", "26.2"):
+            self.assertIn(version, self.core.MINECRAFT_VERSION_PRESETS)
+        self.assertNotIn("26", self.core.MINECRAFT_VERSION_PRESETS)
+        self.assertNotIn("2", self.core.MINECRAFT_VERSION_PRESETS)
+
 class NoguiFeatureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1402,7 +1718,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("2.9.4", payload["body"])
+        self.assertIn("3.0", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_defaults_use_nogui_name(self):

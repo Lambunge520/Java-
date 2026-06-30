@@ -6,7 +6,7 @@ on:
       tag_name:
         description: "Release tag to create or update"
         required: false
-        default: "v2.9.4"
+        default: "v3.0"
   push:
     tags:
       - "v*"
@@ -93,6 +93,16 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
+      - name: Prepare Python source package
+        run: |
+          mkdir -p release-assets/python-source
+          zip -r release-assets/python-source/LJM-Java-Manager-nogui-python-source.zip \
+            src/LJM.pyw \
+            src/LJM_nogui.pyw \
+            src/LJM_nogui_entry.py \
+            nogui/LJM.pyw \
+            nogui/LJM_nogui.pyw \
+            nogui/LJM_nogui_entry.py
       - name: Prepare checksums
         run: |
           find release-assets -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS-nogui.txt
@@ -111,5 +121,6 @@ jobs:
             release-assets/LJM-Java-Manager-nogui-windows/LJM-Java-Manager-nogui-windows.zip \
             release-assets/LJM-Java-Manager-nogui-linux/LJM-Java-Manager-nogui-linux.tar.gz \
             release-assets/LJM-Java-Manager-nogui-macos/LJM-Java-Manager-nogui-macos.zip \
+            release-assets/python-source/LJM-Java-Manager-nogui-python-source.zip \
             SHA256SUMS-nogui.txt \
             --clobber

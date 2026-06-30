@@ -81,7 +81,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 
-VERSION = "2.9.4"
+VERSION = "3.0"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -3264,6 +3264,7 @@ I18N_ZH_CN = {
     "tab_fix": "环境分析与修复",
     "tab_update": "云端更新引擎",
     "tab_download": "Java 下载",
+    "tab_jvm_args": "JVM 参数调整",
     "tab_move": "Java 移动",
     "tab_delete": "Java 卸载/删除",
     "tab_backup": "备份管理",
@@ -3309,6 +3310,29 @@ I18N_ZH_CN = {
     "download_installing": "下载包已验证，正在安装到:\n{path}",
     "download_done": "Java 下载完成",
     "download_done_text": "已安装并注册 Java:\n{path}\n\n版本: {version}\n来源: {source}",
+    "jvm_args_section": "Minecraft JVM 参数调整",
+    "jvm_launcher": "启动器",
+    "jvm_vendor": "Java 类型/发行商",
+    "jvm_major": "Java 大版本",
+    "jvm_mc_version": "Minecraft 版本",
+    "jvm_profile": "参数方案",
+    "jvm_memory": "运行内存",
+    "jvm_os": "系统环境",
+    "jvm_vram": "显存容量",
+    "jvm_profile_stable": "稳定性",
+    "jvm_profile_balanced": "稳定但偏性能",
+    "jvm_profile_performance": "最高性能（可能不稳定）",
+    "jvm_summary": "建议摘要: {summary}",
+    "jvm_warnings": "注意: {warnings}",
+    "jvm_output_section": "推荐参数",
+    "jvm_head_args": "PCLCE / PCL 社区版头部参数",
+    "jvm_tail_args": "PCLCE / PCL 社区版尾部参数",
+    "jvm_combined_args": "HMCL / 通用合并参数",
+    "jvm_copy_head": "复制头部",
+    "jvm_copy_tail": "复制尾部",
+    "jvm_copy_combined": "复制合并参数",
+    "jvm_copy_done": "JVM 参数已复制",
+    "jvm_empty_args": "暂无可复制的 JVM 参数，请调整选项后等待自动刷新。",
     "move_java_section": "移动已注册 Java 环境",
     "move_target_parent": "移动到父目录",
     "move_target_name": "目标文件夹名",
@@ -3507,6 +3531,7 @@ I18N_EN_US = {
     "tab_fix": "Analyze & Repair",
     "tab_update": "Cloud Update Engine",
     "tab_download": "Java Download",
+    "tab_jvm_args": "JVM Args",
     "tab_move": "Java Move",
     "tab_delete": "Java Uninstall/Delete",
     "tab_backup": "Backup Manager",
@@ -3552,6 +3577,29 @@ I18N_EN_US = {
     "download_installing": "Package verified. Installing to:\n{path}",
     "download_done": "Java Download Complete",
     "download_done_text": "Java was installed and registered:\n{path}\n\nVersion: {version}\nSource: {source}",
+    "jvm_args_section": "Minecraft JVM Argument Tuning",
+    "jvm_launcher": "Launcher",
+    "jvm_vendor": "Java type/vendor",
+    "jvm_major": "Java major",
+    "jvm_mc_version": "Minecraft version",
+    "jvm_profile": "Profile",
+    "jvm_memory": "System RAM",
+    "jvm_os": "Operating system",
+    "jvm_vram": "VRAM",
+    "jvm_profile_stable": "Stability",
+    "jvm_profile_balanced": "Stable but faster",
+    "jvm_profile_performance": "Highest performance (may be unstable)",
+    "jvm_summary": "Suggested: {summary}",
+    "jvm_warnings": "Notes: {warnings}",
+    "jvm_output_section": "Recommended Arguments",
+    "jvm_head_args": "PCLCE / PCL Community head arguments",
+    "jvm_tail_args": "PCLCE / PCL Community tail arguments",
+    "jvm_combined_args": "HMCL / generic combined arguments",
+    "jvm_copy_head": "Copy Head",
+    "jvm_copy_tail": "Copy Tail",
+    "jvm_copy_combined": "Copy Combined",
+    "jvm_copy_done": "JVM arguments copied",
+    "jvm_empty_args": "No JVM arguments to copy. Adjust an option and wait for the automatic refresh.",
     "move_java_section": "Move a Registered Java Runtime",
     "move_target_parent": "Move to parent folder",
     "move_target_name": "Target folder name",
@@ -5508,6 +5556,529 @@ def minecraft_java_guidance(major_version, language=None):
     return "This Java major is better for testing or specific server needs; for Minecraft compatibility, prefer Java 21, 17, or 8."
 
 
+MINECRAFT_JVM_LAUNCHERS = ("PCL2", "PCLCE", "HMCL", "Generic")
+MINECRAFT_VERSION_PRESETS = ("1.12.2", "1.16.5", "1.20.1", "1.21.1", "1.21.11", "26.2")
+MINECRAFT_DEVICE_MEMORY_PRESETS = ("auto", "4 GB", "8 GB", "12 GB", "16 GB", "24 GB", "32 GB", "64 GB")
+MINECRAFT_DEVICE_OS_PRESETS = ("auto", "Windows", "Linux", "macOS")
+MINECRAFT_DEVICE_VRAM_PRESETS = ("auto", "1 GB", "2 GB", "4 GB", "6 GB", "8 GB", "12 GB", "16 GB", "24 GB")
+_DETECTED_VRAM_MB = None
+_DETECTED_VRAM_CACHE_TIME = 0
+_DETECTED_VRAM_CACHE_VALID = False
+
+
+def detect_system_memory_mb():
+    try:
+        if IS_WIN:
+            class MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", wintypes.DWORD),
+                    ("dwMemoryLoad", wintypes.DWORD),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            state = MEMORYSTATUSEX()
+            state.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(state)):
+                return max(1024, int(state.ullTotalPhys // 1024 // 1024))
+        if hasattr(os, "sysconf"):
+            pages = os.sysconf("SC_PHYS_PAGES")
+            page_size = os.sysconf("SC_PAGE_SIZE")
+            return max(1024, int(pages * page_size // 1024 // 1024))
+    except Exception as exc:
+        logging.debug("系统内存检测失败: %s", exc)
+    return 8192
+
+
+def format_capacity_mb(value_mb, suffix):
+    try:
+        value = int(value_mb)
+    except Exception:
+        return ""
+    if value <= 0:
+        return ""
+    gb_value = value / 1024
+    if value % 1024 == 0:
+        return f"{int(gb_value)} GB {suffix}"
+    return f"{gb_value:.1f} GB {suffix}"
+
+
+def parse_gpu_vram_mb(value, bare_number_unit="gb"):
+    text = normalize_text(value)
+    if not text:
+        return None
+    lowered = text.lower()
+    if any(token in lowered for token in ("unknown", "auto")) or "未指定" in text or "未知" in text:
+        return None
+    try:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            numeric = float(value)
+            return int(numeric) if numeric > 0 else None
+        numeric = float(text)
+        if normalize_text(bare_number_unit).lower() in ("gb", "gib"):
+            numeric *= 1024
+        return int(numeric) if numeric > 0 else None
+    except Exception:
+        pass
+    match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(gb|gib|mb|mib)", text, re.IGNORECASE)
+    if not match:
+        return None
+    amount = float(match.group(1))
+    unit = match.group(2).lower()
+    if unit in ("gb", "gib"):
+        amount *= 1024
+    return int(amount) if amount > 0 else None
+
+
+def _best_capacity_mb(values):
+    cleaned = []
+    for value in values:
+        try:
+            numeric = int(value)
+        except Exception:
+            continue
+        if 128 <= numeric <= 262144:
+            cleaned.append(numeric)
+    return max(cleaned) if cleaned else None
+
+
+def _capacity_bytes_to_mb(value):
+    try:
+        if isinstance(value, bytes):
+            numeric = int.from_bytes(value[:8], "little", signed=False)
+        else:
+            numeric = int(normalize_text(value))
+    except Exception:
+        return None
+    if numeric <= 0:
+        return None
+    return _best_capacity_mb([numeric // 1024 // 1024])
+
+
+def _quiet_command_output(cmd, timeout=3):
+    kwargs = {"text": True, "encoding": "utf-8", "errors": "ignore", "timeout": timeout}
+    if IS_WIN:
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return subprocess.check_output(cmd, **kwargs)
+
+
+def _detect_windows_vram_mb():
+    values = []
+    try:
+        base = winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            r"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}",
+            0,
+            winreg.KEY_READ,
+        )
+        try:
+            for index in range(winreg.QueryInfoKey(base)[0]):
+                subkey_name = winreg.EnumKey(base, index)
+                if not re.fullmatch(r"\d{4}", subkey_name):
+                    continue
+                try:
+                    subkey = winreg.OpenKey(base, subkey_name, 0, winreg.KEY_READ)
+                except OSError:
+                    continue
+                try:
+                    for value_name in ("HardwareInformation.qwMemorySize", "HardwareInformation.MemorySize"):
+                        try:
+                            detected_mb = _capacity_bytes_to_mb(winreg.QueryValueEx(subkey, value_name)[0])
+                        except OSError:
+                            detected_mb = None
+                        if detected_mb:
+                            values.append(detected_mb)
+                finally:
+                    winreg.CloseKey(subkey)
+        finally:
+            winreg.CloseKey(base)
+    except Exception as exc:
+        logging.debug("Windows 显存注册表检测失败: %s", exc)
+
+    if values:
+        return _best_capacity_mb(values)
+
+    try:
+        output = _quiet_command_output(
+            [
+                "powershell",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Get-CimInstance Win32_VideoController | Where-Object { $_.AdapterRAM -gt 0 } | ForEach-Object { $_.AdapterRAM }",
+            ],
+            timeout=4,
+        )
+        for line in output.splitlines():
+            detected_mb = _capacity_bytes_to_mb(line.strip())
+            if detected_mb:
+                values.append(detected_mb)
+    except Exception as exc:
+        logging.debug("Windows 显存 CIM 检测失败: %s", exc)
+    return _best_capacity_mb(values)
+
+
+def _detect_macos_vram_mb():
+    values = []
+    try:
+        output = _quiet_command_output(["system_profiler", "SPDisplaysDataType"], timeout=6)
+        for line in output.splitlines():
+            if "vram" in line.lower():
+                detected_mb = parse_gpu_vram_mb(line, bare_number_unit="mb")
+                if detected_mb:
+                    values.append(detected_mb)
+    except Exception as exc:
+        logging.debug("macOS 显存检测失败: %s", exc)
+    return _best_capacity_mb(values)
+
+
+def _detect_linux_vram_mb():
+    values = []
+    try:
+        for root, _, files in os.walk("/sys/class/drm"):
+            if "mem_info_vram_total" not in files:
+                continue
+            path = os.path.join(root, "mem_info_vram_total")
+            try:
+                with open(path, "r", encoding="utf-8", errors="ignore") as file_obj:
+                    detected_mb = _capacity_bytes_to_mb(file_obj.read().strip())
+            except Exception:
+                detected_mb = None
+            if detected_mb:
+                values.append(detected_mb)
+    except Exception as exc:
+        logging.debug("Linux sysfs 显存检测失败: %s", exc)
+
+    try:
+        output = _quiet_command_output(
+            ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+            timeout=3,
+        )
+        for line in output.splitlines():
+            match = re.search(r"([0-9]+)", line)
+            if match:
+                values.append(int(match.group(1)))
+    except Exception as exc:
+        logging.debug("Linux nvidia-smi 显存检测失败: %s", exc)
+    return _best_capacity_mb(values)
+
+
+def detect_system_vram_mb(force_refresh=False):
+    global _DETECTED_VRAM_MB, _DETECTED_VRAM_CACHE_TIME, _DETECTED_VRAM_CACHE_VALID
+    now = time.time()
+    if not force_refresh and _DETECTED_VRAM_CACHE_VALID and now - _DETECTED_VRAM_CACHE_TIME < 60:
+        return _DETECTED_VRAM_MB
+
+    detected = None
+    try:
+        if IS_WIN:
+            detected = _detect_windows_vram_mb()
+        elif sys.platform == "darwin":
+            detected = _detect_macos_vram_mb()
+        else:
+            detected = _detect_linux_vram_mb()
+    except Exception as exc:
+        logging.debug("显存容量检测失败: %s", exc)
+
+    _DETECTED_VRAM_MB = detected
+    _DETECTED_VRAM_CACHE_TIME = now
+    _DETECTED_VRAM_CACHE_VALID = True
+    return detected
+
+
+def is_auto_device_choice(value):
+    text = normalize_text(value)
+    lower = text.lower()
+    return not text or "auto" in lower or "current" in lower or "当前" in text or "自动" in text or "本机" in text
+
+
+def selected_device_memory_mb(value):
+    if is_auto_device_choice(value):
+        return detect_system_memory_mb()
+    parsed = parse_gpu_vram_mb(value, bare_number_unit="gb")
+    return parsed or detect_system_memory_mb()
+
+
+def selected_device_os_name(value):
+    if is_auto_device_choice(value):
+        return platform.platform() or platform.system() or sys.platform
+    text = normalize_text(value)
+    lower = text.lower()
+    if "mac" in lower:
+        return "macOS"
+    if "linux" in lower:
+        return "Linux"
+    if "win" in lower:
+        return "Windows"
+    return text or (platform.platform() or platform.system() or sys.platform)
+
+
+def parse_minecraft_version_tuple(version_text):
+    text = normalize_text(version_text)
+    match = re.search(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", text)
+    if not match:
+        return (1, 20, 1)
+    return tuple(int(part or 0) for part in match.groups())
+
+
+def minecraft_version_band(version_text):
+    version = parse_minecraft_version_tuple(version_text)
+    if version <= (1, 16, 5):
+        return "legacy <=1.16.5"
+    if version < (1, 18, 0):
+        return "transition 1.17"
+    if version <= (1, 20, 4):
+        return "modern 1.18-1.20.4"
+    if version <= (1, 21, 99):
+        return "modern 1.20.5-1.21.x"
+    return "future"
+
+
+def normalize_minecraft_launcher(launcher):
+    text = normalize_text(launcher)
+    lower = text.lower()
+    if "hmcl" in lower:
+        return "HMCL"
+    if "pclce" in lower or "community" in lower or "社区" in text:
+        return "PCLCE"
+    if "pcl" in lower:
+        return "PCL2"
+    return "Generic"
+
+
+def minecraft_jvm_output_mode(launcher):
+    return "split" if normalize_minecraft_launcher(launcher) == "PCLCE" else "combined"
+
+
+def normalize_minecraft_jvm_profile(profile):
+    text = normalize_text(profile)
+    lower = text.lower()
+    if any(token in lower for token in ("performance", "max", "highest")) or "最高" in text or "极限" in text:
+        return "performance"
+    if any(token in lower for token in ("balanced", "balance")) or "偏性能" in text or "均衡" in text:
+        return "balanced"
+    if any(token in lower for token in ("stable", "stability", "safe")) or "稳定" in text:
+        return "stable"
+    return "balanced"
+
+
+def bounded_minecraft_memory_mb(system_memory_mb, minecraft_band_name, profile):
+    try:
+        total = int(system_memory_mb or detect_system_memory_mb())
+    except Exception:
+        total = detect_system_memory_mb()
+    total = max(2048, total)
+    profile = normalize_minecraft_jvm_profile(profile)
+    is_legacy = "legacy" in normalize_text(minecraft_band_name)
+
+    if is_legacy:
+        desired = {"stable": 2048, "balanced": 3072, "performance": 4096}[profile]
+        cap = 4096
+    elif total >= 32768:
+        desired = {"stable": 6144, "balanced": 8192, "performance": 12288}[profile]
+        cap = {"stable": 8192, "balanced": 10240, "performance": 12288}[profile]
+    elif total >= 16384:
+        desired = {"stable": 4096, "balanced": 6144, "performance": 8192}[profile]
+        cap = {"stable": 6144, "balanced": 8192, "performance": 10240}[profile]
+    elif total >= 8192:
+        desired = {"stable": 3072, "balanced": 4096, "performance": 5120}[profile]
+        cap = 6144
+    else:
+        desired = {"stable": 2048, "balanced": 2560, "performance": 3072}[profile]
+        cap = 3072
+
+    os_reserve = 1536 if total <= 8192 else 3072
+    allowed = max(1024, min(cap, int(total * 0.60), total - os_reserve))
+    return max(1024, min(desired, allowed))
+
+
+def minecraft_initial_heap_mb(memory_mb, profile):
+    profile = normalize_minecraft_jvm_profile(profile)
+    if profile == "performance":
+        return memory_mb
+    if profile == "balanced":
+        return max(1024, min(memory_mb // 2, 4096))
+    return max(1024, min(memory_mb // 3, 2048))
+
+
+def is_openj9_vendor(java_vendor):
+    text = normalize_text(java_vendor).lower()
+    return any(token in text for token in ("openj9", "semeru", "ibm"))
+
+
+def minecraft_jvm_tail_args(java_major, java_vendor, profile, minecraft_band_name):
+    profile = normalize_minecraft_jvm_profile(profile)
+    warnings = []
+    try:
+        major = int(extract_major_from_version(str(java_major), fallback=str(java_major)))
+    except Exception:
+        major = 17
+
+    if is_openj9_vendor(java_vendor):
+        args = ["-Xshareclasses", "-Xtune:virtualized"]
+        warnings.append("OpenJ9 uses different JVM flags; HotSpot-only G1/ZGC flags were skipped.")
+        return args, warnings
+
+    if profile == "stable":
+        args = ["-XX:+UseG1GC", "-XX:+DisableExplicitGC", "-XX:MaxGCPauseMillis=120"]
+        if major >= 8:
+            args.append("-XX:+UseStringDeduplication")
+        if major >= 17:
+            args.append("-XX:+ParallelRefProcEnabled")
+    elif profile == "balanced":
+        args = [
+            "-XX:+UnlockExperimentalVMOptions",
+            "-XX:+UseG1GC",
+            "-XX:+ParallelRefProcEnabled",
+            "-XX:MaxGCPauseMillis=20",
+            "-XX:+DisableExplicitGC",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+UseStringDeduplication",
+            "-XX:G1NewSizePercent=30",
+            "-XX:G1MaxNewSizePercent=40",
+            "-XX:G1ReservePercent=20",
+            "-XX:G1HeapRegionSize=32m",
+            "-XX:G1HeapWastePercent=5",
+            "-XX:G1MixedGCCountTarget=4",
+            "-XX:InitiatingHeapOccupancyPercent=15",
+            "-XX:G1MixedGCLiveThresholdPercent=90",
+            "-XX:G1RSetUpdatingPauseTimePercent=5",
+            "-XX:SurvivorRatio=32",
+            "-XX:+PerfDisableSharedMem",
+            "-XX:MaxTenuringThreshold=1",
+        ]
+    elif major >= 17:
+        args = ["-XX:+UseZGC", "-XX:+DisableExplicitGC", "-XX:+AlwaysPreTouch"]
+        if major >= 21:
+            args.insert(1, "-XX:+ZGenerational")
+        warnings.append("Highest performance profile enables ZGC and may be unstable for some modpacks or launchers.")
+    else:
+        args = [
+            "-XX:+UseG1GC",
+            "-XX:+DisableExplicitGC",
+            "-XX:+UseStringDeduplication",
+            "-XX:MaxGCPauseMillis=70",
+            "-XX:G1ReservePercent=15",
+            "-XX:InitiatingHeapOccupancyPercent=10",
+        ]
+        warnings.append("Java 8 cannot use ZGC; the profile stays on aggressive G1 settings.")
+
+    if "legacy" in normalize_text(minecraft_band_name) and major >= 17:
+        warnings.append("Legacy Minecraft usually prefers Java 8; check the launcher instance Java setting.")
+    if "1.20.5" in normalize_text(minecraft_band_name) and major < 21:
+        warnings.append("Minecraft 1.20.5+ usually prefers Java 21.")
+    return args, warnings
+
+
+def build_minecraft_jvm_profile(
+    launcher="PCL",
+    profile="balanced",
+    java_major="17",
+    java_vendor="Eclipse Temurin",
+    minecraft_version="1.20.1",
+    system_memory_mb=None,
+    cpu_count=None,
+    os_name=None,
+    gpu_vram_mb=None,
+    language=None,
+):
+    lang = language or active_language()
+    suffix = "zh" if str(lang).lower().startswith("zh") else "en"
+    launcher_name = normalize_minecraft_launcher(launcher)
+    profile_key = normalize_minecraft_jvm_profile(profile)
+    band = minecraft_version_band(minecraft_version)
+    if isinstance(system_memory_mb, str):
+        system_total_mb = selected_device_memory_mb(system_memory_mb)
+    else:
+        try:
+            system_total_mb = int(system_memory_mb or detect_system_memory_mb())
+        except Exception:
+            system_total_mb = detect_system_memory_mb()
+    memory_mb = bounded_minecraft_memory_mb(system_total_mb, band, profile_key)
+    xms_mb = minecraft_initial_heap_mb(memory_mb, profile_key)
+    cpu_total = max(1, int(cpu_count or os.cpu_count() or 4))
+    os_text = normalize_text(os_name or platform.platform() or platform.system() or sys.platform)
+    vram_is_auto = is_auto_device_choice(gpu_vram_mb)
+    gpu_vram_value = detect_system_vram_mb() if vram_is_auto else parse_gpu_vram_mb(gpu_vram_mb)
+    ram_label = format_capacity_mb(system_total_mb, "RAM")
+    if gpu_vram_value:
+        vram_label = format_capacity_mb(gpu_vram_value, "VRAM")
+    else:
+        vram_label = "unknown VRAM" if suffix == "en" else "显存未知"
+
+    head_args = [f"-Xms{xms_mb}M", f"-Xmx{memory_mb}M", "-Dfile.encoding=UTF-8"]
+    if "windows" not in os_text.lower():
+        head_args.append("-Duser.language=en")
+    tail_args, warnings = minecraft_jvm_tail_args(java_major, java_vendor, profile_key, band)
+    if cpu_total <= 4 and "-XX:+AlwaysPreTouch" in tail_args:
+        tail_args.remove("-XX:+AlwaysPreTouch")
+        warnings.append("AlwaysPreTouch was skipped on low-core systems to reduce startup stalls.")
+
+    if is_openj9_vendor(java_vendor):
+        vendor_note = "OpenJ9" if suffix == "en" else "OpenJ9"
+    else:
+        vendor_note = "HotSpot/G1" if profile_key != "performance" else "HotSpot/ZGC"
+
+    if gpu_vram_value and gpu_vram_value < 2048:
+        if suffix == "en":
+            warnings.append("Detected low VRAM; avoid heavy shaders or high-resolution resource packs.")
+        else:
+            warnings.append("检测到显存偏低；建议避免重光影或高清材质包。")
+
+    head_text = " ".join(unique_sequence(head_args))
+    tail_text = " ".join(unique_sequence(tail_args))
+    combined = f"{head_text} {tail_text}".strip()
+    output_mode = minecraft_jvm_output_mode(launcher_name)
+    if output_mode == "combined":
+        head_output = ""
+        tail_output = ""
+        copy_hint = f"{launcher_name}: paste the combined arguments into the JVM arguments box." if suffix == "en" else f"{launcher_name}：把合并参数粘贴到 JVM 参数框。"
+        combined_label = f"{launcher_name} combined JVM arguments" if suffix == "en" else f"{launcher_name} 合并 JVM 参数"
+        head_label = ""
+        tail_label = ""
+    else:
+        head_output = head_text
+        tail_output = tail_text
+        copy_hint = f"{launcher_name}: paste memory/system properties into the head box and GC flags into the tail box." if suffix == "en" else f"{launcher_name}：头部填写内存/系统属性，尾部填写 GC 参数。"
+        head_label = f"{launcher_name} head JVM arguments" if suffix == "en" else f"{launcher_name} 头部 JVM 参数"
+        tail_label = f"{launcher_name} tail JVM arguments" if suffix == "en" else f"{launcher_name} 尾部 JVM 参数"
+        combined_label = f"{launcher_name} combined preview" if suffix == "en" else f"{launcher_name} 合并预览"
+
+    if suffix == "zh":
+        summary = f"{vendor_note} / {band} / 分配 {memory_mb} MB / {os_text} / {ram_label} / {vram_label}，按 {launcher_name} 生成。"
+    else:
+        summary = f"{vendor_note} / {band} / {memory_mb} MB allocated / {os_text} / {ram_label} / {vram_label}, generated for {launcher_name}."
+
+    return {
+        "launcher": launcher_name,
+        "profile": profile_key,
+        "java_major": str(java_major),
+        "java_vendor": canonical_java_vendor_name(java_vendor),
+        "minecraft_version": normalize_text(minecraft_version),
+        "minecraft_band": band,
+        "memory_mb": memory_mb,
+        "system_memory_mb": system_total_mb,
+        "cpu_count": cpu_total,
+        "os_name": os_text,
+        "gpu_vram_mb": gpu_vram_value,
+        "output_mode": output_mode,
+        "head_label": head_label,
+        "tail_label": tail_label,
+        "combined_label": combined_label,
+        "head_args": head_output,
+        "tail_args": tail_output,
+        "combined_args": combined,
+        "warnings": warnings,
+        "summary": summary,
+        "copy_hint": copy_hint,
+    }
+
+
 def java_vendor_foojay_distributions(vendor):
     profile = java_vendor_profile(vendor)
     values = [profile.get("foojay")]
@@ -6099,8 +6670,9 @@ class WindowsTrayIcon:
     ID_FEEDBACK = 1010
     ID_TAB_DELETE = 1011
     ID_TAB_BACKUP = 1012
+    ID_TAB_JVM_ARGS = 1013
 
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_tab_backup=None, on_settings=None, on_repo=None, on_feedback=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_jvm_args=None, on_tab_move=None, on_tab_delete=None, on_tab_backup=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
         self.tooltip = tooltip[:127]
         self.icon_path = icon_path
@@ -6110,6 +6682,7 @@ class WindowsTrayIcon:
         self.on_tab_fix = on_tab_fix
         self.on_tab_update = on_tab_update
         self.on_tab_download = on_tab_download
+        self.on_tab_jvm_args = on_tab_jvm_args
         self.on_tab_move = on_tab_move
         self.on_tab_delete = on_tab_delete
         self.on_tab_backup = on_tab_backup
@@ -6321,6 +6894,7 @@ class WindowsTrayIcon:
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_FIX, "切换到环境分析与修复")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_UPDATE, "切换到云端更新引擎")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_DOWNLOAD, "切换到 Java 下载")
+            user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_JVM_ARGS, "切换到 JVM 参数调整")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_MOVE, "切换到 Java 移动")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_DELETE, "切换到 Java 卸载/删除")
             user32.AppendMenuW(menu, self.MF_STRING, self.ID_TAB_BACKUP, "切换到备份管理")
@@ -6364,6 +6938,9 @@ class WindowsTrayIcon:
             if command_id == self.ID_TAB_DOWNLOAD and self.on_tab_download:
                 self._queue_ui_call(self.on_tab_download)
                 return 0
+            if command_id == self.ID_TAB_JVM_ARGS and self.on_tab_jvm_args:
+                self._queue_ui_call(self.on_tab_jvm_args)
+                return 0
             if command_id == self.ID_TAB_MOVE and self.on_tab_move:
                 self._queue_ui_call(self.on_tab_move)
                 return 0
@@ -6392,7 +6969,7 @@ class WindowsTrayIcon:
 
 
 class PystrayTrayIcon:
-    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_move=None, on_tab_delete=None, on_tab_backup=None, on_settings=None, on_repo=None, on_feedback=None):
+    def __init__(self, root, tooltip, icon_path, on_show, on_exit, on_tab_reg=None, on_tab_fix=None, on_tab_update=None, on_tab_download=None, on_tab_jvm_args=None, on_tab_move=None, on_tab_delete=None, on_tab_backup=None, on_settings=None, on_repo=None, on_feedback=None):
         self.root = root
         self.tooltip = normalize_text(tooltip)
         self.icon_path = icon_path
@@ -6402,6 +6979,7 @@ class PystrayTrayIcon:
         self.on_tab_fix = on_tab_fix
         self.on_tab_update = on_tab_update
         self.on_tab_download = on_tab_download
+        self.on_tab_jvm_args = on_tab_jvm_args
         self.on_tab_move = on_tab_move
         self.on_tab_delete = on_tab_delete
         self.on_tab_backup = on_tab_backup
@@ -6454,6 +7032,7 @@ class PystrayTrayIcon:
             pystray.MenuItem("切换到环境分析与修复", lambda _icon, _item: self._queue_ui_call(self.on_tab_fix)),
             pystray.MenuItem("切换到云端更新引擎", lambda _icon, _item: self._queue_ui_call(self.on_tab_update)),
             pystray.MenuItem("切换到 Java 下载", lambda _icon, _item: self._queue_ui_call(self.on_tab_download)),
+            pystray.MenuItem("切换到 JVM 参数调整", lambda _icon, _item: self._queue_ui_call(self.on_tab_jvm_args)),
             pystray.MenuItem("切换到 Java 移动", lambda _icon, _item: self._queue_ui_call(self.on_tab_move)),
             pystray.MenuItem("切换到 Java 卸载/删除", lambda _icon, _item: self._queue_ui_call(self.on_tab_delete)),
             pystray.MenuItem("切换到备份管理", lambda _icon, _item: self._queue_ui_call(self.on_tab_backup)),
@@ -8133,6 +8712,24 @@ class JavaManagerApp:
         self.download_parent_var = None
         self.download_profile_var = None
         self.download_preview_var = None
+        self.jvm_launcher_var = None
+        self.jvm_vendor_var = None
+        self.jvm_major_var = None
+        self.jvm_mc_version_var = None
+        self.jvm_mc_version_box = None
+        self.jvm_profile_var = None
+        self.jvm_memory_var = None
+        self.jvm_os_var = None
+        self.jvm_vram_var = None
+        self.jvm_summary_var = None
+        self.jvm_warning_var = None
+        self.jvm_head_label_var = None
+        self.jvm_tail_label_var = None
+        self.jvm_combined_label_var = None
+        self.jvm_head_text = None
+        self.jvm_tail_text = None
+        self.jvm_combined_text = None
+        self.jvm_output_rows = {}
         self.move_parent_var = None
         self.move_name_var = None
         self.move_preview_var = None
@@ -9001,6 +9598,7 @@ class JavaManagerApp:
             self.show_fix_tab,
             self.show_update_tab,
             self.show_download_tab,
+            self.show_jvm_args_tab,
             self.show_move_tab,
             self.show_delete_tab,
             self.show_backup_tab,
@@ -9105,6 +9703,9 @@ class JavaManagerApp:
     def show_download_tab(self):
         self.show_tab(self.tab_download)
 
+    def show_jvm_args_tab(self):
+        self.show_tab(self.tab_jvm_args)
+
     def show_move_tab(self):
         self.show_tab(self.tab_move)
 
@@ -9190,6 +9791,7 @@ class JavaManagerApp:
         self.tab_fix = ttk.Frame(self.notebook)
         self.tab_update = ttk.Frame(self.notebook)
         self.tab_download = ttk.Frame(self.notebook)
+        self.tab_jvm_args = ttk.Frame(self.notebook)
         self.tab_move = ttk.Frame(self.notebook)
         self.tab_delete = ttk.Frame(self.notebook)
         self.tab_backup = ttk.Frame(self.notebook)
@@ -9197,6 +9799,7 @@ class JavaManagerApp:
         self.tab_fix_body, self.tab_fix_canvas = self._create_scrollable_area(self.tab_fix)
         self.tab_update_body, self.tab_update_canvas = self._create_scrollable_area(self.tab_update)
         self.tab_download_body, self.tab_download_canvas = self._create_scrollable_area(self.tab_download)
+        self.tab_jvm_args_body, self.tab_jvm_args_canvas = self._create_scrollable_area(self.tab_jvm_args)
         self.tab_move_body, self.tab_move_canvas = self._create_scrollable_area(self.tab_move)
         self.tab_delete_body, self.tab_delete_canvas = self._create_scrollable_area(self.tab_delete)
         self.tab_backup_body, self.tab_backup_canvas = self._create_scrollable_area(self.tab_backup)
@@ -9205,6 +9808,7 @@ class JavaManagerApp:
         self.notebook.add(self.tab_fix, text=tr("tab_fix"))
         self.notebook.add(self.tab_update, text=tr("tab_update"))
         self.notebook.add(self.tab_download, text=tr("tab_download"))
+        self.notebook.add(self.tab_jvm_args, text=tr("tab_jvm_args"))
         self.notebook.add(self.tab_move, text=tr("tab_move"))
         self.notebook.add(self.tab_delete, text=tr("tab_delete"))
         self.notebook.add(self.tab_backup, text=tr("tab_backup"))
@@ -9213,6 +9817,7 @@ class JavaManagerApp:
         self.setup_fix_tab_enhanced()
         self.setup_update_tab()
         self.setup_download_tab()
+        self.setup_jvm_args_tab()
         self.setup_move_tab()
         self.setup_delete_tab()
         self.setup_backup_tab()
@@ -9221,6 +9826,7 @@ class JavaManagerApp:
             (self.tab_fix_body, self.tab_fix_canvas),
             (self.tab_update_body, self.tab_update_canvas),
             (self.tab_download_body, self.tab_download_canvas),
+            (self.tab_jvm_args_body, self.tab_jvm_args_canvas),
             (self.tab_move_body, self.tab_move_canvas),
             (self.tab_delete_body, self.tab_delete_canvas),
             (self.tab_backup_body, self.tab_backup_canvas),
@@ -9258,6 +9864,8 @@ class JavaManagerApp:
             self.check_all_updates()
         elif tab_text == tr("tab_move"):
             self.refresh_move_target_preview()
+        elif tab_text == tr("tab_jvm_args"):
+            self.refresh_jvm_args_preview()
         elif tab_text == tr("tab_backup"):
             self.refresh_backup_tab()
         self._animate_selected_tab_motion_header()
@@ -9425,6 +10033,150 @@ class JavaManagerApp:
         for var in (self.download_vendor_var, self.download_major_var, self.download_parent_var):
             var.trace_add("write", lambda *_args: self.refresh_download_preview())
         self.refresh_download_preview()
+
+    def setup_jvm_args_tab(self):
+        parent = getattr(self, "tab_jvm_args_body", self.tab_jvm_args)
+        self._create_tab_motion_header(self.tab_jvm_args, parent, "tab_jvm_args")
+        main = ttk.LabelFrame(parent, text=tr("jvm_args_section"))
+        main.pack(fill=tk.X, padx=12, pady=12)
+
+        launcher_values = ("PCL2", "PCLCE（社区版）", "HMCL", "通用启动器") if active_language().lower().startswith("zh") else MINECRAFT_JVM_LAUNCHERS
+        profile_values = (
+            tr("jvm_profile_stable"),
+            tr("jvm_profile_balanced"),
+            tr("jvm_profile_performance"),
+        )
+        if active_language().lower().startswith("zh"):
+            memory_values = ("当前电脑（自动）",) + tuple(MINECRAFT_DEVICE_MEMORY_PRESETS[1:])
+            os_values = ("当前系统（自动）",) + tuple(MINECRAFT_DEVICE_OS_PRESETS[1:])
+            vram_values = ("自动",) + tuple(MINECRAFT_DEVICE_VRAM_PRESETS[1:])
+        else:
+            memory_values = ("Current device (auto)",) + tuple(MINECRAFT_DEVICE_MEMORY_PRESETS[1:])
+            os_values = ("Current OS (auto)",) + tuple(MINECRAFT_DEVICE_OS_PRESETS[1:])
+            vram_values = ("Auto",) + tuple(MINECRAFT_DEVICE_VRAM_PRESETS[1:])
+        self.jvm_launcher_var = tk.StringVar(value=launcher_values[0])
+        self.jvm_vendor_var = tk.StringVar(value=JAVA_VENDOR_OPTIONS[0])
+        self.jvm_major_var = tk.StringVar(value="21")
+        self.jvm_mc_version_var = tk.StringVar(value="1.21.1")
+        self.jvm_profile_var = tk.StringVar(value=profile_values[1])
+        self.jvm_memory_var = tk.StringVar(value=memory_values[0])
+        self.jvm_os_var = tk.StringVar(value=os_values[0])
+        self.jvm_vram_var = tk.StringVar(value=vram_values[0])
+        self.jvm_summary_var = tk.StringVar()
+        self.jvm_warning_var = tk.StringVar()
+        self.jvm_head_label_var = tk.StringVar(value=tr("jvm_head_args"))
+        self.jvm_tail_label_var = tk.StringVar(value=tr("jvm_tail_args"))
+        self.jvm_combined_label_var = tk.StringVar(value=tr("jvm_combined_args"))
+
+        self.jvm_mc_version_box = ttk.Combobox(main, textvariable=self.jvm_mc_version_var, values=MINECRAFT_VERSION_PRESETS, width=16)
+        self.jvm_mc_version_box.bind("<<ComboboxSelected>>", lambda _event: self.refresh_jvm_args_preview())
+        fields = (
+            (tr("jvm_launcher"), ttk.Combobox(main, textvariable=self.jvm_launcher_var, values=launcher_values, state="readonly", width=24)),
+            (tr("jvm_vendor"), ttk.Combobox(main, textvariable=self.jvm_vendor_var, values=JAVA_VENDOR_OPTIONS, state="readonly", width=32)),
+            (tr("jvm_major"), ttk.Combobox(main, textvariable=self.jvm_major_var, values=JAVA_MAJOR_OPTIONS, width=10)),
+            (tr("jvm_mc_version"), self.jvm_mc_version_box),
+            (tr("jvm_profile"), ttk.Combobox(main, textvariable=self.jvm_profile_var, values=profile_values, state="readonly", width=28)),
+            (tr("jvm_memory"), ttk.Combobox(main, textvariable=self.jvm_memory_var, values=memory_values, width=18)),
+            (tr("jvm_os"), ttk.Combobox(main, textvariable=self.jvm_os_var, values=os_values, state="readonly", width=18)),
+            (tr("jvm_vram"), ttk.Combobox(main, textvariable=self.jvm_vram_var, values=vram_values, width=18)),
+        )
+        for index, (label, widget) in enumerate(fields):
+            row = index // 2
+            col = (index % 2) * 2
+            tk.Label(main, text=label).grid(row=row, column=col, sticky="w", padx=10, pady=(12 if row == 0 else 6, 6))
+            widget.grid(row=row, column=col + 1, sticky="ew", padx=10, pady=(12 if row == 0 else 6, 6))
+        main.columnconfigure(1, weight=1)
+        main.columnconfigure(3, weight=1)
+
+        tk.Label(main, textvariable=self.jvm_summary_var, justify="left", anchor="w", wraplength=820).grid(row=4, column=0, columnspan=4, sticky="ew", padx=10, pady=(10, 4))
+        tk.Label(main, textvariable=self.jvm_warning_var, justify="left", anchor="w", wraplength=820).grid(row=5, column=0, columnspan=4, sticky="ew", padx=10, pady=(0, 10))
+
+        output = ttk.LabelFrame(parent, text=tr("jvm_output_section"))
+        output.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 12))
+
+        self.jvm_head_text = tk.Text(output, height=3, wrap=tk.WORD, font=("Consolas", 10))
+        self.jvm_tail_text = tk.Text(output, height=4, wrap=tk.WORD, font=("Consolas", 10))
+        self.jvm_combined_text = tk.Text(output, height=5, wrap=tk.WORD, font=("Consolas", 10))
+        self.jvm_output_rows = {}
+        for row, (label_var, widget, copy_kind, copy_text) in enumerate(
+            (
+                (self.jvm_head_label_var, self.jvm_head_text, "head", tr("jvm_copy_head")),
+                (self.jvm_tail_label_var, self.jvm_tail_text, "tail", tr("jvm_copy_tail")),
+                (self.jvm_combined_label_var, self.jvm_combined_text, "combined", tr("jvm_copy_combined")),
+            )
+        ):
+            label_widget = tk.Label(output, textvariable=label_var, anchor="w")
+            copy_button = tk.Button(output, text=copy_text, command=lambda kind=copy_kind: self.copy_jvm_args(kind), width=18, height=2)
+            label_widget.grid(row=row * 2, column=0, sticky="ew", padx=10, pady=(10, 4))
+            copy_button.grid(row=row * 2, column=1, sticky="w", padx=(0, 10), pady=(10, 4))
+            widget.grid(row=row * 2 + 1, column=0, columnspan=2, sticky="nsew", padx=10, pady=(0, 8))
+            output.rowconfigure(row * 2 + 1, weight=1)
+            self.jvm_output_rows[copy_kind] = (label_widget, copy_button, widget)
+        output.columnconfigure(0, weight=1)
+        output.columnconfigure(1, minsize=180)
+
+        for var in (self.jvm_launcher_var, self.jvm_vendor_var, self.jvm_major_var, self.jvm_mc_version_var, self.jvm_profile_var, self.jvm_memory_var, self.jvm_os_var, self.jvm_vram_var):
+            var.trace_add("write", lambda *_args: self.refresh_jvm_args_preview())
+        self.refresh_jvm_args_preview()
+
+    def apply_jvm_output_mode(self, mode):
+        if not self.jvm_output_rows:
+            return
+        visible = {"head", "tail"} if mode == "split" else {"combined"}
+        for key, widgets in self.jvm_output_rows.items():
+            for widget in widgets:
+                if key in visible:
+                    widget.grid()
+                else:
+                    widget.grid_remove()
+
+    def _set_text_widget_value(self, widget, value):
+        if not widget:
+            return
+        widget.config(state=tk.NORMAL)
+        widget.delete("1.0", tk.END)
+        widget.insert("1.0", normalize_text(value))
+
+    def refresh_jvm_args_preview(self):
+        if not self.jvm_launcher_var or not self.jvm_head_text:
+            return
+        memory_mb = selected_device_memory_mb(self.jvm_memory_var.get())
+        os_text = selected_device_os_name(self.jvm_os_var.get())
+        vram_text = self.jvm_vram_var.get()
+        profile = build_minecraft_jvm_profile(
+            launcher=self.jvm_launcher_var.get(),
+            profile=self.jvm_profile_var.get(),
+            java_major=self.jvm_major_var.get(),
+            java_vendor=self.jvm_vendor_var.get(),
+            minecraft_version=self.jvm_mc_version_var.get(),
+            system_memory_mb=memory_mb,
+            cpu_count=os.cpu_count(),
+            os_name=os_text,
+            gpu_vram_mb=vram_text,
+        )
+        self._set_text_widget_value(self.jvm_head_text, profile["head_args"])
+        self._set_text_widget_value(self.jvm_tail_text, profile["tail_args"])
+        self._set_text_widget_value(self.jvm_combined_text, profile["combined_args"])
+        self.jvm_head_label_var.set(profile.get("head_label") or tr("jvm_head_args"))
+        self.jvm_tail_label_var.set(profile.get("tail_label") or tr("jvm_tail_args"))
+        self.jvm_combined_label_var.set(profile.get("combined_label") or tr("jvm_combined_args"))
+        self.apply_jvm_output_mode(profile["output_mode"])
+        self.jvm_summary_var.set(tr("jvm_summary", summary=f"{profile['summary']} {profile['copy_hint']}"))
+        warnings = "；".join(profile["warnings"]) if profile["warnings"] else profile["copy_hint"]
+        self.jvm_warning_var.set(tr("jvm_warnings", warnings=warnings))
+
+    def copy_jvm_args(self, kind):
+        widget = {
+            "head": self.jvm_head_text,
+            "tail": self.jvm_tail_text,
+            "combined": self.jvm_combined_text,
+        }.get(kind)
+        text = widget.get("1.0", tk.END).strip() if widget else ""
+        if not text:
+            return messagebox.showinfo(tr("jvm_copy_done"), tr("jvm_empty_args"))
+        self.root.clipboard_clear()
+        self.root.clipboard_append(text)
+        messagebox.showinfo(tr("jvm_copy_done"), text)
 
     def setup_move_tab(self):
         parent = getattr(self, "tab_move_body", self.tab_move)
@@ -10637,62 +11389,64 @@ class JavaManagerApp:
 
     def execute_self_update(self, url):
         return self.execute_self_update_popup(url)
-        top = tk.Toplevel(self.root)
-        top.title("静默更新中...")
-        top.geometry("420x130")
-        if self.icon_img:
-            top.iconphoto(True, self.icon_img)
-        top.configure(bg=self.current_bg)
 
-        progress = ttk.Progressbar(top, orient=tk.HORIZONTAL, length=360, mode="determinate")
-        progress.pack(pady=20)
-        status_label = tk.Label(top, text="正在拉取最新程序包...")
-        status_label.pack()
-        self._traverse_and_paint(top)
+    def _windows_self_update_script(self, temp_new, bundle_dir, cleanup_dir, target_dir, launch_command):
+        app_name = os.path.basename(APP_EXECUTABLE_PATH)
+        lines = [
+            "@echo off",
+            "setlocal EnableExtensions EnableDelayedExpansion",
+            "timeout /t 1 /nobreak >nul",
+        ]
+        if bundle_dir:
+            lines.extend([
+                f'robocopy "{bundle_dir}" "{target_dir}" /E /NFL /NDL /NJH /NJS /NP /XF "{app_name}" >nul',
+                "if errorlevel 8 exit /b 1",
+            ])
+        lines.extend([
+            "set /a LJM_REPLACE_RETRY=0",
+            ":replace_self_update",
+            f'move /y "{temp_new}" "{APP_EXECUTABLE_PATH}" >nul',
+            "if errorlevel 1 (",
+            "  set /a LJM_REPLACE_RETRY+=1",
+            "  if !LJM_REPLACE_RETRY! GEQ 20 exit /b 1",
+            "  timeout /t 1 /nobreak >nul",
+            "  goto replace_self_update",
+            ")",
+        ])
+        if cleanup_dir:
+            lines.append(f'rmdir /s /q "{cleanup_dir}"')
+        lines.extend([
+            f"start \"\" {launch_command}",
+            'del "%~f0"',
+        ])
+        return "\n".join(lines) + "\n"
 
-        def update_progress(percent, downloaded, total):
-            progress.config(value=percent)
-            if total > 0:
-                status_label.config(text=f"下载中: {downloaded / 1024 / 1024:.1f} MB / {total / 1024 / 1024:.1f} MB")
-            else:
-                status_label.config(text=f"下载中: {downloaded / 1024 / 1024:.1f} MB")
-
-        def update_status(message):
-            self.root.after(0, lambda: status_label.config(text=message))
-
-        def dl_task():
-            temp_new = APP_EXECUTABLE_PATH + ".new"
-            try:
-                update_urls = build_github_url_variants(url) if is_github_like_url(url) else [url]
-                NetworkEngine.download_from_candidates(update_urls, temp_new, lambda *args: self.root.after(0, lambda: update_progress(*args)), update_status)
-                if IS_WIN:
-                    bat_path = os.path.join(tempfile.gettempdir(), "update_java_mgr.bat")
-                    with open(bat_path, "w", encoding="gbk") as f:
-                        f.write(
-                            "@echo off\n"
-                            "timeout /t 1 /nobreak >nul\n"
-                            f'move /y "{temp_new}" "{APP_EXECUTABLE_PATH}"\n'
-                            f'start "" "{APP_EXECUTABLE_PATH}"\n'
-                            'del "%~f0"\n'
-                        )
-                    os.startfile(bat_path)
-                else:
-                    sh_path = os.path.join(tempfile.gettempdir(), "update_java_mgr.sh")
-                    with open(sh_path, "w", encoding="utf-8") as f:
-                        f.write(
-                            "sleep 1\n"
-                            f'mv -f "{temp_new}" "{APP_EXECUTABLE_PATH}"\n'
-                            f'chmod +x "{APP_EXECUTABLE_PATH}"\n'
-                            f'"{APP_EXECUTABLE_PATH}" &\n'
-                            'rm "$0"\n'
-                        )
-                    os.system(f'chmod +x "{sh_path}" && "{sh_path}" &')
-                self.root.after(0, sys.exit)
-            except Exception as exc:
-                self.root.after(0, top.destroy)
-                self.root.after(0, lambda: messagebox.showerror("自身更新失败", str(exc)))
-
-        threading.Thread(target=dl_task, daemon=True).start()
+    def _unix_self_update_script(self, temp_new, bundle_dir, cleanup_dir, target_dir, launch_command):
+        q_temp_new = shlex.quote(temp_new)
+        q_app_path = shlex.quote(APP_EXECUTABLE_PATH)
+        q_target_dir = shlex.quote(target_dir)
+        lines = [
+            "#!/bin/sh",
+            "sleep 1",
+        ]
+        if bundle_dir:
+            lines.append(f"cp -R {shlex.quote(bundle_dir)}/. {q_target_dir}/")
+        lines.extend([
+            "LJM_REPLACE_RETRY=0",
+            "while ! mv -f " + q_temp_new + " " + q_app_path + "; do",
+            "  LJM_REPLACE_RETRY=$((LJM_REPLACE_RETRY + 1))",
+            "  [ \"$LJM_REPLACE_RETRY\" -ge 20 ] && exit 1",
+            "  sleep 1",
+            "done",
+            f"chmod +x {q_app_path}",
+        ])
+        if cleanup_dir:
+            lines.append(f"rm -rf {shlex.quote(cleanup_dir)}")
+        lines.extend([
+            f"{launch_command} &",
+            'rm "$0"',
+        ])
+        return "\n".join(lines) + "\n"
 
     def execute_self_update_popup(self, url):
         top = tk.Toplevel(self.root)
@@ -10735,41 +11489,12 @@ class JavaManagerApp:
                 if IS_WIN:
                     bat_path = os.path.join(tempfile.gettempdir(), "update_java_mgr.bat")
                     with open(bat_path, "w", encoding="gbk") as f:
-                        if bundle_dir:
-                            f.write(
-                                "@echo off\n"
-                                "timeout /t 1 /nobreak >nul\n"
-                                f'xcopy /E /I /Y /H /C /Q "{os.path.join(bundle_dir, "*")}" "{target_dir}\\" >nul\n'
-                                f'move /y "{temp_new}" "{APP_EXECUTABLE_PATH}"\n'
-                            )
-                        else:
-                            f.write(
-                                "@echo off\n"
-                                "timeout /t 1 /nobreak >nul\n"
-                                f'move /y "{temp_new}" "{APP_EXECUTABLE_PATH}"\n'
-                            )
-                        if cleanup_dir:
-                            f.write(f'rmdir /s /q "{cleanup_dir}"\n')
-                        f.write(
-                            f"start \"\" {launch_command}\n"
-                            'del "%~f0"\n'
-                        )
+                        f.write(self._windows_self_update_script(temp_new, bundle_dir, cleanup_dir, target_dir, launch_command))
                     os.startfile(bat_path)
                 else:
                     sh_path = os.path.join(tempfile.gettempdir(), "update_java_mgr.sh")
-                    q_temp_new = shlex.quote(temp_new)
-                    q_app_path = shlex.quote(APP_EXECUTABLE_PATH)
-                    q_target_dir = shlex.quote(target_dir)
                     with open(sh_path, "w", encoding="utf-8") as f:
-                        f.write("#!/bin/sh\nsleep 1\n")
-                        if bundle_dir:
-                            f.write(f"cp -R {shlex.quote(bundle_dir)}/. {q_target_dir}/\n")
-                        f.write(f"mv -f {q_temp_new} {q_app_path}\n")
-                        f.write(f"chmod +x {q_app_path}\n")
-                        if cleanup_dir:
-                            f.write(f"rm -rf {shlex.quote(cleanup_dir)}\n")
-                        f.write(f"{launch_command} &\n")
-                        f.write('rm "$0"\n')
+                        f.write(self._unix_self_update_script(temp_new, bundle_dir, cleanup_dir, target_dir, launch_command))
                     os.system(f'chmod +x "{sh_path}" && "{sh_path}" &')
                 self.root.after(0, sys.exit)
             except Exception as exc:
