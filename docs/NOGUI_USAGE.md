@@ -55,14 +55,41 @@ xattr -dr com.apple.quarantine .
 Windows:
 
 ```powershell
-python .\src\LJM_nogui.pyw list --stdout
+python .\src\LJM_nogui.py
+python .\src\LJM_nogui.py list --stdout
 ```
+
+在 Windows 终端里请使用 `LJM_nogui.py` 这个控制台入口；不要直接输入 `LJM_nogui.pyw`，`.pyw` 会通过 `pythonw.exe` 启动，无法稳定接入当前终端。
+不带参数运行 `python .\src\LJM_nogui.py` 会自动进入 NoGUI 终端环境；带 `list`、`version`、`status` 等参数时才执行一次性命令后返回。
 
 Linux/macOS:
 
 ```bash
-python3 ./src/LJM_nogui.pyw list --stdout
+chmod +x ./src/LJM_nogui
+./src/LJM_nogui
+./src/LJM_nogui list --stdout
 ```
+
+如果源码包解压后没有执行权限，执行一次 `chmod +x ./src/LJM_nogui` 即可。也可以继续使用 `python3 ./src/LJM_nogui.py` 或 `python3 ./src/LJM_nogui.py list --stdout`。
+
+### 终端环境
+
+如果普通用户不想记完整命令，可以直接进入 NoGUI 终端环境：
+
+```powershell
+.\LJM-Java-Manager-nogui.exe terminal
+```
+
+Linux/macOS 使用对应入口：
+
+```bash
+./LJM-Java-Manager-nogui.run terminal
+./LJM-Java-Manager-nogui.command terminal
+```
+
+在真实终端里不带任何参数启动时，也会自动进入终端环境。进入后输入 `help` 查看命令，输入 `exit` 退出。
+
+成功接入后会显示“已成功接入 LJM Java Manager NoGUI 终端环境”。终端提示词和帮助内容会跟随系统语言自动切换；Windows 的 cmd、PowerShell，以及 Linux/macOS 常见终端都可以直接输入 NoGUI 命令。终端内还支持 `帮助`、`退出`、`清屏`、`状态`、`版本`、`pwd` 和 `cd <目录>` 等辅助命令。
 
 ### 输出和日志
 
@@ -207,14 +234,41 @@ xattr -dr com.apple.quarantine .
 Windows:
 
 ```powershell
-python .\src\LJM_nogui.pyw list --stdout
+python .\src\LJM_nogui.py
+python .\src\LJM_nogui.py list --stdout
 ```
+
+Use the `LJM_nogui.py` console entry from Windows terminals. Do not run `LJM_nogui.pyw` directly from a Windows terminal, because `.pyw` starts through `pythonw.exe` and cannot reliably attach to the current console.
+Running `python .\src\LJM_nogui.py` without arguments enters the NoGUI terminal environment. Passing `list`, `version`, `status`, or another command still runs that one command and returns.
 
 Linux/macOS:
 
 ```bash
-python3 ./src/LJM_nogui.pyw list --stdout
+chmod +x ./src/LJM_nogui
+./src/LJM_nogui
+./src/LJM_nogui list --stdout
 ```
+
+If a source package loses execute permission after extracting, run `chmod +x ./src/LJM_nogui` once. You can also keep using `python3 ./src/LJM_nogui.py` or `python3 ./src/LJM_nogui.py list --stdout`.
+
+### Terminal Environment
+
+If users do not want to remember full commands, start the interactive NoGUI terminal:
+
+```powershell
+.\LJM-Java-Manager-nogui.exe terminal
+```
+
+Use the matching launcher on Linux/macOS:
+
+```bash
+./LJM-Java-Manager-nogui.run terminal
+./LJM-Java-Manager-nogui.command terminal
+```
+
+When started with no arguments in a real terminal, NoGUI also enters this environment automatically. Type `help` for commands and `exit` to quit.
+
+After connecting, NoGUI prints `Successfully connected to the LJM Java Manager NoGUI terminal environment.` The prompt and help text follow the detected system language. Windows cmd, PowerShell, and common Linux/macOS terminals can call NoGUI commands directly. Built-in helpers include `help`, `exit`, `clear`/`cls`, `status`, `version`, `pwd`, and `cd <folder>`.
 
 ### Output And Logs
 

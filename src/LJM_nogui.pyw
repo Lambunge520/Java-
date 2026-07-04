@@ -1,8 +1,11 @@
 import argparse
+import ctypes
 import importlib.machinery
 import importlib.util
 import json
+import locale
 import os
+import shlex
 import sys
 import tarfile
 import tempfile
@@ -22,6 +25,107 @@ else:
 CORE_PATH = os.path.join(RESOURCE_DIR, "LJM.pyw")
 DEFAULT_RESULT_FILE = os.path.join(APP_DIR, "ljm_nogui_result.json")
 DEFAULT_LOG_FILE = os.path.join(APP_DIR, "ljm_nogui.log")
+TERMINAL_EXIT_COMMANDS = {"exit", "quit", "q", "退出"}
+TERMINAL_HELP_COMMANDS = {"help", "?", "h", "帮助", "幫助"}
+TERMINAL_CLEAR_COMMANDS = {"clear", "cls", "清屏"}
+TERMINAL_VERSION_COMMANDS = {"version", "ver", "版本"}
+TERMINAL_STATUS_COMMANDS = {"status", "状态", "狀態"}
+TERMINAL_CANONICAL_COMMANDS = {
+    "list",
+    "scan",
+    "check-updates",
+    "repair",
+    "update",
+    "download",
+    "vendors",
+    "feedback",
+    "move",
+    "delete",
+    "set-default",
+    "terminal",
+}
+TERMINAL_COMMAND_ALIASES = {
+    "ls": "list",
+    "列表": "list",
+    "扫描": "scan",
+    "掃描": "scan",
+    "下载": "download",
+    "下載": "download",
+    "修复": "repair",
+    "修復": "repair",
+    "更新": "update",
+    "检查更新": "check-updates",
+    "檢查更新": "check-updates",
+    "移动": "move",
+    "移動": "move",
+    "删除": "delete",
+    "刪除": "delete",
+    "默认": "set-default",
+    "預設": "set-default",
+    "发行商": "vendors",
+    "發行商": "vendors",
+    "反馈": "feedback",
+    "反饋": "feedback",
+}
+
+TERMINAL_TEXT = {
+    "zh_CN": {
+        "connected": "已成功接入 LJM Java Manager NoGUI 终端环境。",
+        "title": "LJM Java Manager NoGUI 终端 {version}",
+        "hint": "输入 help/帮助 查看命令，输入 exit/退出 离开终端环境。",
+        "prompt": "ljm无桌面> ",
+        "commands_title": "可用命令:",
+        "cmd_list": "  list / 列表",
+        "cmd_scan": "  scan <文件夹> / 扫描 <文件夹>",
+        "cmd_vendors": "  vendors / 发行商",
+        "cmd_check": "  check-updates / 检查更新",
+        "cmd_download": "  download \"Eclipse Temurin\" 21 <安装父目录> --package-type jdk",
+        "cmd_repair": "  repair <注册名或Java目录> --mode smart",
+        "cmd_update": "  update <注册名或Java目录>",
+        "cmd_move": "  move <注册名或Java目录> <新的Java目录>",
+        "cmd_delete": "  delete <注册名或Java目录> [--files] [--force]",
+        "cmd_default": "  set-default <注册名或Java目录>",
+        "cmd_feedback": "  feedback --message \"反馈内容\"",
+        "cmd_builtin": "  help/帮助, status/状态, version/版本, pwd, cd <目录>, clear/清屏, exit/退出",
+        "parse_error": "命令解析失败: {error}",
+        "unknown_error": "命令执行失败: {error}",
+        "version": "当前 NoGUI 版本: {version}",
+        "status": "已接入终端环境；结果文件: {result}; 日志文件: {log}; 当前目录: {cwd}",
+        "cwd": "当前目录: {cwd}",
+        "cd_missing": "请提供要进入的目录。",
+        "cd_done": "当前目录已切换到: {cwd}",
+        "cd_failed": "目录不存在: {path}",
+        "bye": "已退出 NoGUI 终端环境。",
+    },
+    "en_US": {
+        "connected": "Successfully connected to the LJM Java Manager NoGUI terminal environment.",
+        "title": "LJM Java Manager NoGUI Terminal {version}",
+        "hint": "Type help for commands, exit to leave the terminal environment.",
+        "prompt": "ljm-nogui> ",
+        "commands_title": "Available commands:",
+        "cmd_list": "  list",
+        "cmd_scan": "  scan <folder>",
+        "cmd_vendors": "  vendors",
+        "cmd_check": "  check-updates",
+        "cmd_download": "  download \"Eclipse Temurin\" 21 <parent-folder> --package-type jdk",
+        "cmd_repair": "  repair <name-or-java-home> --mode smart",
+        "cmd_update": "  update <name-or-java-home>",
+        "cmd_move": "  move <name-or-java-home> <new-java-home>",
+        "cmd_delete": "  delete <name-or-java-home> [--files] [--force]",
+        "cmd_default": "  set-default <name-or-java-home>",
+        "cmd_feedback": "  feedback --message \"text\"",
+        "cmd_builtin": "  help, status, version, pwd, cd <folder>, clear/cls, exit",
+        "parse_error": "Command parse failed: {error}",
+        "unknown_error": "Command failed: {error}",
+        "version": "Current NoGUI version: {version}",
+        "status": "Terminal environment connected; result file: {result}; log file: {log}; current directory: {cwd}",
+        "cwd": "Current directory: {cwd}",
+        "cd_missing": "Provide a folder to enter.",
+        "cd_done": "Current directory changed to: {cwd}",
+        "cd_failed": "Folder does not exist: {path}",
+        "bye": "Exited the NoGUI terminal environment.",
+    },
+}
 
 
 def load_core():
@@ -41,10 +145,61 @@ def log_line(message, log_file=DEFAULT_LOG_FILE):
         f.write(f"[{stamp}] {message}\n")
 
 
-def safe_print(message):
+def terminal_language():
+    try:
+        lang = core.active_language()
+    except Exception:
+        lang = ""
+    return "zh_CN" if str(lang).lower().startswith("zh") else "en_US"
+
+
+def terminal_text(key, language=None, **kwargs):
+    lang = language or terminal_language()
+    table = TERMINAL_TEXT.get(lang, TERMINAL_TEXT["en_US"])
+    template = table.get(key, TERMINAL_TEXT["en_US"].get(key, key))
+    try:
+        return template.format(**kwargs)
+    except Exception:
+        return template
+
+
+def configure_terminal_environment():
+    if os.name == "nt":
+        try:
+            ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+            ctypes.windll.kernel32.SetConsoleCP(65001)
+        except Exception:
+            pass
+    stdin_is_tty = bool(getattr(sys.stdin, "isatty", lambda: False)())
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+    if stdin_is_tty and hasattr(sys.stdin, "reconfigure"):
+        try:
+            sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+    if os.name != "nt":
+        try:
+            import readline  # noqa: F401
+        except Exception:
+            pass
+
+
+def safe_print(message, end="\n"):
     try:
         if sys.stdout:
-            print(message)
+            print(str(message), end=end, flush=True)
+    except UnicodeEncodeError:
+        try:
+            sys.stdout.buffer.write((str(message) + end).encode("utf-8", errors="replace"))
+            sys.stdout.flush()
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -119,20 +274,55 @@ def find_source_jdk(extract_dir):
 
 def download_latest_jdk(vendor, major, log_prefix="download", package_type="jdk"):
     package_type = core.normalize_java_package_type(package_type)
-    info = core.JavaDownloadEngine.get_latest_download_info(vendor, major, package_type=package_type)
-    if not info:
+    primary_info = core.JavaDownloadEngine.get_latest_download_info(vendor, major, package_type=package_type)
+    if not primary_info:
         raise RuntimeError(f"no available update source for {vendor} {package_type} {major}")
 
-    suffix = core.download_info_archive_suffix(info)
-    fd, archive_path = tempfile.mkstemp(suffix=suffix)
-    os.close(fd)
     progress_cb, status_cb = progress_logger(log_prefix)
-    urls = info.get("urls") or [info["url"]]
-    used_url = core.NetworkEngine.download_from_candidates(urls, archive_path, progress_cb, status_cb)
-    info["used_url"] = used_url
-    info["archive_path"] = archive_path
-    info["archive_suffix"] = suffix
-    return info
+    info_queue = [primary_info]
+    seen_info = {core.JavaDownloadEngine._download_info_identity(primary_info)}
+    fallback_loaded = False
+    last_error = None
+
+    while info_queue:
+        info = dict(info_queue.pop(0))
+        suffix = core.download_info_archive_suffix(info)
+        fd, archive_path = tempfile.mkstemp(suffix=suffix)
+        os.close(fd)
+        try:
+            expected_sha256 = core.resolve_download_sha256(info)
+            urls = info.get("urls") or [info["url"]]
+            used_url = core.NetworkEngine.download_from_candidates(
+                urls,
+                archive_path,
+                progress_cb,
+                status_cb,
+                expected_sha256=expected_sha256,
+            )
+            if core.APP_CONFIG.get("verify_download_sha256", True) and expected_sha256:
+                core.verify_file_sha256(archive_path, expected_sha256)
+            if not core.archive_quick_check(archive_path, suffix):
+                raise RuntimeError("downloaded archive failed structure validation")
+            info["used_url"] = used_url
+            info["archive_path"] = archive_path
+            info["archive_suffix"] = suffix
+            return info
+        except Exception as exc:
+            last_error = exc
+            try:
+                if os.path.exists(archive_path):
+                    os.remove(archive_path)
+            except Exception:
+                pass
+            if not fallback_loaded:
+                for candidate in core.JavaDownloadEngine.get_download_info_candidates(vendor, major, package_type=package_type):
+                    key = core.JavaDownloadEngine._download_info_identity(candidate)
+                    if key not in seen_info:
+                        seen_info.add(key)
+                        info_queue.append(candidate)
+                fallback_loaded = True
+
+    raise last_error
 
 
 def extract_archive(info):
@@ -223,9 +413,9 @@ def command_scan(args):
         if core.normalize_path(register_home) != core.normalize_path(java_home):
             runtime = core.read_java_runtime_info(register_home)
         registry_name = core.build_registry_name(runtime)
-        jvm_path = core.find_jvm_library(register_home)
-        if core.JavaRegistryAdapter.register(registry_name, register_home, jvm_path):
-            registered.append({"registry_name": registry_name, "java_home": register_home})
+        synced = core.JavaRegistryAdapter.sync_runtime_registration(register_home, preferred_name=registry_name)
+        for synced_name in synced:
+            registered.append({"registry_name": synced_name, "java_home": register_home})
     return {"ok": True, "found": homes, "registered": registered}
 
 
@@ -330,6 +520,26 @@ def command_set_default(args):
     return {"ok": True, "action": "set-default", "result": set_default_java(args.target)}
 
 
+def command_terminal(_args):
+    return {"ok": True, "action": "terminal"}
+
+
+def command_version(_args):
+    return {"ok": True, "action": "version", "version": getattr(core, "VERSION", "unknown")}
+
+
+def command_status(_args):
+    return {
+        "ok": True,
+        "action": "status",
+        "version": getattr(core, "VERSION", "unknown"),
+        "result_file": DEFAULT_RESULT_FILE,
+        "log_file": DEFAULT_LOG_FILE,
+        "cwd": os.getcwd(),
+        "platform": sys.platform,
+    }
+
+
 def build_parser():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--output", default=argparse.SUPPRESS, help="JSON result file path")
@@ -397,32 +607,281 @@ def build_parser():
     p_default.add_argument("target", help="registered name or Java home path")
     p_default.set_defaults(func=command_set_default)
 
+    p_terminal = sub.add_parser("terminal", parents=[common], help="start the interactive terminal environment")
+    p_terminal.add_argument("--attach-console", action="store_true", help=argparse.SUPPRESS)
+    p_terminal.set_defaults(func=command_terminal)
+
+    p_version = sub.add_parser("version", parents=[common], help="print NoGUI version information")
+    p_version.set_defaults(func=command_version)
+
+    p_status = sub.add_parser("status", parents=[common], help="print NoGUI terminal and file status")
+    p_status.set_defaults(func=command_status)
+
     return parser
 
 
-def main(argv=None):
-    parser = build_parser()
-    args = parser.parse_args(argv)
+def terminal_help_text(language=None):
+    lang = language or terminal_language()
+    return "\n".join(
+        [
+            terminal_text("commands_title", lang),
+            terminal_text("cmd_list", lang),
+            terminal_text("cmd_scan", lang),
+            terminal_text("cmd_vendors", lang),
+            terminal_text("cmd_check", lang),
+            terminal_text("cmd_download", lang),
+            terminal_text("cmd_repair", lang),
+            terminal_text("cmd_update", lang),
+            terminal_text("cmd_move", lang),
+            terminal_text("cmd_delete", lang),
+            terminal_text("cmd_default", lang),
+            terminal_text("cmd_feedback", lang),
+            terminal_text("cmd_builtin", lang),
+        ]
+    )
+
+
+def terminal_split(command_line, platform_name=None):
+    platform_name = platform_name or os.name
+    if platform_name == "nt":
+        tokens = shlex.split(command_line, posix=False)
+        cleaned = []
+        for token in tokens:
+            if len(token) >= 2 and token[0] == token[-1] and token[0] in ("'", '"'):
+                cleaned.append(token[1:-1])
+            else:
+                cleaned.append(token)
+        return cleaned
+    return shlex.split(command_line, posix=True)
+
+
+def should_start_terminal(argv):
+    return not argv
+
+
+def terminal_stream_is_tty(stream):
+    try:
+        return bool(stream and stream.isatty())
+    except Exception:
+        return False
+
+
+def terminal_encoding():
+    return getattr(sys.stdin, "encoding", None) or locale.getpreferredencoding(False) or "utf-8"
+
+
+def open_terminal_console_input():
+    paths = ["CONIN$"] if os.name == "nt" else ["/dev/tty"]
+    for path in paths:
+        try:
+            return open(path, "r", encoding=terminal_encoding(), errors="replace")
+        except Exception:
+            continue
+    return None
+
+
+def decode_terminal_input_bytes(data):
+    if not data:
+        return ""
+    encodings = ["utf-8-sig", "utf-16"]
+    for candidate in (getattr(sys.stdin, "encoding", None), locale.getpreferredencoding(False), "mbcs" if os.name == "nt" else None):
+        if candidate and candidate not in encodings:
+            encodings.append(candidate)
+    for encoding in encodings:
+        try:
+            return data.decode(encoding)
+        except Exception:
+            continue
+    return data.decode("utf-8", errors="replace")
+
+
+def terminal_text_lines_from_stream(stream, language=None, close_stream=False):
+    lang = language or terminal_language()
+    try:
+        while True:
+            try:
+                safe_print(terminal_text("prompt", lang), end="")
+                line = stream.readline()
+            except (EOFError, KeyboardInterrupt):
+                return
+            if line == "":
+                return
+            yield line.rstrip("\r\n")
+    finally:
+        if close_stream:
+            try:
+                stream.close()
+            except Exception:
+                pass
+
+
+def terminal_stdin_lines(language=None):
+    lang = language or terminal_language()
+    if terminal_stream_is_tty(sys.stdin):
+        yield from terminal_text_lines_from_stream(sys.stdin, lang)
+        return
+    buffer = getattr(sys.stdin, "buffer", None)
+    if buffer is not None:
+        text = decode_terminal_input_bytes(buffer.read())
+        for line in text.splitlines():
+            yield line
+        return
+    for line in sys.stdin:
+        yield line
+
+
+def terminal_input_lines(language=None, attach_console=False):
+    if terminal_stream_is_tty(sys.stdin):
+        yield from terminal_stdin_lines(language)
+        return
+    piped_lines = list(terminal_stdin_lines(language))
+    if piped_lines:
+        for line in piped_lines:
+            yield line
+        return
+    if attach_console:
+        console = open_terminal_console_input()
+        if console is not None:
+            yield from terminal_text_lines_from_stream(console, language, close_stream=True)
+
+
+def normalize_terminal_argv(argv):
+    if not argv:
+        return argv
+    command = argv[0].strip()
+    lower_command = command.lower()
+    if lower_command in TERMINAL_CANONICAL_COMMANDS:
+        argv[0] = lower_command
+    else:
+        argv[0] = TERMINAL_COMMAND_ALIASES.get(lower_command, TERMINAL_COMMAND_ALIASES.get(command, command))
+    return argv
+
+
+def clear_terminal_screen():
+    if os.name == "nt":
+        os.system("cls")
+    else:
+        safe_print("\033[2J\033[H")
+
+
+def handle_terminal_builtin(command_argv, language=None):
+    if not command_argv:
+        return True
+    lang = language or terminal_language()
+    command = command_argv[0].lower()
+    if command in TERMINAL_HELP_COMMANDS:
+        safe_print(terminal_help_text(lang))
+        return True
+    if command in TERMINAL_CLEAR_COMMANDS:
+        clear_terminal_screen()
+        return True
+    if command in TERMINAL_VERSION_COMMANDS:
+        safe_print(terminal_text("version", lang, version=getattr(core, "VERSION", "unknown")))
+        return True
+    if command in TERMINAL_STATUS_COMMANDS:
+        safe_print(
+            terminal_text(
+                "status",
+                lang,
+                result=DEFAULT_RESULT_FILE,
+                log=DEFAULT_LOG_FILE,
+                cwd=os.getcwd(),
+            )
+        )
+        return True
+    if command == "pwd":
+        safe_print(terminal_text("cwd", lang, cwd=os.getcwd()))
+        return True
+    if command == "cd":
+        if len(command_argv) < 2:
+            safe_print(terminal_text("cd_missing", lang))
+            return True
+        target = os.path.abspath(os.path.expanduser(command_argv[1]))
+        if not os.path.isdir(target):
+            safe_print(terminal_text("cd_failed", lang, path=command_argv[1]))
+            return True
+        os.chdir(target)
+        safe_print(terminal_text("cd_done", lang, cwd=os.getcwd()))
+        return True
+    return False
+
+
+def execute_parsed_args(args, parser=None, interactive=False):
     if not hasattr(args, "output"):
         args.output = DEFAULT_RESULT_FILE
     if not hasattr(args, "stdout"):
         args.stdout = False
     if not args.command:
-        help_text = parser.format_help()
+        help_text = parser.format_help() if parser else ""
         payload = {"ok": False, "error": "no command provided", "help": help_text}
-        write_result(payload, args.output, args.stdout)
+        write_result(payload, args.output, args.stdout or interactive)
         return 2
+    if args.command == "terminal":
+        return run_terminal(parser, attach_console=getattr(args, "attach_console", False))
 
     try:
         core.NetworkEngine.apply_proxy_settings()
         result = args.func(args)
-        write_result(result, args.output, args.stdout)
+        write_result(result, args.output, args.stdout or interactive)
         return 0
     except Exception as exc:
         log_line(traceback.format_exc())
         payload = {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
-        write_result(payload, args.output, args.stdout)
+        write_result(payload, args.output, args.stdout or interactive)
         return 1
+
+
+def run_terminal(parser=None, attach_console=False):
+    configure_terminal_environment()
+    parser = parser or build_parser()
+    language = terminal_language()
+    safe_print(terminal_text("connected", language))
+    safe_print(terminal_text("title", language, version=getattr(core, "VERSION", "unknown")))
+    safe_print(terminal_text("hint", language))
+    for line in terminal_input_lines(language, attach_console=attach_console):
+        try:
+            command_line = line.strip().lstrip("\ufeff")
+        except KeyboardInterrupt:
+            safe_print("")
+            safe_print(terminal_text("bye", language))
+            return 0
+        if not command_line:
+            continue
+        if command_line.lower() in TERMINAL_EXIT_COMMANDS:
+            safe_print(terminal_text("bye", language))
+            return 0
+        try:
+            command_argv = normalize_terminal_argv(terminal_split(command_line))
+        except ValueError as exc:
+            safe_print(terminal_text("parse_error", language, error=exc))
+            continue
+        if not command_argv:
+            continue
+        if command_argv[0].lower() in TERMINAL_EXIT_COMMANDS:
+            safe_print(terminal_text("bye", language))
+            return 0
+        if handle_terminal_builtin(command_argv, language=language):
+            continue
+        try:
+            args = parser.parse_args(command_argv)
+        except SystemExit:
+            safe_print(terminal_text("hint", language))
+            continue
+        result_code = execute_parsed_args(args, parser=parser, interactive=True)
+        if result_code:
+            safe_print(terminal_text("unknown_error", language, error=f"exit code {result_code}"))
+    safe_print(terminal_text("bye", language))
+    return 0
+
+
+def main(argv=None):
+    parser = build_parser()
+    auto_terminal = argv is None
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if auto_terminal and should_start_terminal(argv):
+        return run_terminal(parser)
+    args = parser.parse_args(argv)
+    return execute_parsed_args(args, parser=parser)
 
 
 if __name__ == "__main__":

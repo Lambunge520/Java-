@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+set -eu
+
+SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
+PY_SCRIPT="$SCRIPT_DIR/LJM_nogui.py"
+
+if [ "$#" -eq 0 ]; then
+    set -- terminal
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+    exec python3 "$PY_SCRIPT" "$@"
+fi
+
+if command -v python >/dev/null 2>&1; then
+    exec python "$PY_SCRIPT" "$@"
+fi
+
+echo "Python 3 is required to run LJM Java Manager NoGUI." >&2
+echo "Please install Python 3, or use the packaged NoGUI executable from GitHub Releases." >&2
+exit 127

@@ -1,5 +1,7 @@
 import importlib.machinery
 import importlib.util
+import inspect
+import io
 import json
 import os
 import re
@@ -36,9 +38,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_30(self):
-        self.assertEqual(self.core.VERSION, "3.0")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.0")
+    def test_version_and_user_agent_are_31(self):
+        self.assertEqual(self.core.VERSION, "3.1")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -47,7 +49,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("3.0", query["body"][0])
+        self.assertIn("3.1", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -186,6 +188,217 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertEqual(calls[:2], [(first_url, "direct"), (second_url, "direct")])
         self.assertEqual(len(calls), 2)
 
+    def test_parallel_download_uses_range_segments_and_merges_file(self):
+        url = "https://fast-mirror.invalid/jdk.zip"
+        payload = b"0123456789abcdef"
+        ranges = []
+        original_detect = self.core.NetworkEngine.detect_environment
+        original_open = self.core.NetworkEngine.open_request_with_mode
+        original_min = self.core.PARALLEL_DOWNLOAD_MIN_BYTES
+        original_segment_min = self.core.PARALLEL_DOWNLOAD_SEGMENT_MIN_BYTES
+        original_workers = self.core.PARALLEL_DOWNLOAD_MAX_WORKERS
+
+        class FakeResponse:
+            def __init__(self, status, data, headers):
+                self.status = status
+                self._data = data
+                self._offset = 0
+                self.headers = headers
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def getcode(self):
+                return self.status
+
+            def read(self, size=-1):
+                if self._offset >= len(self._data):
+                    return b""
+                if size is None or size < 0:
+                    size = len(self._data) - self._offset
+                chunk = self._data[self._offset:self._offset + size]
+                self._offset += len(chunk)
+                return chunk
+
+        def fake_detect_environment(*_args, **_kwargs):
+            return {
+                "effective_direct": True,
+                "system_proxies": {},
+                "windows_proxy": {},
+            }
+
+        def fake_open_request(request_obj, timeout=10, mode="default", info=None):
+            range_header = request_obj.get_header("Range")
+            ranges.append(range_header or "")
+            if not range_header:
+                return FakeResponse(200, payload, {"Content-Length": str(len(payload)), "Accept-Ranges": "bytes"})
+            match = re.match(r"bytes=(\d+)-(\d+)", range_header)
+            self.assertIsNotNone(match)
+            start, end = int(match.group(1)), int(match.group(2))
+            return FakeResponse(206, payload[start:end + 1], {"Content-Length": str(end - start + 1)})
+
+        try:
+            self.core.PARALLEL_DOWNLOAD_MIN_BYTES = 8
+            self.core.PARALLEL_DOWNLOAD_SEGMENT_MIN_BYTES = 4
+            self.core.PARALLEL_DOWNLOAD_MAX_WORKERS = 3
+            self.core.NetworkEngine.detect_environment = staticmethod(fake_detect_environment)
+            self.core.NetworkEngine.open_request_with_mode = staticmethod(fake_open_request)
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = os.path.join(tmp, "jdk.zip")
+                result = self.core.NetworkEngine.download_from_candidates(
+                    [url],
+                    dest,
+                    lambda *_args: None,
+                    lambda *_args: None,
+                )
+                data = Path(dest).read_bytes()
+        finally:
+            self.core.PARALLEL_DOWNLOAD_MIN_BYTES = original_min
+            self.core.PARALLEL_DOWNLOAD_SEGMENT_MIN_BYTES = original_segment_min
+            self.core.PARALLEL_DOWNLOAD_MAX_WORKERS = original_workers
+            self.core.NetworkEngine.detect_environment = original_detect
+            self.core.NetworkEngine.open_request_with_mode = original_open
+
+        self.assertEqual(result, url)
+        self.assertEqual(data, payload)
+        self.assertIn("", ranges)
+        self.assertTrue(any(item.startswith("bytes=") for item in ranges))
+
+    def test_download_retries_with_resume_after_network_change(self):
+        url = "https://network-change.invalid/jdk.zip"
+        payload = b"resume-ok"
+        calls = []
+        original_detect = self.core.NetworkEngine.detect_environment
+        original_open = self.core.NetworkEngine.open_request_with_mode
+
+        class FlakyResponse:
+            status = 200
+
+            def __init__(self):
+                self._calls = 0
+                self.headers = {"Content-Length": str(len(payload))}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def getcode(self):
+                return self.status
+
+            def read(self, _size=-1):
+                self._calls += 1
+                if self._calls == 1:
+                    return payload[:4]
+                raise OSError("network changed")
+
+        class ResumeResponse:
+            status = 206
+
+            def __init__(self, start):
+                self._data = payload[start:]
+                self._offset = 0
+                self.headers = {"Content-Length": str(len(self._data))}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def getcode(self):
+                return self.status
+
+            def read(self, size=-1):
+                if self._offset >= len(self._data):
+                    return b""
+                if size is None or size < 0:
+                    size = len(self._data) - self._offset
+                chunk = self._data[self._offset:self._offset + size]
+                self._offset += len(chunk)
+                return chunk
+
+        def fake_detect_environment(*_args, **_kwargs):
+            return {
+                "effective_direct": True,
+                "system_proxies": {},
+                "windows_proxy": {},
+            }
+
+        def fake_open_request(request_obj, timeout=10, mode="default", info=None):
+            range_header = request_obj.get_header("Range")
+            calls.append(range_header or "")
+            if not range_header:
+                return FlakyResponse()
+            match = re.match(r"bytes=(\d+)-", range_header)
+            self.assertIsNotNone(match)
+            return ResumeResponse(int(match.group(1)))
+
+        try:
+            self.core.NetworkEngine.detect_environment = staticmethod(fake_detect_environment)
+            self.core.NetworkEngine.open_request_with_mode = staticmethod(fake_open_request)
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = os.path.join(tmp, "jdk.zip")
+                result = self.core.NetworkEngine.download_from_candidates(
+                    [url],
+                    dest,
+                    lambda *_args: None,
+                    lambda *_args: None,
+                )
+                data = Path(dest).read_bytes()
+        finally:
+            self.core.NetworkEngine.detect_environment = original_detect
+            self.core.NetworkEngine.open_request_with_mode = original_open
+
+        self.assertEqual(result, url)
+        self.assertEqual(data, payload)
+        self.assertEqual(calls[0], "")
+        self.assertIn("bytes=4-", calls)
+
+    def test_download_from_candidates_allows_missing_callbacks(self):
+        url = "https://callback-optional.invalid/jdk.zip"
+        payload = b"ok"
+        original_detect = self.core.NetworkEngine.detect_environment
+        original_open = self.core.NetworkEngine.open_request_with_mode
+
+        class FakeResponse:
+            status = 200
+            headers = {"Content-Length": str(len(payload))}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def getcode(self):
+                return 200
+
+            def read(self, _size=-1):
+                data = getattr(self, "_data", payload)
+                self._data = b""
+                return data
+
+        try:
+            self.core.NetworkEngine.detect_environment = staticmethod(
+                lambda *_args, **_kwargs: {"effective_direct": True, "system_proxies": {}, "windows_proxy": {}}
+            )
+            self.core.NetworkEngine.open_request_with_mode = staticmethod(lambda *_args, **_kwargs: FakeResponse())
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = os.path.join(tmp, "jdk.zip")
+                result = self.core.NetworkEngine.download_from_candidates([url], dest, None, None)
+                data = Path(dest).read_bytes()
+        finally:
+            self.core.NetworkEngine.detect_environment = original_detect
+            self.core.NetworkEngine.open_request_with_mode = original_open
+
+        self.assertEqual(result, url)
+        self.assertEqual(data, payload)
+
     def test_microsoft_github_mirror_uses_profile_release_source(self):
         calls = []
         original = self.core.JavaDownloadEngine._fetch_github_profile_releases
@@ -206,6 +419,54 @@ class CoreFeatureTests(unittest.TestCase):
             "microsoft/openjdk-adoptium-marketplace-data",
             self.core.java_vendor_github_repos("Microsoft Build of OpenJDK", "21"),
         )
+
+    def test_corretto_official_source_uses_permanent_latest_url(self):
+        original_redirect = self.core.NetworkEngine.resolve_redirect_location
+        try:
+            self.core.NetworkEngine.resolve_redirect_location = staticmethod(
+                lambda _urls, timeout=6: "https://corretto.aws/downloads/resources/21.0.11.10.1/amazon-corretto-21.0.11.10.1-windows-x64-jdk.zip"
+            )
+            result = self.core.JavaDownloadEngine._fetch_corretto("21", package_type="jdk")
+        finally:
+            self.core.NetworkEngine.resolve_redirect_location = original_redirect
+
+        self.assertEqual(result["source"], "Amazon Corretto permanent URL")
+        self.assertEqual(result["vendor"], "Amazon Corretto")
+        self.assertIn("amazon-corretto-21-x64-windows-jdk.zip", result["url"])
+        self.assertIn("21.0.11", result["version"])
+        self.assertGreaterEqual(len(result["urls"]), 2)
+
+    def test_download_candidates_expand_foojay_distribution_fallbacks(self):
+        calls = []
+        original_chain = self.core.JavaDownloadEngine._resolve_source_chain
+        original_fetch = self.core.JavaDownloadEngine._fetch_foojay_distribution
+        original_github = self.core.JavaDownloadEngine._fetch_github_profile_releases
+
+        def fake_fetch(distribution, vendor, major_version, resolve_final_url=False, package_type="jdk"):
+            calls.append((distribution, vendor, major_version, package_type))
+            return {
+                "version": f"{major_version}.0.{len(calls)}",
+                "url": f"https://download.example.invalid/{distribution}-{package_type}.zip",
+                "urls": [f"https://download.example.invalid/{distribution}-{package_type}.zip"],
+                "source": f"Foojay {distribution}",
+                "vendor": vendor,
+                "package_type": package_type,
+            }
+
+        try:
+            self.core.JavaDownloadEngine._resolve_source_chain = staticmethod(lambda _vendor: [])
+            self.core.JavaDownloadEngine._fetch_foojay_distribution = staticmethod(fake_fetch)
+            self.core.JavaDownloadEngine._fetch_github_profile_releases = staticmethod(lambda *_args, **_kwargs: None)
+
+            candidates = self.core.JavaDownloadEngine.get_download_info_candidates("AOJ OpenJDK", "8", package_type="jdk")
+        finally:
+            self.core.JavaDownloadEngine._resolve_source_chain = original_chain
+            self.core.JavaDownloadEngine._fetch_foojay_distribution = original_fetch
+            self.core.JavaDownloadEngine._fetch_github_profile_releases = original_github
+
+        self.assertEqual([item["source"] for item in candidates], ["Foojay aoj", "Foojay aoj_openj9"])
+        self.assertIn(("aoj", "AOJ OpenJDK", "8", "jdk"), calls)
+        self.assertIn(("aoj_openj9", "AOJ OpenJDK", "8", "jdk"), calls)
 
     def test_github_asset_selection_respects_requested_java_major(self):
         releases = [
@@ -329,6 +590,30 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertEqual(self.core.runtime_update_package_type(runtime), "jdk")
         self.assertEqual(Path(runtime["nested_jre_home"]), jre_home)
 
+    def test_release_metadata_detects_more_java_vendors(self):
+        cases = [
+            ('IMPLEMENTOR="AdoptOpenJDK"\n', "AOJ OpenJDK", "hotspot"),
+            ('IMPLEMENTOR="AdoptOpenJDK"\nJVM_VARIANT="OpenJ9"\n', "AOJ OpenJ9", "openj9"),
+            ('IMPLEMENTOR="IBM"\nIMPLEMENTOR_VERSION="Semeru Certified"\n', "IBM Semeru Certified", "openj9"),
+            ('IMPLEMENTOR="OpenLogic"\n', "OpenLogic OpenJDK", "hotspot"),
+            ('IMPLEMENTOR="Red Hat, Inc."\n', "Red Hat OpenJDK", "hotspot"),
+            ('IMPLEMENTOR="Mandrel"\n', "Mandrel", "hotspot"),
+            ('IMPLEMENTOR="BellSoft"\nIMPLEMENTOR_VERSION="Liberica Native Image Kit"\n', "Liberica Native Image Kit", "hotspot"),
+            ('IMPLEMENTOR="Gluon"\nJAVA_RUNTIME_NAME="GraalVM Runtime Environment"\n', "Gluon GraalVM", "hotspot"),
+            ('IMPLEMENTOR="GraalVM Community"\n', "GraalVM Community", "hotspot"),
+        ]
+
+        for release_extra, expected_vendor, expected_jvm in cases:
+            with self.subTest(vendor=expected_vendor), tempfile.TemporaryDirectory() as tmp:
+                java_home = Path(tmp) / expected_vendor.replace(" ", "_")
+                java_home.mkdir(parents=True)
+                (java_home / "release").write_text(f'JAVA_VERSION="21.0.1"\n{release_extra}', encoding="utf-8")
+
+                runtime = self.core.read_java_runtime_info(str(java_home))
+
+                self.assertEqual(runtime["vendor"], expected_vendor)
+                self.assertEqual(runtime["jvm_impl"], expected_jvm)
+
     def test_jre_runtime_update_requests_jre_package_type(self):
         calls = []
         original_fetch = self.core.JavaDownloadEngine._fetch_foojay_distribution
@@ -396,6 +681,11 @@ class CoreFeatureTests(unittest.TestCase):
             "Gluon GraalVM": "gluon_graalvm",
             "Red Hat OpenJDK": "redhat",
             "IBM Semeru Certified": "semeru_certified",
+            "Trava OpenJDK": "trava",
+            "ojdkbuild": "ojdk_build",
+            "AOJ OpenJDK": "aoj",
+            "AOJ OpenJ9": "aoj_openj9",
+            "Eliya OpenJDK": "eliya",
         }
 
         for vendor, distribution in expected.items():
@@ -725,30 +1015,45 @@ class CoreFeatureTests(unittest.TestCase):
     def test_unregister_selected_uses_equivalent_java_home_cleanup(self):
         calls = []
 
-        class Listbox:
-            def curselection(self):
-                return (0, 1)
+        class Tree:
+            def get_children(self):
+                return ("row1", "row2", "row3")
 
-            def get(self, index):
-                return (
-                    "[OK] Root  [C:\\Java\\jdk8]",
-                    "[!] MissingNameOnly",
-                )[index]
-
-        app = type("App", (), {})()
-        app.lb_reg = Listbox()
+        app = object.__new__(self.core.JavaManagerApp)
+        app.tree_reg = Tree()
+        app.reg_items = {
+            "row1": {
+                "key": "root-key",
+                "registry_name": "Root",
+                "java_home": "C:\\Java\\jdk8",
+            },
+            "row2": {
+                "key": "missing-name-key",
+                "registry_name": "MissingNameOnly",
+                "java_home": "",
+            },
+            "row3": {
+                "key": "unchecked-key",
+                "registry_name": "Unchecked",
+                "java_home": "C:\\Java\\unchecked",
+            },
+        }
+        app.reg_checked_items = {"root-key", "missing-name-key"}
         app.refresh_all_data = lambda: calls.append(("refresh",))
 
         original_unregister_home = self.core.unregister_java_home
         original_unregister = self.core.JavaRegistryAdapter.unregister
+        original_warning = self.core.messagebox.showwarning
         try:
             self.core.unregister_java_home = lambda path, preferred_name=None: calls.append(("home", path, preferred_name))
             self.core.JavaRegistryAdapter.unregister = staticmethod(lambda name: calls.append(("name", name)))
+            self.core.messagebox.showwarning = lambda *_args, **_kwargs: calls.append(("warning",))
 
             self.core.JavaManagerApp.unregister_selected(app)
         finally:
             self.core.unregister_java_home = original_unregister_home
             self.core.JavaRegistryAdapter.unregister = original_unregister
+            self.core.messagebox.showwarning = original_warning
 
         self.assertEqual(
             calls,
@@ -759,27 +1064,69 @@ class CoreFeatureTests(unittest.TestCase):
             ],
         )
 
+    def test_registration_check_buttons_update_visible_rows(self):
+        events = []
+
+        class Tree:
+            def get_children(self):
+                return ("row1", "row2")
+
+            def set(self, item_id, column, value):
+                events.append((item_id, column, value))
+
+        app = object.__new__(self.core.JavaManagerApp)
+        app.tree_reg = Tree()
+        app.reg_items = {
+            "row1": {"key": "one"},
+            "row2": {"key": "two"},
+        }
+        app.reg_checked_items = set()
+
+        self.core.JavaManagerApp.select_all_registered_java(app)
+        self.assertEqual(app.reg_checked_items, {"one", "two"})
+        self.assertTrue(all(value == "☑" for _item, _col, value in events[-2:]))
+
+        self.core.JavaManagerApp.clear_registered_java_selection(app)
+        self.assertEqual(app.reg_checked_items, set())
+        self.assertTrue(all(value == "☐" for _item, _col, value in events[-2:]))
+
+    def test_registration_tab_uses_checkbox_treeview(self):
+        source = inspect.getsource(self.core.JavaManagerApp.setup_reg_tab)
+
+        self.assertIn("ttk.Treeview", source)
+        self.assertIn("select_all_registered_java", source)
+        self.assertIn("clear_registered_java_selection", source)
+        self.assertIn("on_registration_tree_click", source)
+        self.assertNotIn("Listbox", source)
+
     def test_release_notes_and_workflows_are_bilingual(self):
         root = Path(__file__).resolve().parents[1]
-        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.0.md").read_text(encoding="utf-8")
+        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.md").read_text(encoding="utf-8")
         template = (root / "docs" / "releases" / "RELEASE_NOTES_TEMPLATE_BILINGUAL.md").read_text(encoding="utf-8")
         gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
         nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
 
-        self.assertIn("## 中文", notes)
-        self.assertIn("## English", notes)
-        self.assertIn("JVM", notes)
-        self.assertIn("Minecraft", notes)
+        self.assertIn("## 更新内容", notes)
+        self.assertIn("## Update Content", notes)
+        self.assertIn("JAVA_HOME", notes)
+        self.assertIn("self-update", notes)
         self.assertLessEqual(len(notes.splitlines()), 32)
-        self.assertIn("## 中文", template)
-        self.assertIn("## English", template)
+        self.assertIn("## 更新内容", template)
+        self.assertIn("## Update Content", template)
         for workflow in (gui_workflow, nogui_workflow):
             self.assertIn("RELEASE_NOTES_FILE", workflow)
             self.assertIn('RELEASE_VERSION="${RELEASE_TAG#v}"', workflow)
+            self.assertIn('default: "v3.1"', workflow)
             self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
             self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
+            self.assertIn("chmod +x src/LJM_nogui nogui/LJM_nogui", workflow)
             self.assertIn("python-source.zip", workflow)
             self.assertIn("src/LJM.pyw", workflow)
+            self.assertIn("src/LJM_nogui.py", workflow)
+            self.assertIn("src/LJM_nogui \\", workflow)
+            self.assertIn("nogui/LJM_nogui.py", workflow)
+            self.assertIn("nogui/LJM_nogui \\", workflow)
+            self.assertNotIn("LJM_nogui.cmd", workflow)
 
     def test_nogui_usage_docs_are_bilingual_and_asset_focused(self):
         root = Path(__file__).resolve().parents[1]
@@ -800,9 +1147,31 @@ class CoreFeatureTests(unittest.TestCase):
         ):
             self.assertIn(marker, docs)
         self.assertIn("docs/NOGUI_USAGE.md", readme)
-        self.assertIn("当前版本：`3.0`", readme)
+        self.assertIn("3.1", readme)
+        self.assertIn("python .\\src\\LJM_nogui.py", readme)
+        self.assertIn("./src/LJM_nogui", readme)
         self.assertNotIn("Current version:", readme)
+        self.assertIn("python .\\LJM_nogui.py", standalone)
+        self.assertIn("pythonw.exe", docs)
+        self.assertNotIn("LJM_nogui.cmd", docs)
+        self.assertNotIn("LJM_nogui.cmd", standalone)
         self.assertIn("../docs/NOGUI_USAGE.md", standalone)
+
+    def test_nogui_source_launchers_attach_to_terminal(self):
+        root = Path(__file__).resolve().parents[1]
+        for directory in ("src", "nogui"):
+            py_launcher = (root / directory / "LJM_nogui.py").read_text(encoding="utf-8")
+            sh_launcher = (root / directory / "LJM_nogui").read_text(encoding="utf-8")
+
+            self.assertIn("LJM_nogui.pyw", py_launcher)
+            self.assertIn('args = sys.argv[1:] or ["terminal", "--attach-console"]', py_launcher)
+            self.assertNotIn("cmd", py_launcher.lower())
+            self.assertTrue(sh_launcher.startswith("#!/usr/bin/env sh"))
+            self.assertIn('if [ "$#" -eq 0 ]; then', sh_launcher)
+            self.assertIn("set -- terminal", sh_launcher)
+            self.assertIn('PY_SCRIPT="$SCRIPT_DIR/LJM_nogui.py"', sh_launcher)
+            self.assertIn('python3 "$PY_SCRIPT" "$@"', sh_launcher)
+            self.assertIn('python "$PY_SCRIPT" "$@"', sh_launcher)
 
     def test_windows_self_update_script_retries_locked_old_executable_and_skips_payload_copy(self):
         app = object.__new__(self.core.JavaManagerApp)
@@ -825,6 +1194,106 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("robocopy", script.lower())
         self.assertNotIn("xcopy", script.lower())
 
+    def test_unix_self_update_script_skips_running_executable_during_bundle_copy(self):
+        app = object.__new__(self.core.JavaManagerApp)
+        original_path = self.core.APP_EXECUTABLE_PATH
+        try:
+            self.core.APP_EXECUTABLE_PATH = "/opt/ljm/LJM-Java-Manager"
+            script = app._unix_self_update_script(
+                temp_new="/opt/ljm/LJM-Java-Manager.new",
+                bundle_dir="/tmp/ljm-update/bundle",
+                cleanup_dir="/tmp/ljm-update",
+                target_dir="/opt/ljm",
+                launch_command='"/opt/ljm/LJM-Java-Manager"',
+            )
+        finally:
+            self.core.APP_EXECUTABLE_PATH = original_path
+
+        self.assertIn('LJM_MAIN_REL="./LJM-Java-Manager"', script)
+        self.assertIn("set -e", script)
+        self.assertIn('if [ "$item" = "$LJM_MAIN_REL" ]; then continue; fi', script)
+        self.assertIn('if [ -L "$src" ]; then', script)
+        self.assertIn('cp -P "$src" "$dst"', script)
+        self.assertIn("while ! mv -f", script)
+        self.assertIn("chmod +x", script)
+        self.assertNotIn("cp -R", script)
+
+    def test_java_transfer_popups_are_minimizable_and_non_modal(self):
+        download_source = inspect.getsource(self.core.JavaManagerApp.run_download_java)
+        update_source = inspect.getsource(self.core.JavaManagerApp.download_and_extract_popup_v2)
+        start_source = inspect.getsource(self.core.JavaManagerApp.start_download_java)
+        repair_source = inspect.getsource(self.core.JavaManagerApp.cloud_repair_java)
+        perform_update_source = inspect.getsource(self.core.JavaManagerApp.perform_update)
+        tray_setup_source = inspect.getsource(self.core.JavaManagerApp._setup_tray_icon)
+
+        for source in (download_source, update_source):
+            self.assertIn("transient=False", source)
+            self.assertIn("minimize_task", source)
+            self.assertIn("top.iconify", source)
+            self.assertNotIn("grab_set", source)
+            self.assertIn("_register_java_transfer", source)
+            self.assertIn("_clear_java_transfer", source)
+        for source in (start_source, repair_source, perform_update_source):
+            self.assertIn("_guard_java_transfer_start", source)
+        self.assertIn("show_active_java_transfer_from_tray", tray_setup_source)
+
+    def test_active_java_transfer_guard_restores_existing_window(self):
+        app = object.__new__(self.core.JavaManagerApp)
+        app._active_java_transfer = None
+        app._active_java_transfer_lock = self.core.threading.RLock()
+        events = []
+
+        class FakeRoot:
+            def deiconify(self):
+                events.append("root-deiconify")
+
+            def state(self, value):
+                events.append(("root-state", value))
+
+            def lift(self):
+                events.append("root-lift")
+
+        class FakeWindow:
+            def __init__(self):
+                self.exists = True
+
+            def winfo_exists(self):
+                return self.exists
+
+            def deiconify(self):
+                events.append("window-deiconify")
+
+            def state(self, value):
+                events.append(("window-state", value))
+
+            def lift(self):
+                events.append("window-lift")
+
+            def focus_force(self):
+                events.append("window-focus")
+
+            def attributes(self, name, value):
+                events.append(("window-attr", name, value))
+
+            def after(self, _delay, callback):
+                callback()
+
+        app.root = FakeRoot()
+        window = FakeWindow()
+        original_info = self.core.messagebox.showinfo
+        try:
+            self.core.messagebox.showinfo = lambda title, text: events.append(("info", title, text))
+            task_id = self.core.JavaManagerApp._register_java_transfer(app, "download", "下载 Java", window)
+
+            self.assertFalse(self.core.JavaManagerApp._guard_java_transfer_start(app))
+            self.assertIn("window-deiconify", events)
+            self.assertTrue(any(item[0] == "info" for item in events if isinstance(item, tuple)))
+
+            self.core.JavaManagerApp._clear_java_transfer(app, task_id)
+            self.assertTrue(self.core.JavaManagerApp._guard_java_transfer_start(app))
+        finally:
+            self.core.messagebox.showinfo = original_info
+
     def test_new_vendor_registry_tokens_are_clear(self):
         cases = [
             ("Oracle JDK", "OracleJDK_21.0.9"),
@@ -839,6 +1308,70 @@ class CoreFeatureTests(unittest.TestCase):
                     self.core.build_registry_name({"vendor": vendor, "version": expected.split("_", 1)[1]}),
                     expected,
                 )
+
+    def test_java_repair_plan_chooses_local_smart_or_full(self):
+        runtime = {"vendor": "Eclipse Temurin", "major": "21"}
+        healthy = {"exists": True, "usable": True, "healthy": True, "issues": [], "warnings": []}
+        warning_only = {"exists": True, "usable": True, "healthy": False, "issues": [], "warnings": ["缺失 release 元数据"]}
+        missing_core = {"exists": True, "usable": False, "healthy": False, "issues": ["缺失核心 java 可执行文件"], "warnings": []}
+        missing_path = {"exists": False, "usable": False, "healthy": False, "issues": ["Java 目录不存在"], "warnings": []}
+
+        self.assertEqual(self.core.plan_java_repair(runtime, healthy)["action"], "local")
+        self.assertEqual(self.core.plan_java_repair(runtime, warning_only)["download_mode"], "smart")
+        self.assertEqual(self.core.plan_java_repair(runtime, missing_core)["download_mode"], "full")
+        self.assertEqual(self.core.plan_java_repair(runtime, missing_path)["download_mode"], "full")
+        self.assertEqual(self.core.plan_java_repair(runtime, healthy, requested_mode="full")["download_mode"], "full")
+
+    def test_cloud_repair_uses_local_repair_for_healthy_runtime(self):
+        calls = []
+        app = object.__new__(self.core.JavaManagerApp)
+
+        class Tree:
+            def selection(self):
+                return ("row1",)
+
+            def item(self, _row):
+                return {"values": ("21", "Eclipse Temurin", r"C:\Java\jdk-21", "正常可用")}
+
+        app.tree_fix = Tree()
+        app.fix_items = {
+            "row1": {
+                "registry_name": "Temurin_21",
+                "java_home": r"C:\Java\jdk-21",
+                "runtime": {
+                    "vendor": "Eclipse Temurin",
+                    "major": "21",
+                    "java_home": r"C:\Java\jdk-21",
+                    "update_java_home": r"C:\Java\jdk-21",
+                    "package_type": "jdk",
+                    "version": "21.0.1",
+                },
+                "report": {"exists": True, "usable": True, "healthy": True, "issues": [], "warnings": []},
+            }
+        }
+        app.refresh_all_data = lambda: calls.append(("refresh",))
+        app.download_and_extract = lambda *_args, **_kwargs: calls.append(("download",))
+
+        original_ask = self.core.messagebox.askyesno
+        original_info = self.core.messagebox.showinfo
+        original_error = self.core.messagebox.showerror
+        original_local = self.core.apply_local_java_repair
+        try:
+            self.core.messagebox.askyesno = lambda *_args, **_kwargs: True
+            self.core.messagebox.showinfo = lambda *args, **_kwargs: calls.append(("info", args[0]))
+            self.core.messagebox.showerror = lambda *args, **_kwargs: calls.append(("error", args[0]))
+            self.core.apply_local_java_repair = lambda path, preferred_name=None: calls.append(("local", path, preferred_name)) or {}
+
+            self.core.JavaManagerApp.cloud_repair_java(app)
+        finally:
+            self.core.messagebox.askyesno = original_ask
+            self.core.messagebox.showinfo = original_info
+            self.core.messagebox.showerror = original_error
+            self.core.apply_local_java_repair = original_local
+
+        self.assertIn(("local", r"C:\Java\jdk-21", "Temurin_21"), calls)
+        self.assertIn(("refresh",), calls)
+        self.assertNotIn(("download",), calls)
 
     def test_java_install_dir_name_keeps_vendor_type_visible(self):
         cases = [
@@ -1072,6 +1605,20 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("LJM-Java-Manager-nogui.command", workflow)
         self.assertIn("LJM-Java-Manager-nogui-macos", workflow)
 
+    def test_standalone_nogui_build_scripts_fallback_to_repo_vendor_deps(self):
+        root = Path(__file__).resolve().parents[1]
+        linux_script = (root / "nogui" / "build_linux.sh").read_text(encoding="utf-8")
+        macos_script = (root / "nogui" / "build_macos.sh").read_text(encoding="utf-8")
+        windows_script = (root / "nogui" / "build_windows.ps1").read_text(encoding="utf-8")
+
+        for script in (linux_script, macos_script):
+            self.assertIn('DEPS="$ROOT/deps"', script)
+            self.assertIn('vendor/deps', script)
+            self.assertIn('--add-data "$DEPS:deps"', script)
+        self.assertIn('$Deps = Join-Path $Root "deps"', windows_script)
+        self.assertIn('"vendor\\deps"', windows_script)
+        self.assertIn('--add-data "$Deps;deps"', windows_script)
+
     def test_macos_gui_package_uses_app_bundle_launcher(self):
         root = Path(__file__).resolve().parents[1]
         script = (root / "scripts" / "build_macos.sh").read_text(encoding="utf-8")
@@ -1136,6 +1683,20 @@ class CoreFeatureTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "inside source"):
                 self.core.validate_java_move_target(str(source), str(nested))
 
+    def test_validate_java_move_target_rejects_symbolic_link_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            real_source = Path(tmp) / "real-jdk"
+            link_source = Path(tmp) / "linked-jdk"
+            target = Path(tmp) / "moved-jdk"
+            real_source.mkdir()
+            try:
+                os.symlink(real_source, link_source, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+
+            with self.assertRaisesRegex(ValueError, "symbolic link"):
+                self.core.validate_java_move_target(str(link_source), str(target))
+
     def test_move_java_home_commits_stage_without_shutil_move(self):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "jdk-21"
@@ -1197,7 +1758,8 @@ class CoreFeatureTests(unittest.TestCase):
             desktop_env = (home / ".config" / "environment.d" / "ljm-java.conf").read_text(encoding="utf-8")
             self.assertIn("export JAVA_HOME=", profile_text)
             self.assertIn(f"JAVA_HOME={java_home}", desktop_env)
-            self.assertIn(f"PATH={java_home}{os.sep}bin:${{PATH}}", desktop_env)
+        self.assertNotIn("PATH=", desktop_env)
+        self.assertNotIn("export PATH", profile_text)
 
     def test_write_macos_java_environment_includes_launch_agent(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1218,6 +1780,94 @@ class CoreFeatureTests(unittest.TestCase):
             launch_text = launch_agent.read_text(encoding="utf-8")
             self.assertIn(str(java_home), launch_text)
             self.assertIn("launchctl", launch_text)
+            self.assertNotIn("setenv PATH", launch_text)
+
+    def test_windows_java_environment_sets_java_home_without_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            java_home = Path(tmp) / "jdk-21"
+            java_home.mkdir()
+
+            calls = []
+
+            class FakeWinreg:
+                HKEY_LOCAL_MACHINE = object()
+                KEY_READ = 1
+                KEY_WRITE = 2
+                REG_SZ = 1
+
+                @staticmethod
+                def OpenKey(_root, path, _reserved, access):
+                    calls.append(("OpenKey", path, access))
+                    return "key"
+
+                @staticmethod
+                def QueryValueEx(_key, name):
+                    calls.append(("QueryValueEx", name))
+                    return (r"C:\Windows\System32;C:\Tools", None)
+
+                @staticmethod
+                def SetValueEx(_key, name, _reserved, _kind, value):
+                    calls.append(("SetValueEx", name, value))
+
+                @staticmethod
+                def CloseKey(key):
+                    calls.append(("CloseKey", key))
+
+            original_winreg = getattr(self.core, "winreg", None)
+            original_broadcast = self.core.broadcast_environment_change
+            original_path = os.environ.get("PATH")
+            try:
+                self.core.winreg = FakeWinreg
+                self.core.broadcast_environment_change = lambda: calls.append(("broadcast",))
+                self.core.write_windows_java_environment(str(java_home))
+            finally:
+                if original_winreg is not None:
+                    self.core.winreg = original_winreg
+                self.core.broadcast_environment_change = original_broadcast
+                if original_path is None:
+                    os.environ.pop("PATH", None)
+                else:
+                    os.environ["PATH"] = original_path
+
+            self.assertIn(("SetValueEx", "JAVA_HOME", str(java_home)), calls)
+            self.assertNotIn("Path", [call[1] for call in calls if call[0] == "SetValueEx"])
+            self.assertEqual(os.environ.get("PATH"), original_path)
+
+    def test_sync_runtime_registration_updates_java_home_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            java_home = Path(tmp) / "jdk-21"
+            bin_dir = java_home / "bin"
+            bin_dir.mkdir(parents=True)
+            (bin_dir / ("java.exe" if self.core.IS_WIN else "java")).write_text("", encoding="utf-8")
+            (java_home / "release").write_text('JAVA_VERSION="21.0.1"\nIMPLEMENTOR="Eclipse Temurin"\n', encoding="utf-8")
+
+            calls = []
+            original_find = self.core.JavaRegistryAdapter.find_version_names_by_home
+            original_register = self.core.JavaRegistryAdapter.register
+            original_configure = self.core.configure_registered_java_environment
+            try:
+                self.core.JavaRegistryAdapter.find_version_names_by_home = staticmethod(lambda _home: [])
+                self.core.JavaRegistryAdapter.register = staticmethod(lambda _name, _home, _jvm: True)
+                self.core.configure_registered_java_environment = lambda home: calls.append(home)
+
+                synced = self.core.JavaRegistryAdapter.sync_runtime_registration(str(java_home), preferred_name="Temurin_21")
+            finally:
+                self.core.JavaRegistryAdapter.find_version_names_by_home = original_find
+                self.core.JavaRegistryAdapter.register = original_register
+                self.core.configure_registered_java_environment = original_configure
+
+            self.assertEqual(synced, ["Temurin_21"])
+            self.assertEqual(calls, [str(java_home)])
+
+    def test_scan_folder_uses_registration_sync(self):
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "LJM.pyw").read_text(encoding="utf-8")
+
+        match = re.search(r"    def scan_folder\(self\):\n(?P<body>.*?)(?=\n    def |\nclass |\Z)", source, re.S)
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        self.assertIn("JavaRegistryAdapter.sync_runtime_registration(register_home", body)
+        self.assertNotIn("JavaRegistryAdapter.register(registry_name, register_home", body)
 
     def test_validate_java_delete_target_requires_java_home_shape(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1231,6 +1881,20 @@ class CoreFeatureTests(unittest.TestCase):
             (java_home / "release").write_text('JAVA_VERSION="21.0.1"', encoding="utf-8")
 
             self.assertEqual(Path(self.core.validate_java_delete_target(str(java_home))).resolve(), java_home.resolve())
+
+    def test_validate_java_delete_target_rejects_symbolic_link_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            real_source = Path(tmp) / "real-jdk"
+            link_source = Path(tmp) / "linked-jdk"
+            (real_source / "bin").mkdir(parents=True)
+            (real_source / "bin" / ("java.exe" if self.core.IS_WIN else "java")).write_text("", encoding="utf-8")
+            try:
+                os.symlink(real_source, link_source, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"symbolic links unavailable: {exc}")
+
+            with self.assertRaisesRegex(ValueError, "symbolic link"):
+                self.core.validate_java_delete_target(str(link_source))
 
     def test_delete_java_home_uses_permission_retry_removal(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1408,6 +2072,82 @@ class CoreFeatureTests(unittest.TestCase):
             self.assertEqual(list(cache_dir.iterdir()), [])
             self.assertNotIn("sample", self.core.JavaDownloadEngine._cache)
 
+    def test_remove_cached_archive_cleans_parallel_download_parts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive = Path(tmp) / "Temurin_jdk_21.zip"
+            url = "https://download.example.invalid/jdk.zip"
+            part = Path(self.core.NetworkEngine._download_part_path(str(archive), url))
+            segment = Path(f"{part}.0")
+            merge = Path(f"{part}.merge")
+            unrelated = Path(tmp) / "Other_jdk_21.zip.0123456789abcdef.part.0"
+
+            archive.write_bytes(b"bad-cache")
+            Path(str(archive) + ".json").write_text("{}", encoding="utf-8")
+            part.write_bytes(b"part")
+            segment.write_bytes(b"segment")
+            merge.write_bytes(b"merge")
+            unrelated.write_bytes(b"keep")
+
+            self.core.remove_cached_archive(str(archive))
+
+            self.assertFalse(archive.exists())
+            self.assertFalse(Path(str(archive) + ".json").exists())
+            self.assertFalse(part.exists())
+            self.assertFalse(segment.exists())
+            self.assertFalse(merge.exists())
+            self.assertTrue(unrelated.exists())
+
+    def test_safe_extract_zip_rejects_backslash_path_traversal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive_path = Path(tmp) / "bad.zip"
+            extract_dir = Path(tmp) / "extract"
+            extract_dir.mkdir()
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("..\\evil.txt", "blocked")
+
+            with zipfile.ZipFile(archive_path, "r") as archive:
+                with self.assertRaisesRegex(Exception, "越界路径"):
+                    self.core.safe_extract_zip(archive, str(extract_dir))
+
+            self.assertFalse((Path(tmp) / "evil.txt").exists())
+
+    def test_safe_extract_zip_rejects_unsafe_symlink_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive_path = Path(tmp) / "bad-link.zip"
+            extract_dir = Path(tmp) / "extract"
+            extract_dir.mkdir()
+            link_info = zipfile.ZipInfo("jdk/link")
+            link_info.external_attr = 0o120777 << 16
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr(link_info, "../../outside")
+
+            with zipfile.ZipFile(archive_path, "r") as archive:
+                with self.assertRaisesRegex(Exception, "越界链接"):
+                    self.core.safe_extract_zip(archive, str(extract_dir))
+
+    def test_safe_extract_zip_preserves_unix_executable_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            archive_path = Path(tmp) / "mode.zip"
+            extract_dir = Path(tmp) / "extract"
+            extract_dir.mkdir()
+            file_info = zipfile.ZipInfo("jdk/bin/java")
+            file_info.external_attr = 0o100755 << 16
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr(file_info, "java")
+
+            chmod_calls = []
+            original_chmod = self.core.os.chmod
+            try:
+                self.core.os.chmod = lambda path, mode: chmod_calls.append((Path(path), mode))
+                with zipfile.ZipFile(archive_path, "r") as archive:
+                    self.core.safe_extract_zip(archive, str(extract_dir))
+            finally:
+                self.core.os.chmod = original_chmod
+
+            extracted = extract_dir / "jdk" / "bin" / "java"
+            self.assertTrue(extracted.exists())
+            self.assertIn((extracted, 0o755), chmod_calls)
+
     def test_registry_cleanup_prunes_missing_and_ljm_backup_entries(self):
         with tempfile.TemporaryDirectory() as tmp:
             backup_root = Path(tmp) / "backups"
@@ -1556,6 +2296,123 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("_animate_selected_tab_motion_header()", match.group("body"))
         self.assertNotIn("_fade_in_window(self.root", match.group("body"))
 
+    def test_main_ui_has_home_changelog_and_fade_navigation_without_extra_menu_bar(self):
+        source = Path("src/LJM.pyw").read_text(encoding="utf-8")
+
+        self.assertIn("PAGE_FADE_STEPS = 12", source)
+        self.assertIn("def _switch_notebook_tab", source)
+        self.assertIn("def _fade_switch_to_tab", source)
+        self.assertIn("self.notebook.bind(\"<ButtonPress-1>\", self._on_notebook_button_press)", source)
+        self.assertIn("self.root.config(menu=\"\")", source)
+        self.assertNotIn("def _setup_menu_bar", source)
+        self.assertNotIn("def _theme_menu_bar", source)
+        self.assertNotIn("tk.Menubutton(", source)
+        self.assertNotIn("tk.Menu(self.root", source)
+        self.assertNotIn("self._setup_menu_bar()", source)
+        self.assertNotIn("self._theme_menu_bar()", source)
+        self.assertNotIn("self.root.config(menu=self.menubar)", source)
+        self.assertNotIn('widget_class == "Menubutton"', source)
+        self.assertIn("self.notebook.add(self.tab_home, text=tr(\"tab_home\"))", source)
+        self.assertIn("self.notebook.add(self.tab_changelog, text=tr(\"tab_changelog\"))", source)
+        self.assertIn("def setup_home_tab", source)
+        self.assertIn("def setup_changelog_tab", source)
+        self.assertIn("command=self.open_feedback", source)
+        self.assertIn("command=self.open_settings", source)
+        self.assertIn("command=self.open_about", source)
+        self.assertIn("command=self.show_changelog_tab", source)
+        self.assertIn("def load_changelog_text", source)
+        self.assertIn('"home_about": "关于"', source)
+        self.assertIn('"home_about": "About"', source)
+        self.assertNotIn('tk.Button(toolbar, text=tr("toolbar_settings")', source)
+        self.assertNotIn('tk.Button(toolbar, text=tr("toolbar_feedback")', source)
+        self.assertNotIn('tk.Button(toolbar, text=tr("toolbar_about")', source)
+
+    def test_theme_paints_text_widgets_and_scrollbars(self):
+        source = Path("src/LJM.pyw").read_text(encoding="utf-8")
+
+        self.assertIn('style.configure(\n            "TScrollbar"', source)
+        self.assertIn('elif widget_class == "Text":', source)
+        self.assertIn("bg=self.current_field", source)
+        self.assertIn("fg=self.current_fg", source)
+        self.assertIn("insertbackground=self.current_fg", source)
+        self.assertIn("selectbackground=self.current_btn", source)
+        self.assertIn("self.changelog_text = text", source)
+
+    def test_notebook_fade_navigation_does_not_use_blocking_overlay(self):
+        source = Path("src/LJM.pyw").read_text(encoding="utf-8")
+
+        self.assertIn("def _selected_tab_motion_canvas", source)
+        self.assertNotIn("tk.Canvas(self.notebook", source)
+        self.assertNotIn("overlay.place(relx=0, rely=0, relwidth=1, relheight=1)", source)
+
+        fade_match = re.search(r"    def _fade_switch_to_tab\(self, target_tab.*?\):\n(?P<body>.*?)(?=\n    def |\nclass |\Z)", source, re.S)
+        self.assertIsNotNone(fade_match)
+        fade_body = fade_match.group("body")
+        self.assertNotIn("_ensure_notebook_fade_overlay", fade_body)
+        self.assertNotIn("_draw_notebook_fade_overlay", fade_body)
+
+        cancel_match = re.search(r"    def _cancel_notebook_fade\(self, reset_state=True\):\n(?P<body>.*?)(?=\n    def |\nclass |\Z)", source, re.S)
+        self.assertIsNotNone(cancel_match)
+        cancel_body = cancel_match.group("body")
+        self.assertIn("self._notebook_switching = False", cancel_body)
+        self.assertIn("self._pending_notebook_tab = None", cancel_body)
+
+    def test_notebook_switch_selects_tab_before_scheduling_animation(self):
+        app = object.__new__(self.core.JavaManagerApp)
+        events = []
+
+        class Root:
+            def __init__(self):
+                self.jobs = []
+                self.cancelled = []
+
+            def after(self, delay, callback):
+                job = f"job-{len(self.jobs) + 1}"
+                self.jobs.append((job, delay, callback))
+                events.append(("after", delay))
+                return job
+
+            def after_cancel(self, job):
+                self.cancelled.append(job)
+                events.append(("cancel", job))
+
+        class Notebook:
+            def __init__(self):
+                self.selected = "tab-home"
+
+            def select(self, tab=None):
+                if tab is not None:
+                    self.selected = str(tab)
+                    events.append(("select", self.selected))
+                return self.selected
+
+        root = Root()
+        app.root = root
+        app.notebook = Notebook()
+        app._ui_ready_for_tab_fade = True
+        app._notebook_switching = False
+        app._notebook_fade_job = None
+        app._notebook_fade_overlay = None
+        app._notebook_fade_generation = 0
+        app._pending_notebook_tab = None
+        app._tab_motion_headers = {"tab-download": object()}
+        app._animate_selected_tab_motion_header = lambda: events.append("animate")
+        app._draw_tab_motion_header = lambda _canvas, progress: events.append(("draw", round(progress, 2)))
+
+        switched = self.core.JavaManagerApp._switch_notebook_tab(app, "tab-download")
+
+        self.assertTrue(switched)
+        self.assertEqual(app.notebook.selected, "tab-download")
+        self.assertIn(("select", "tab-download"), events)
+        self.assertIn(("draw", 0.0), events)
+        self.assertEqual(root.jobs[-1][1], self.core.PAGE_FADE_INTERVAL_MS)
+        self.assertIsNone(app._notebook_fade_overlay)
+
+        self.core.JavaManagerApp._cancel_notebook_fade(app)
+
+        self.assertFalse(app._notebook_switching)
+        self.assertIsNone(app._pending_notebook_tab)
+
     def test_window_fade_cancels_previous_pending_job(self):
         app = object.__new__(self.core.JavaManagerApp)
         app._window_fade_jobs = {}
@@ -1687,6 +2544,39 @@ class NoguiFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.nogui = load_nogui()
 
+    def test_nogui_entry_tkinter_import_is_optional_for_source_usage(self):
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "LJM_nogui_entry.py").read_text(encoding="utf-8")
+        core_source = (root / "src" / "LJM.pyw").read_text(encoding="utf-8")
+
+        self.assertIn("try:\n    import tkinter as tk", source)
+        self.assertIn("except Exception:", source)
+        self.assertIn("try:\n    import tkinter as tk", core_source)
+        self.assertIn("TK_IMPORT_ERROR", core_source)
+        self.assertIn('args = sys.argv[1:] or ["terminal", "--attach-console"]', source)
+
+    def test_nogui_scan_uses_shared_registration_sync(self):
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "LJM_nogui.pyw").read_text(encoding="utf-8")
+        match = re.search(r"def command_scan\(args\):\n(?P<body>.*?)(?=\ndef |\nclass |\Z)", source, re.S)
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        self.assertIn("core.JavaRegistryAdapter.sync_runtime_registration(register_home", body)
+        self.assertNotIn("core.JavaRegistryAdapter.register(registry_name, register_home", body)
+
+    def test_nogui_update_download_uses_checksum_archive_check_and_fallback_sources(self):
+        root = Path(__file__).resolve().parents[1]
+        source = (root / "src" / "LJM_nogui.pyw").read_text(encoding="utf-8")
+        match = re.search(r"def download_latest_jdk\(.*?\):\n(?P<body>.*?)(?=\ndef |\nclass |\Z)", source, re.S)
+        self.assertIsNotNone(match)
+        body = match.group("body")
+
+        self.assertIn("core.resolve_download_sha256(info)", body)
+        self.assertIn("expected_sha256=expected_sha256", body)
+        self.assertIn("core.verify_file_sha256", body)
+        self.assertIn("core.archive_quick_check", body)
+        self.assertIn("core.JavaDownloadEngine.get_download_info_candidates", body)
+
     def test_nogui_parser_has_download_move_delete_and_feedback_commands(self):
         parser = self.nogui.build_parser()
 
@@ -1695,6 +2585,10 @@ class NoguiFeatureTests(unittest.TestCase):
         delete_args = parser.parse_args(["delete", "Temurin_21", "--files", "--force"])
         vendors_args = parser.parse_args(["vendors"])
         feedback_args = parser.parse_args(["feedback", "--message", "OpenJ9 source is slow"])
+        terminal_args = parser.parse_args(["terminal"])
+        terminal_attach_args = parser.parse_args(["terminal", "--attach-console"])
+        version_args = parser.parse_args(["version"])
+        status_args = parser.parse_args(["status"])
 
         self.assertEqual(download_args.command, "download")
         self.assertIs(download_args.func, self.nogui.command_download)
@@ -1708,6 +2602,135 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertIs(vendors_args.func, self.nogui.command_vendors)
         self.assertEqual(feedback_args.command, "feedback")
         self.assertIs(feedback_args.func, self.nogui.command_feedback)
+        self.assertEqual(terminal_args.command, "terminal")
+        self.assertIs(terminal_args.func, self.nogui.command_terminal)
+        self.assertTrue(terminal_attach_args.attach_console)
+        self.assertEqual(version_args.command, "version")
+        self.assertIs(version_args.func, self.nogui.command_version)
+        self.assertEqual(status_args.command, "status")
+        self.assertIs(status_args.func, self.nogui.command_status)
+
+    def test_nogui_terminal_environment_helpers(self):
+        argv = self.nogui.terminal_split(r'download "Eclipse Temurin" 21 D:\Java --package-type jdk', platform_name="nt")
+        self.assertEqual(argv, ["download", "Eclipse Temurin", "21", r"D:\Java", "--package-type", "jdk"])
+        posix_argv = self.nogui.terminal_split('scan "/opt/java runtimes" --stdout', platform_name="posix")
+        self.assertEqual(posix_argv, ["scan", "/opt/java runtimes", "--stdout"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["LIST"]), ["list"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["列表"]), ["list"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["检查更新"]), ["check-updates"])
+        self.assertIn("check-updates", self.nogui.terminal_help_text("en_US"))
+        self.assertIn("exit", self.nogui.terminal_help_text("en_US"))
+        self.assertIn("已成功接入", self.nogui.terminal_text("connected", "zh_CN"))
+        self.assertIn("Successfully connected", self.nogui.terminal_text("connected", "en_US"))
+        self.assertIn("ljm", self.nogui.terminal_text("prompt", "zh_CN"))
+        self.assertEqual(self.nogui.decode_terminal_input_bytes("状态\n".encode("utf-8-sig")).strip(), "状态")
+
+        class FakeStdin:
+            def __init__(self, is_tty):
+                self.is_tty = is_tty
+
+            def isatty(self):
+                return self.is_tty
+
+        original_stdin = self.nogui.sys.stdin
+        try:
+            self.nogui.sys.stdin = FakeStdin(True)
+            self.assertTrue(self.nogui.should_start_terminal([]))
+            self.assertFalse(self.nogui.should_start_terminal(["list"]))
+            self.nogui.sys.stdin = FakeStdin(False)
+            self.assertTrue(self.nogui.should_start_terminal([]))
+        finally:
+            self.nogui.sys.stdin = original_stdin
+
+    def test_nogui_terminal_console_fallback_handles_empty_stdin(self):
+        original_stdin = self.nogui.sys.stdin
+        original_open_console = self.nogui.open_terminal_console_input
+        original_print = self.nogui.safe_print
+
+        class EmptyPipe:
+            def __init__(self):
+                self.buffer = io.BytesIO(b"")
+
+            def isatty(self):
+                return False
+
+            @property
+            def encoding(self):
+                return "utf-8"
+
+        try:
+            self.nogui.sys.stdin = EmptyPipe()
+            self.nogui.open_terminal_console_input = lambda: io.StringIO("version\nexit\n")
+            self.nogui.safe_print = lambda message, end="\n": None
+            lines = list(self.nogui.terminal_input_lines("en_US", attach_console=True))
+        finally:
+            self.nogui.sys.stdin = original_stdin
+            self.nogui.open_terminal_console_input = original_open_console
+            self.nogui.safe_print = original_print
+
+        self.assertEqual(lines, ["version", "exit"])
+
+    def test_nogui_terminal_pipe_input_still_wins_over_console_fallback(self):
+        original_stdin = self.nogui.sys.stdin
+        original_open_console = self.nogui.open_terminal_console_input
+        original_print = self.nogui.safe_print
+
+        class Pipe:
+            def __init__(self):
+                self.buffer = io.BytesIO(b"status\nexit\n")
+
+            def isatty(self):
+                return False
+
+            @property
+            def encoding(self):
+                return "utf-8"
+
+        try:
+            self.nogui.sys.stdin = Pipe()
+            self.nogui.open_terminal_console_input = lambda: io.StringIO("version\nexit\n")
+            self.nogui.safe_print = lambda message, end="\n": None
+            lines = list(self.nogui.terminal_input_lines("en_US", attach_console=True))
+        finally:
+            self.nogui.sys.stdin = original_stdin
+            self.nogui.open_terminal_console_input = original_open_console
+            self.nogui.safe_print = original_print
+
+        self.assertEqual(lines, ["status", "exit"])
+
+    def test_nogui_terminal_prints_localized_connected_message(self):
+        events = []
+        original_print = self.nogui.safe_print
+        original_configure = self.nogui.configure_terminal_environment
+        original_language = self.nogui.terminal_language
+        original_stdin = self.nogui.sys.stdin
+
+        class FakeStdin:
+            def __init__(self):
+                self.lines = iter(["退出\n"])
+
+            def isatty(self):
+                return True
+
+            def readline(self):
+                return next(self.lines, "")
+
+        try:
+            self.nogui.sys.stdin = FakeStdin()
+            self.nogui.configure_terminal_environment = lambda: events.append(("configure",))
+            self.nogui.terminal_language = lambda: "zh_CN"
+            self.nogui.safe_print = lambda message, end="\n": events.append(("prompt", str(message)) if end == "" else str(message))
+            self.assertEqual(self.nogui.run_terminal(self.nogui.build_parser()), 0)
+        finally:
+            self.nogui.safe_print = original_print
+            self.nogui.configure_terminal_environment = original_configure
+            self.nogui.terminal_language = original_language
+            self.nogui.sys.stdin = original_stdin
+
+        self.assertIn(("configure",), events)
+        self.assertTrue(any("已成功接入" in item for item in events if isinstance(item, str)))
+        self.assertTrue(any(item[0] == "prompt" and "ljm" in item[1] for item in events if isinstance(item, tuple)))
+        self.assertTrue(any("已退出" in item for item in events if isinstance(item, str)))
 
     def test_nogui_feedback_exports_github_issue_url(self):
         parser = self.nogui.build_parser()
@@ -1718,7 +2741,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("3.0", payload["body"])
+        self.assertIn("3.1", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_defaults_use_nogui_name(self):

@@ -2,6 +2,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEPS="$ROOT/deps"
+if [ ! -d "$DEPS" ]; then
+  DEPS="$(cd "$ROOT/.." && pwd)/vendor/deps"
+fi
 cd "$ROOT"
 
 python3 -m PyInstaller \
@@ -13,7 +17,7 @@ python3 -m PyInstaller \
   --add-data "$ROOT/LJM_nogui.pyw:." \
   --add-data "$ROOT/LJM.pyw:." \
   --add-data "$ROOT/java.ico:." \
-  --add-data "$ROOT/deps:deps" \
+  --add-data "$DEPS:deps" \
   "$ROOT/LJM_nogui_entry.py"
 
 cat > "$ROOT/dist/LJM-Java-Manager-nogui.run" <<'EOF'

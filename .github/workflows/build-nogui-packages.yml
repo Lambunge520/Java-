@@ -6,7 +6,7 @@ on:
       tag_name:
         description: "Release tag to create or update"
         required: false
-        default: "v3.0"
+        default: "v3.1"
   push:
     tags:
       - "v*"
@@ -96,12 +96,17 @@ jobs:
       - name: Prepare Python source package
         run: |
           mkdir -p release-assets/python-source
+          chmod +x src/LJM_nogui nogui/LJM_nogui
           zip -r release-assets/python-source/LJM-Java-Manager-nogui-python-source.zip \
             src/LJM.pyw \
             src/LJM_nogui.pyw \
+            src/LJM_nogui.py \
+            src/LJM_nogui \
             src/LJM_nogui_entry.py \
             nogui/LJM.pyw \
             nogui/LJM_nogui.pyw \
+            nogui/LJM_nogui.py \
+            nogui/LJM_nogui \
             nogui/LJM_nogui_entry.py
       - name: Prepare checksums
         run: |

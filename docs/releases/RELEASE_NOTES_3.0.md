@@ -1,6 +1,6 @@
 # LJM Java Manager 3.0
 
-## 中文
+## 更新内容
 
 - 新增独立「JVM 参数调整」界面，面向 Minecraft Java 版。
 - 可按 PCL、PCL 社区版、HMCL、Java 类型、大版本、MC 版本和电脑配置生成推荐参数。
@@ -10,7 +10,7 @@
 
 桌面版请选择不带 `nogui` 的资产；无桌面版请选择带 `nogui` 的资产。
 
-## English
+## Update Content
 
 - Added an independent JVM Args page for Minecraft Java Edition.
 - Generates presets by PCL, PCL Community, HMCL, Java vendor, Java major, MC version, and PC configuration.

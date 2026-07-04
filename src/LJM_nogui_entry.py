@@ -22,8 +22,14 @@ import tarfile
 import tempfile
 import threading
 import time
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+try:
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+except Exception:
+    tk = None
+    filedialog = None
+    messagebox = None
+    ttk = None
 import traceback
 from urllib.parse import urlparse
 import urllib.error
@@ -40,7 +46,10 @@ def main():
         base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(sys.executable)))
     else:
         base_dir = os.path.dirname(os.path.abspath(__file__))
-    runpy.run_path(os.path.join(base_dir, "LJM_nogui.pyw"), run_name="__main__")
+    script_path = os.path.join(base_dir, "LJM_nogui.pyw")
+    args = sys.argv[1:] or ["terminal", "--attach-console"]
+    sys.argv = [script_path] + args
+    runpy.run_path(script_path, run_name="__main__")
 
 
 if __name__ == "__main__":

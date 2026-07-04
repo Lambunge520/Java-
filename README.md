@@ -2,7 +2,7 @@
 
 LJM 是一个跨平台 Java 运行时管理工具，用来扫描、注册、下载、修复、更新、移动和删除本机 Java，适合 Minecraft 玩家、启动器、IDE、服务端、脚本任务和无桌面环境使用。
 
-当前版本：`3.0`
+当前版本：`3.1`
 
 ## 下载
 
@@ -23,6 +23,9 @@ NoGUI 使用文档：[docs/NOGUI_USAGE.md](docs/NOGUI_USAGE.md)
 - 按 Minecraft 版本、发行商、运行时类型和性能差距给出 Java 选择建议。
 - 新增 Minecraft JVM 参数调整界面，可按启动器、Java 大版本、MC 版本和电脑配置生成推荐参数。
 - 修复 PCL/HMCL 反复安装、卸载后仍能看到旧 Java 注册项的问题。
+- Java 注册会同步写入 JAVA_HOME，不再修改系统 PATH。
+- 新增主页、菜单栏导航和更新日志独立界面，独立页面切换带淡入淡出动画。
+- 优化 Windows、Linux、macOS 工具本体热更新和权限处理逻辑。
 - 自动处理 Linux/macOS 常见可执行权限问题，减少普通用户手动 `chmod` 的需要。
 - 桌面端提供图形界面、托盘、备份管理、下载缓存管理和反馈入口。
 - NoGUI 版适合脚本、服务器、计划任务、CI 和其他无桌面环境。
@@ -31,11 +34,14 @@ NoGUI 使用文档：[docs/NOGUI_USAGE.md](docs/NOGUI_USAGE.md)
 
 ```powershell
 python .\src\LJM.pyw
-python .\src\LJM_nogui.pyw list --stdout
+python .\src\LJM_nogui.py
+python .\src\LJM_nogui.py list --stdout
 ```
 
 ```bash
-python3 ./src/LJM_nogui.pyw list --stdout
+chmod +x ./src/LJM_nogui
+./src/LJM_nogui
+./src/LJM_nogui list --stdout
 ```
 
 ## 本地打包

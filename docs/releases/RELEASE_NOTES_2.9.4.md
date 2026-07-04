@@ -1,6 +1,6 @@
 # LJM Java Manager 2.9.4
 
-## 中文
+## 更新内容
 
 - 修复反复下载、卸载、注销 Java 后，PCL/HMCL 仍可能读到旧 Java 注册项的问题。
 - 注销会同步清理同一 JDK 的根目录、内置 `jre`、`bin` 等等价注册路径。
@@ -12,7 +12,7 @@
 
 桌面版请选择不带 `nogui` 的资产；无桌面版请选择带 `nogui` 的资产。
 
-## English
+## Update Content
 
 - Fixed stale Java registry entries that PCL/HMCL could still see after repeated download, uninstall, and unregister workflows.
 - Unregister now removes equivalent paths for the same JDK, including root, bundled `jre`, and `bin` registrations.
