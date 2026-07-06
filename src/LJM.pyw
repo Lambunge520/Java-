@@ -98,7 +98,7 @@ except Exception as exc:
     messagebox = _UnavailableMessageBox()
 
 
-VERSION = "3.1"
+VERSION = "3.1.1"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -3320,9 +3320,46 @@ I18N_ZH_CN = {
     "changelog_empty": "当前版本暂未随包提供更新日志。",
     "toolbar_search_label": "搜索/筛选 Java:",
     "toolbar_clear_filter": "清空筛选",
+    "task_progress_button": "下载任务",
+    "task_progress_title": "任务进度",
+    "task_progress_running": "正在进行的任务",
+    "task_progress_completed": "已完成的任务",
+    "task_progress_failed": "下载失败的任务",
+    "task_progress_empty": "暂无任务",
+    "task_col_name": "任务",
+    "task_col_status": "状态",
+    "task_col_time": "时间",
+    "task_col_detail": "详情",
+    "task_status_running": "进行中",
+    "task_status_completed": "已完成",
+    "task_status_failed": "失败",
+    "task_status_cancelled": "已取消",
+    "task_status_paused": "已暂停",
+    "task_progress_refresh": "刷新任务",
+    "task_progress_pause_all": "全部暂停",
+    "task_progress_resume_all": "全部开始",
+    "task_progress_cancel_all": "取消全部",
+    "task_progress_clear": "清空",
+    "task_delete_item": "×",
+    "task_cancel_confirm_title": "取消任务",
+    "task_cancel_confirm_text": "确定要取消这个正在进行的任务吗？",
+    "task_cancel_all_confirm_text": "确定要取消全部正在进行的任务吗？",
     "scan_register_local_java": "从文件夹扫描并注册本地 Java",
     "select_all_java": "全选",
     "select_no_java": "全不选",
+    "choose_system_default_java": "系统默认 Java 选择",
+    "default_java_title": "系统默认 Java 选择",
+    "default_java_apply": "使用此Java作为系统默认Java",
+    "default_java_no_selection_title": "未选择 Java",
+    "default_java_no_selection_text": "请先选择一个已注册的 Java。",
+    "default_java_done_title": "设置完成",
+    "default_java_done_win": "已将系统 JAVA_HOME 设置为:\n{path}",
+    "default_java_done_unix": "已写入当前用户 Java 环境配置:\nJAVA_HOME={path}\n\n生效文件:\n{files}\n\n新开的终端会自动生效；当前已运行的终端需要重新打开。",
+    "default_java_failed_title": "写入失败",
+    "default_java_current": "当前默认 Java: {path}",
+    "default_java_current_missing": "当前默认 Java: 未检测到",
+    "default_java_current_invalid": "当前默认 Java: {path}（路径不可用）",
+    "default_java_refresh": "刷新默认 Java",
     "unregister_selected": "注销勾选的 Java",
     "registration_no_checked_title": "未勾选 Java",
     "registration_no_checked_text": "请先勾选需要注销的 Java。",
@@ -3523,8 +3560,8 @@ I18N_ZH_CN = {
     "repair_label_full": "完整修复",
     "repair_action": "云端修复当前环境（{mode}）",
     "confirm_local_repair_title": "本地修复",
-    "confirm_local_repair_text": "当前 Java 环境文件状态良好，工具将只同步注册信息、JAVA_HOME 和可执行权限:\n{path}\n\n是否继续？",
-    "local_repair_done": "本地修复完成：已同步注册信息、JAVA_HOME 和可执行权限。",
+    "confirm_local_repair_text": "当前 Java 环境文件状态良好，工具将只同步注册信息和可执行权限:\n{path}\n\n是否继续？",
+    "local_repair_done": "本地修复完成：已同步注册信息和可执行权限。",
     "mirror_speed_none": "镜像测速: 尚未测速，将在启动后或检查更新时自动测速并记忆最快源。",
     "mirror_speed_prefix": "镜像测速: {items}",
     "mirror_unavailable": "{label}: 不可用",
@@ -3611,9 +3648,46 @@ I18N_EN_US = {
     "changelog_empty": "No changelog was bundled for this version.",
     "toolbar_search_label": "Search/Filter Java:",
     "toolbar_clear_filter": "Clear",
+    "task_progress_button": "Download Tasks",
+    "task_progress_title": "Task Progress",
+    "task_progress_running": "Running Tasks",
+    "task_progress_completed": "Completed Tasks",
+    "task_progress_failed": "Failed Downloads",
+    "task_progress_empty": "No tasks",
+    "task_col_name": "Task",
+    "task_col_status": "Status",
+    "task_col_time": "Time",
+    "task_col_detail": "Details",
+    "task_status_running": "Running",
+    "task_status_completed": "Completed",
+    "task_status_failed": "Failed",
+    "task_status_cancelled": "Canceled",
+    "task_status_paused": "Paused",
+    "task_progress_refresh": "Refresh Tasks",
+    "task_progress_pause_all": "Pause All",
+    "task_progress_resume_all": "Start All",
+    "task_progress_cancel_all": "Cancel All",
+    "task_progress_clear": "Clear",
+    "task_delete_item": "×",
+    "task_cancel_confirm_title": "Cancel Task",
+    "task_cancel_confirm_text": "Cancel this running task?",
+    "task_cancel_all_confirm_text": "Cancel all running tasks?",
     "scan_register_local_java": "Scan Folder and Register Local Java",
     "select_all_java": "Select All",
     "select_no_java": "Select None",
+    "choose_system_default_java": "System Default Java",
+    "default_java_title": "System Default Java",
+    "default_java_apply": "Use This Java as System Default",
+    "default_java_no_selection_title": "No Java Selected",
+    "default_java_no_selection_text": "Select a registered Java runtime first.",
+    "default_java_done_title": "Default Java Set",
+    "default_java_done_win": "System JAVA_HOME was set to:\n{path}",
+    "default_java_done_unix": "Current-user Java environment was written:\nJAVA_HOME={path}\n\nFiles:\n{files}\n\nNew terminals will pick it up automatically. Already-open terminals need to be reopened.",
+    "default_java_failed_title": "Write Failed",
+    "default_java_current": "Current default Java: {path}",
+    "default_java_current_missing": "Current default Java: not detected",
+    "default_java_current_invalid": "Current default Java: {path} (path unavailable)",
+    "default_java_refresh": "Refresh Default Java",
     "unregister_selected": "Unregister Checked Java",
     "registration_no_checked_title": "No Java Checked",
     "registration_no_checked_text": "Check the Java entries you want to unregister first.",
@@ -3814,8 +3888,8 @@ I18N_EN_US = {
     "repair_label_full": "Full repair",
     "repair_action": "Cloud repair current environment ({mode})",
     "confirm_local_repair_title": "Local Repair",
-    "confirm_local_repair_text": "This Java runtime looks structurally healthy. The tool will only sync registry entries, JAVA_HOME, and executable permissions:\n{path}\n\nContinue?",
-    "local_repair_done": "Local repair complete: registry entries, JAVA_HOME, and executable permissions were synced.",
+    "confirm_local_repair_text": "This Java runtime looks structurally healthy. The tool will only sync registry entries and executable permissions:\n{path}\n\nContinue?",
+    "local_repair_done": "Local repair complete: registry entries and executable permissions were synced.",
     "mirror_speed_none": "Mirror speed: not tested yet. The fastest GitHub mirror will be detected on startup or during update checks.",
     "mirror_speed_prefix": "Mirror speed: {items}",
     "mirror_unavailable": "{label}: unavailable",
@@ -4435,6 +4509,11 @@ def replace_managed_block(text, block, begin="# >>> LJM Java Manager >>>", end="
     return f"{cleaned}\n\n{begin}\n{block.rstrip()}\n{end}\n" if cleaned else f"{begin}\n{block.rstrip()}\n{end}\n"
 
 
+def extract_managed_block(text, begin="# >>> LJM Java Manager >>>", end="# <<< LJM Java Manager <<<"):
+    match = re.search(re.escape(begin) + r"\n(?P<body>.*?)\n" + re.escape(end), text or "", re.S)
+    return match.group("body") if match else ""
+
+
 def write_text_file(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
@@ -4546,6 +4625,73 @@ def configure_registered_java_environment(java_home):
     if IS_WIN:
         return write_windows_java_environment(java_home)
     return write_unix_java_environment(java_home)
+
+
+def read_windows_java_home_from_registry():
+    if not IS_WIN:
+        return ""
+    candidates = (
+        (winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+        (winreg.HKEY_CURRENT_USER, r"Environment"),
+    )
+    for hive, key_path in candidates:
+        try:
+            key = winreg.OpenKey(hive, key_path, 0, winreg.KEY_READ)
+            value = normalize_text(os.path.expandvars(str(winreg.QueryValueEx(key, "JAVA_HOME")[0])))
+            winreg.CloseKey(key)
+            if value:
+                return value
+        except Exception:
+            pass
+    return ""
+
+
+def read_unix_java_home_from_profiles(home_dir=None):
+    home_dir = home_dir or os.path.expanduser("~")
+    for profile in shell_profile_paths(home_dir=home_dir):
+        try:
+            if not os.path.exists(profile):
+                continue
+            with open(profile, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+            block = extract_managed_block(text)
+            match = re.search(r"^\s*export\s+JAVA_HOME=(.+?)\s*$", block, re.M)
+            if match:
+                value = normalize_text(match.group(1)).strip("'\"")
+                if value:
+                    return value
+        except Exception:
+            pass
+    fish_config = os.path.join(home_dir, ".config", "fish", "config.fish")
+    try:
+        if os.path.exists(fish_config):
+            with open(fish_config, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+            block = extract_managed_block(text)
+            match = re.search(r"^\s*set\s+-gx\s+JAVA_HOME\s+(.+?)\s*$", block, re.M)
+            if match:
+                value = normalize_text(match.group(1)).strip("'\"")
+                if value:
+                    return value
+    except Exception:
+        pass
+    return ""
+
+
+def read_current_default_java_home():
+    if IS_WIN:
+        return read_windows_java_home_from_registry() or normalize_text(os.environ.get("JAVA_HOME"))
+    return normalize_text(os.environ.get("JAVA_HOME")) or read_unix_java_home_from_profiles()
+
+
+def describe_current_default_java_home():
+    java_home = normalize_text(read_current_default_java_home())
+    if not java_home:
+        return {"java_home": "", "valid": False, "runtime": {}, "text": tr("default_java_current_missing")}
+    runtime = read_java_runtime_info(java_home)
+    valid = bool(runtime.get("java_binary"))
+    text = tr("default_java_current", path=java_home) if valid else tr("default_java_current_invalid", path=java_home)
+    return {"java_home": java_home, "valid": valid, "runtime": runtime, "text": text}
 
 
 def is_github_like_url(url):
@@ -5132,9 +5278,16 @@ def unregister_java_home(java_home, preferred_name=None):
         names.insert(0, preferred_name)
     removed = []
     for name in unique_sequence(names):
-        JavaRegistryAdapter.unregister(name)
+        unregister_java_registry_name(name, java_home=java_home)
         removed.append(name)
     return removed
+
+
+def unregister_java_registry_name(name, java_home=""):
+    try:
+        return JavaRegistryAdapter.unregister(name, java_home=java_home)
+    except TypeError:
+        return JavaRegistryAdapter.unregister(name)
 
 
 def list_possible_jvm_paths(java_home):
@@ -6666,7 +6819,7 @@ def plan_java_repair(runtime, report, requested_mode="smart"):
 def apply_local_java_repair(java_home, preferred_name=None):
     target = os.path.abspath(os.path.expanduser(normalize_text(java_home)))
     changed = ensure_java_home_executables(target)
-    synced = JavaRegistryAdapter.sync_runtime_registration(target, preferred_name=preferred_name, raise_environment_errors=True)
+    synced = JavaRegistryAdapter.sync_runtime_registration(target, preferred_name=preferred_name)
     return {
         "java_home": target,
         "changed_permissions": changed,
@@ -6934,7 +7087,7 @@ def cleanup_stale_java_registrations():
     for version_name, java_home in JavaRegistryAdapter.get_all():
         raw_home = normalize_text(java_home)
         if not raw_home or is_ljm_backup_path(raw_home) or not os.path.exists(os.path.abspath(os.path.expanduser(raw_home))):
-            JavaRegistryAdapter.unregister(version_name)
+            unregister_java_registry_name(version_name, java_home=java_home)
             removed.append(version_name)
     return removed
 
@@ -7461,6 +7614,12 @@ class PystrayTrayIcon:
 class JavaRegistryAdapter:
     LINUX_REG_FILE = "java_virtual_registry.json"
     WIN_REG_PATH = r"SOFTWARE\JavaSoft\JDK"
+    WIN_READ_REG_PATHS = (
+        r"SOFTWARE\JavaSoft\JDK",
+        r"SOFTWARE\JavaSoft\JRE",
+        r"SOFTWARE\JavaSoft\Java Development Kit",
+        r"SOFTWARE\JavaSoft\Java Runtime Environment",
+    )
 
     @staticmethod
     def registry_file():
@@ -7489,25 +7648,142 @@ class JavaRegistryAdapter:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     @staticmethod
-    def get_all():
-        result = []
-        if IS_WIN:
+    def _windows_registry_view_flags():
+        flags = [0]
+        for name in ("KEY_WOW64_64KEY", "KEY_WOW64_32KEY"):
+            value = getattr(winreg, name, 0)
+            if value and value not in flags:
+                flags.append(value)
+        return flags
+
+    @staticmethod
+    def _read_windows_java_entries_from_key(hive, key_path, access_flags=0):
+        entries = []
+        try:
+            key = winreg.OpenKey(hive, key_path, 0, winreg.KEY_READ | access_flags)
+        except Exception:
+            return entries
+        try:
             try:
-                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, JavaRegistryAdapter.WIN_REG_PATH, 0, winreg.KEY_READ)
-                index = 0
-                while True:
+                current = normalize_text(winreg.QueryValueEx(key, "CurrentVersion")[0])
+                if current:
+                    sub_key = winreg.OpenKey(key, current, 0, winreg.KEY_READ | access_flags)
                     try:
-                        version_name = winreg.EnumKey(key, index)
-                        sub_key = winreg.OpenKey(key, version_name)
-                        java_home = winreg.QueryValueEx(sub_key, "JavaHome")[0]
-                        result.append((version_name, java_home))
+                        java_home = normalize_text(os.path.expandvars(str(winreg.QueryValueEx(sub_key, "JavaHome")[0])))
+                        if java_home:
+                            entries.append((sanitize_registry_name(current), java_home))
+                    finally:
                         winreg.CloseKey(sub_key)
-                        index += 1
-                    except OSError:
-                        break
+            except Exception:
+                pass
+
+            index = 0
+            while True:
+                try:
+                    version_name = winreg.EnumKey(key, index)
+                    sub_key = winreg.OpenKey(key, version_name, 0, winreg.KEY_READ | access_flags)
+                    try:
+                        java_home = normalize_text(os.path.expandvars(str(winreg.QueryValueEx(sub_key, "JavaHome")[0])))
+                        if java_home:
+                            entries.append((sanitize_registry_name(version_name), java_home))
+                    finally:
+                        winreg.CloseKey(sub_key)
+                    index += 1
+                except OSError:
+                    break
+                except Exception:
+                    index += 1
+        finally:
+            try:
                 winreg.CloseKey(key)
             except Exception:
                 pass
+        return entries
+
+    @staticmethod
+    def _windows_registered_java_entries():
+        entries = []
+        seen_homes = set()
+        hives = (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER)
+        for hive in hives:
+            for key_path in JavaRegistryAdapter.WIN_READ_REG_PATHS:
+                for view_flag in JavaRegistryAdapter._windows_registry_view_flags():
+                    for version_name, java_home in JavaRegistryAdapter._read_windows_java_entries_from_key(hive, key_path, view_flag):
+                        home_key = normalize_path(java_home)
+                        if home_key in seen_homes:
+                            continue
+                        entries.append((version_name, java_home))
+                        seen_homes.add(home_key)
+        return entries
+
+    @staticmethod
+    def _read_windows_java_home_from_subkey(parent_key, version_name, access_flags=0):
+        try:
+            sub_key = winreg.OpenKey(parent_key, version_name, 0, winreg.KEY_READ | access_flags)
+        except Exception:
+            return ""
+        try:
+            return normalize_text(os.path.expandvars(str(winreg.QueryValueEx(sub_key, "JavaHome")[0])))
+        except Exception:
+            return ""
+        finally:
+            try:
+                winreg.CloseKey(sub_key)
+            except Exception:
+                pass
+
+    @staticmethod
+    def _delete_windows_java_entries_from_key(hive, key_path, version_str="", java_home="", access_flags=0):
+        try:
+            access = getattr(winreg, "KEY_ALL_ACCESS", winreg.KEY_READ | getattr(winreg, "KEY_WRITE", 0))
+            parent = winreg.OpenKey(hive, key_path, 0, access | access_flags)
+        except Exception:
+            return 0
+
+        target_name = sanitize_registry_name(version_str)
+        target_home = normalize_text(java_home)
+        candidates = []
+        try:
+            if target_home:
+                index = 0
+                while True:
+                    try:
+                        version_name = winreg.EnumKey(parent, index)
+                    except OSError:
+                        break
+                    except Exception:
+                        index += 1
+                        continue
+                    registered_home = JavaRegistryAdapter._read_windows_java_home_from_subkey(parent, version_name, access_flags)
+                    if java_home_matches_registered_path(target_home, registered_home):
+                        candidates.append(version_name)
+                    index += 1
+                if target_name and target_name not in candidates:
+                    registered_home = JavaRegistryAdapter._read_windows_java_home_from_subkey(parent, target_name, access_flags)
+                    if java_home_matches_registered_path(target_home, registered_home):
+                        candidates.append(target_name)
+            elif target_name:
+                candidates.append(target_name)
+
+            removed = 0
+            for version_name in unique_sequence(candidates):
+                try:
+                    winreg.DeleteKey(parent, version_name)
+                    removed += 1
+                except Exception as exc:
+                    logging.debug("移除 Windows Java 注册项失败: %s\\%s - %s", key_path, version_name, exc)
+            return removed
+        finally:
+            try:
+                winreg.CloseKey(parent)
+            except Exception:
+                pass
+
+    @staticmethod
+    def get_all():
+        result = []
+        if IS_WIN:
+            result = JavaRegistryAdapter._windows_registered_java_entries()
         else:
             data = JavaRegistryAdapter._load_virtual_registry()
             result = [(key, value) for key, value in data.items()]
@@ -7548,22 +7824,37 @@ class JavaRegistryAdapter:
             return False
 
     @staticmethod
-    def unregister(version_str):
+    def unregister(version_str, java_home=""):
         if IS_WIN:
-            try:
-                parent = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, JavaRegistryAdapter.WIN_REG_PATH, 0, winreg.KEY_ALL_ACCESS)
-                winreg.DeleteKey(parent, version_str)
-                winreg.CloseKey(parent)
-            except Exception:
-                pass
-            return
+            removed = 0
+            hives = (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER)
+            for hive in hives:
+                for key_path in JavaRegistryAdapter.WIN_READ_REG_PATHS:
+                    for view_flag in JavaRegistryAdapter._windows_registry_view_flags():
+                        removed += JavaRegistryAdapter._delete_windows_java_entries_from_key(
+                            hive,
+                            key_path,
+                            version_str=version_str,
+                            java_home=java_home,
+                            access_flags=view_flag,
+                        )
+            return removed > 0
         try:
             data = JavaRegistryAdapter._load_virtual_registry()
-            if version_str in data:
+            removed = False
+            if java_home:
+                for name, registered_home in list(data.items()):
+                    if java_home_matches_registered_path(java_home, registered_home):
+                        del data[name]
+                        removed = True
+            elif version_str in data:
                 del data[version_str]
+                removed = True
             JavaRegistryAdapter._save_virtual_registry(data)
+            return removed
         except Exception as exc:
             logging.warning("移除虚拟 Java 注册信息失败: %s", exc)
+        return False
 
     @staticmethod
     def find_version_names_by_home(java_home):
@@ -7591,13 +7882,8 @@ class JavaRegistryAdapter:
         for name in unique_sequence(names):
             if JavaRegistryAdapter.register(name, java_home, jvm_path):
                 synced.append(name)
-        if synced:
-            try:
-                configure_registered_java_environment(java_home)
-            except Exception as exc:
-                logging.warning("同步 Java 环境变量失败: %s", exc)
-                if raise_environment_errors:
-                    raise
+        if raise_environment_errors:
+            logging.debug("raise_environment_errors is ignored because runtime registration no longer writes JAVA_HOME.")
         return synced
 
 
@@ -9336,7 +9622,7 @@ def move_java_home(source_java_home, target_path, preferred_name=None, cancel_ev
         raise
 
     for name in old_names:
-        JavaRegistryAdapter.unregister(name)
+        unregister_java_registry_name(name, java_home=source)
     synced = JavaRegistryAdapter.sync_runtime_registration(target, preferred_name=preferred_name)
     return {
         "old_java_home": source,
@@ -9376,9 +9662,13 @@ class JavaManagerApp:
         self.reg_items = {}
         self.reg_checked_items = set()
         self.update_items = {}
+        self.update_checked_items = set()
         self.move_items = {}
+        self.move_checked_items = set()
         self.delete_items = {}
+        self.delete_checked_items = set()
         self.backup_items = {}
+        self.backup_checked_items = set()
         self._java_rows = []
         self.search_var = None
         self.download_vendor_var = None
@@ -9417,6 +9707,16 @@ class JavaManagerApp:
         self._current_tray_task = ""
         self._active_java_transfer = None
         self._active_java_transfer_lock = threading.RLock()
+        self._task_records_lock = threading.RLock()
+        self._task_records = {"running": {}, "completed": [], "failed": []}
+        self._task_progress_window = None
+        self._task_progress_bodies = {}
+        self._task_progress_action_frame = None
+        self._task_progress_notebook = None
+        self._task_progress_refresh_job = None
+        self._task_progress_action_state = None
+        self._task_badge_label = None
+        self._task_badge_count = 0
         self.tray_icon = None
         self._allow_close = False
         self._minimize_to_tray_job = None
@@ -9497,6 +9797,67 @@ class JavaManagerApp:
         self._traverse_and_paint(self.root)
         for canvas in getattr(self, "_tab_motion_headers", {}).values():
             self._draw_tab_motion_header(canvas, 1.0)
+        self._configure_task_visual_styles(style)
+        self._task_badge_count = -1
+        self._update_task_badge()
+
+    def _task_progress_color(self):
+        theme_name = APP_CONFIG.get("theme", "暗粉色")
+        if theme_name == "纯白":
+            return "#000000"
+        if theme_name == "纯黑":
+            return "#FFFFFF"
+        return "#FF8AC2"
+
+    def _task_badge_fg(self):
+        theme_name = APP_CONFIG.get("theme", "暗粉色")
+        if theme_name == "纯白":
+            return "#000000"
+        if theme_name == "纯黑":
+            return "#FFFFFF"
+        return "#FFB6D5"
+
+    def _configure_task_visual_styles(self, style=None):
+        style = style or ttk.Style()
+        progress_color = self._task_progress_color()
+        for style_name in ("Horizontal.TProgressbar", "LJM.Horizontal.TProgressbar"):
+            try:
+                style.configure(
+                    style_name,
+                    background=progress_color,
+                    troughcolor=self.current_field,
+                    bordercolor=self.current_bg,
+                    lightcolor=progress_color,
+                    darkcolor=progress_color,
+                )
+            except Exception:
+                pass
+        try:
+            style.layout(
+                "Clean.Vertical.TScrollbar",
+                [
+                    (
+                        "Vertical.Scrollbar.trough",
+                        {
+                            "sticky": "ns",
+                            "children": [("Vertical.Scrollbar.thumb", {"expand": "1", "sticky": "nswe"})],
+                        },
+                    )
+                ],
+            )
+            style.configure(
+                "Clean.Vertical.TScrollbar",
+                background=self.current_btn,
+                troughcolor=self.current_field,
+                bordercolor=self.current_bg,
+                arrowcolor=self.current_fg,
+                lightcolor=self.current_btn,
+                darkcolor=self.current_btn,
+                relief="flat",
+                width=12,
+            )
+        except Exception:
+            pass
 
     def _traverse_and_paint(self, widget):
         try:
@@ -10364,6 +10725,207 @@ class JavaManagerApp:
             self._active_java_transfer_lock = threading.RLock()
         if not hasattr(self, "_active_java_transfer"):
             self._active_java_transfer = None
+        if not hasattr(self, "_task_records_lock"):
+            self._task_records_lock = threading.RLock()
+        if not hasattr(self, "_task_records"):
+            self._task_records = {"running": {}, "completed": [], "failed": []}
+        if not hasattr(self, "_task_progress_bodies"):
+            self._task_progress_bodies = {}
+        if not hasattr(self, "_task_progress_refresh_job"):
+            self._task_progress_refresh_job = None
+        if not hasattr(self, "_task_progress_action_state"):
+            self._task_progress_action_state = None
+
+    def _task_record_time(self, timestamp=None):
+        return time.strftime("%H:%M:%S", time.localtime(timestamp or time.time()))
+
+    def _record_task_started(self, task_id, kind, task_name, cancel_event=None, pause_event=None):
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            self._task_records["running"][task_id] = {
+                "id": task_id,
+                "kind": normalize_text(kind),
+                "task": normalize_text(task_name),
+                "status": tr("task_status_running"),
+                "started_at": time.time(),
+                "time": self._task_record_time(),
+                "detail": tr("connecting_vendor"),
+                "progress": 0.0,
+                "cancel_event": cancel_event,
+                "pause_event": pause_event,
+            }
+        self._queue_task_ui_refresh()
+
+    def _record_task_finished(self, task_id, status="completed", detail=""):
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            record = self._task_records["running"].pop(task_id, None)
+            if not record:
+                return
+            failed = status == "failed"
+            cancelled = status == "cancelled"
+            record["status"] = tr("task_status_failed") if failed else (tr("task_status_cancelled") if cancelled else tr("task_status_completed"))
+            record["finished_at"] = time.time()
+            record["time"] = self._task_record_time(record["finished_at"])
+            record["detail"] = normalize_text(detail) or record.get("detail", "")
+            record["progress"] = 100.0 if not failed and not cancelled else record.get("progress", 0.0)
+            record.pop("cancel_event", None)
+            record.pop("pause_event", None)
+            bucket = "failed" if failed else "completed"
+            self._task_records[bucket].insert(0, record)
+            self._task_records[bucket] = self._task_records[bucket][:80]
+        self._queue_task_ui_refresh()
+
+    def _update_task_record(self, task_id, progress=None, detail=None, status=None):
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            record = self._task_records["running"].get(task_id)
+            if not record:
+                return
+            if progress is not None:
+                try:
+                    record["progress"] = max(0.0, min(100.0, float(progress)))
+                except Exception:
+                    pass
+            if detail is not None:
+                record["detail"] = normalize_text(detail)
+            if status is not None:
+                record["status"] = normalize_text(status)
+            record["time"] = self._task_record_time()
+        self._queue_task_ui_refresh()
+
+    def _wait_if_task_paused(self, task_id):
+        self._ensure_java_transfer_state()
+        while True:
+            with self._task_records_lock:
+                record = self._task_records["running"].get(task_id)
+                if not record:
+                    return
+                cancel_event = record.get("cancel_event")
+                pause_event = record.get("pause_event")
+            ensure_not_cancelled(cancel_event)
+            if not pause_event or not pause_event.is_set():
+                return
+            self._update_task_record(task_id, status=tr("task_status_paused"))
+            time.sleep(0.18)
+
+    def _running_task_count(self):
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            return len(self._task_records["running"])
+
+    def _queue_task_ui_refresh(self):
+        try:
+            self.root.after(0, self._update_task_badge)
+            if not self._task_progress_window_alive():
+                return
+            if getattr(self, "_task_progress_refresh_job", None):
+                return
+
+            def run_refresh():
+                self._task_progress_refresh_job = None
+                self._refresh_task_progress_panel()
+
+            self._task_progress_refresh_job = self.root.after(180, run_refresh)
+        except Exception:
+            pass
+
+    def _task_progress_window_alive(self, window=None):
+        window = window or getattr(self, "_task_progress_window", None)
+        if not window:
+            return False
+        try:
+            return bool(window.winfo_exists())
+        except Exception:
+            return False
+
+    def _task_progress_panel_has_focus(self, window=None):
+        window = window or getattr(self, "_task_progress_window", None)
+        if not self._task_progress_window_alive(window):
+            return False
+        try:
+            focused = window.focus_displayof()
+        except Exception:
+            return False
+        if not focused:
+            return False
+        try:
+            return focused.winfo_toplevel() == window
+        except Exception:
+            return focused == window
+
+    def _restore_task_progress_panel_focus(self, window=None):
+        window = window or getattr(self, "_task_progress_window", None)
+        if not self._task_progress_window_alive(window):
+            return
+        try:
+            window.deiconify()
+        except Exception:
+            pass
+        try:
+            window.state("normal")
+        except Exception:
+            pass
+        try:
+            window.lift()
+            window.focus_force()
+        except Exception:
+            pass
+        try:
+            window.attributes("-topmost", True)
+
+            def release_topmost(win=window):
+                try:
+                    if self._task_progress_window_alive(win):
+                        win.attributes("-topmost", False)
+                except Exception:
+                    pass
+
+            window.after(120, release_topmost)
+        except Exception:
+            pass
+
+    def _show_task_message(self, kind, title, text):
+        window = getattr(self, "_task_progress_window", None)
+        parent = window if self._task_progress_window_alive(window) else self.root
+        dialog = getattr(messagebox, kind)
+        try:
+            dialog(title, text, parent=parent)
+        except TypeError:
+            dialog(title, text)
+        if parent is window:
+            self._restore_task_progress_panel_focus(window)
+
+    def _update_task_badge(self):
+        label = getattr(self, "_task_badge_label", None)
+        if not label:
+            return
+        count = self._running_task_count()
+        if count <= 0:
+            self._task_badge_count = 0
+            try:
+                label.place_forget()
+            except Exception:
+                pass
+            return
+        try:
+            if count == getattr(self, "_task_badge_count", 0):
+                return
+            self._task_badge_count = count
+            label.configure(text=str(min(count, 99)), fg=self._task_badge_fg(), bg="#D40000", width=2)
+            label.place(relx=1.0, rely=0.0, x=4, y=-7, anchor="ne")
+        except Exception:
+            pass
+
+    def _task_records_snapshot(self):
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            running = sorted(self._task_records["running"].values(), key=lambda item: item.get("started_at", 0), reverse=True)
+            return {
+                "running": [dict(item) for item in running],
+                "completed": [dict(item) for item in self._task_records["completed"]],
+                "failed": [dict(item) for item in self._task_records["failed"]],
+            }
 
     def _active_java_transfer_snapshot(self):
         self._ensure_java_transfer_state()
@@ -10374,9 +10936,9 @@ class JavaManagerApp:
             self._active_java_transfer = None
         return None
 
-    def _register_java_transfer(self, kind, task_name, window):
+    def _register_java_transfer(self, kind, task_name, window=None, cancel_event=None, pause_event=None):
         self._ensure_java_transfer_state()
-        task_id = f"{kind}-{int(time.time() * 1000)}-{id(window)}"
+        task_id = f"{kind}-{int(time.time() * 1000)}-{id(cancel_event) if cancel_event else id(window)}"
         with self._active_java_transfer_lock:
             self._active_java_transfer = {
                 "id": task_id,
@@ -10385,14 +10947,19 @@ class JavaManagerApp:
                 "window": window,
                 "started_at": time.time(),
             }
+        self._record_task_started(task_id, kind, task_name, cancel_event=cancel_event, pause_event=pause_event)
         return task_id
 
-    def _clear_java_transfer(self, task_id):
+    def _create_transfer_control(self):
+        return {"cancel_event": threading.Event(), "pause_event": threading.Event()}
+
+    def _clear_java_transfer(self, task_id, status="completed", detail=""):
         self._ensure_java_transfer_state()
         with self._active_java_transfer_lock:
             task = self._active_java_transfer
             if task and task.get("id") == task_id:
                 self._active_java_transfer = None
+        self._record_task_finished(task_id, status=status, detail=detail)
 
     def show_active_java_transfer(self, show_notice=False):
         task = self._active_java_transfer_snapshot()
@@ -10429,11 +10996,222 @@ class JavaManagerApp:
         return True
 
     def show_active_java_transfer_from_tray(self):
-        if not self.show_active_java_transfer(show_notice=False):
-            self.show_from_tray()
+        self.show_from_tray()
+        self.open_task_progress_panel()
 
     def _guard_java_transfer_start(self):
-        return not self.show_active_java_transfer(show_notice=True)
+        return True
+
+    def _cancel_task_by_id(self, task_id, ask=True):
+        if ask and not messagebox.askyesno(tr("task_cancel_confirm_title"), tr("task_cancel_confirm_text")):
+            return False
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            record = self._task_records["running"].get(task_id)
+            cancel_event = record.get("cancel_event") if record else None
+        if cancel_event:
+            cancel_event.set()
+            self._update_task_record(task_id, detail=tr("cancel_requested"))
+            return True
+        return False
+
+    def _delete_task_record(self, bucket, task_id):
+        self._ensure_java_transfer_state()
+        if bucket not in ("completed", "failed"):
+            return
+        with self._task_records_lock:
+            self._task_records[bucket] = [record for record in self._task_records[bucket] if record.get("id") != task_id]
+        self._refresh_task_progress_panel()
+
+    def _clear_task_records(self, bucket):
+        if bucket not in ("completed", "failed"):
+            return
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            self._task_records[bucket].clear()
+        self._refresh_task_progress_panel()
+
+    def pause_all_running_tasks(self):
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            records = list(self._task_records["running"].values())
+        for record in records:
+            pause_event = record.get("pause_event")
+            if pause_event:
+                pause_event.set()
+                self._update_task_record(record.get("id"), status=tr("task_status_paused"))
+
+    def resume_all_running_tasks(self):
+        self._ensure_java_transfer_state()
+        with self._task_records_lock:
+            records = list(self._task_records["running"].values())
+        for record in records:
+            pause_event = record.get("pause_event")
+            if pause_event:
+                pause_event.clear()
+                self._update_task_record(record.get("id"), status=tr("task_status_running"))
+
+    def cancel_all_running_tasks(self):
+        if not messagebox.askyesno(tr("task_cancel_confirm_title"), tr("task_cancel_all_confirm_text")):
+            return
+        with self._task_records_lock:
+            task_ids = list(self._task_records["running"].keys())
+        for task_id in task_ids:
+            self._cancel_task_by_id(task_id, ask=False)
+
+    def _active_task_tab_key(self):
+        notebook = getattr(self, "_task_progress_notebook", None)
+        if not notebook:
+            return "running"
+        try:
+            index = notebook.index(notebook.select())
+        except Exception:
+            return "running"
+        return ("running", "completed", "failed")[max(0, min(index, 2))]
+
+    def _refresh_task_action_buttons(self, force=False):
+        frame = getattr(self, "_task_progress_action_frame", None)
+        if not frame:
+            return
+        active = self._active_task_tab_key()
+        snapshot = self._task_records_snapshot()
+        state = (
+            active,
+            bool(snapshot.get("completed", [])),
+            bool(snapshot.get("failed", [])),
+        )
+        try:
+            has_children = bool(frame.winfo_children())
+        except Exception:
+            has_children = False
+        if not force and has_children and state == getattr(self, "_task_progress_action_state", None):
+            return
+        self._task_progress_action_state = state
+        for child in list(frame.winfo_children()):
+            child.destroy()
+        tk.Button(frame, text=tr("task_progress_refresh"), command=self._refresh_task_progress_panel).pack(side=tk.RIGHT, padx=(6, 0))
+        if active == "running":
+            tk.Button(frame, text=tr("task_progress_cancel_all"), command=self.cancel_all_running_tasks).pack(side=tk.RIGHT, padx=6)
+            tk.Button(frame, text=tr("task_progress_resume_all"), command=self.resume_all_running_tasks).pack(side=tk.RIGHT, padx=6)
+            tk.Button(frame, text=tr("task_progress_pause_all"), command=self.pause_all_running_tasks).pack(side=tk.RIGHT, padx=6)
+        elif active in ("completed", "failed"):
+            records = snapshot.get(active, [])
+            state = tk.NORMAL if records else tk.DISABLED
+            tk.Button(frame, text=tr("task_progress_clear"), command=lambda bucket=active: self._clear_task_records(bucket), state=state).pack(side=tk.RIGHT, padx=6)
+        self._traverse_and_paint(frame)
+
+    def _create_task_scroll_body(self, parent):
+        parent.grid_rowconfigure(0, weight=1)
+        parent.grid_columnconfigure(0, weight=1)
+        canvas = tk.Canvas(parent, bg=self.current_bg, highlightthickness=0, bd=0)
+        body = tk.Frame(canvas, bg=self.current_bg)
+        y_scroll = ttk.Scrollbar(parent, orient=tk.VERTICAL, command=canvas.yview, style="Clean.Vertical.TScrollbar")
+        window_id = canvas.create_window((0, 0), window=body, anchor="nw")
+        canvas.configure(yscrollcommand=y_scroll.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+
+        def sync(_event=None):
+            try:
+                canvas.itemconfigure(window_id, width=max(1, canvas.winfo_width()))
+                bbox = canvas.bbox("all")
+                if bbox:
+                    canvas.configure(scrollregion=bbox)
+            except Exception:
+                pass
+
+        body.bind("<Configure>", sync)
+        canvas.bind("<Configure>", sync)
+        self._install_mousewheel_scroll(body, canvas)
+        return body
+
+    def _create_task_row(self, parent, record, bucket):
+        row = tk.Frame(parent, bg=self.current_field, bd=0, highlightthickness=1, highlightbackground=self.current_btn)
+        row.pack(fill=tk.X, padx=8, pady=6)
+        row.grid_columnconfigure(1, weight=1)
+        tk.Label(row, text=record.get("task") or record.get("kind") or "", anchor="w", font=("", 10, "bold"), bg=self.current_field, fg=self.current_fg).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+        tk.Label(row, text=record.get("status", ""), anchor="w", bg=self.current_field, fg=self.current_fg).grid(row=0, column=1, sticky="w", padx=8, pady=(8, 2))
+        tk.Label(row, text=record.get("time", ""), anchor="e", bg=self.current_field, fg=self.current_fg).grid(row=0, column=2, sticky="e", padx=8, pady=(8, 2))
+        tk.Label(row, text=record.get("detail", ""), anchor="w", justify="left", wraplength=520, bg=self.current_field, fg=self.current_fg).grid(row=1, column=0, columnspan=3, sticky="ew", padx=10, pady=(0, 6))
+        progress = ttk.Progressbar(row, orient=tk.HORIZONTAL, mode="determinate", style="LJM.Horizontal.TProgressbar")
+        progress.grid(row=2, column=0, columnspan=3, sticky="ew", padx=10, pady=(0, 8))
+        try:
+            progress.configure(value=float(record.get("progress", 0.0)))
+        except Exception:
+            pass
+        if bucket == "running":
+            command = lambda task_id=record.get("id"): self._cancel_task_by_id(task_id, ask=True)
+        else:
+            command = lambda task_id=record.get("id"), key=bucket: self._delete_task_record(key, task_id)
+        tk.Button(row, text=tr("task_delete_item"), command=command, width=3).grid(row=0, column=3, rowspan=3, sticky="ns", padx=(0, 8), pady=8)
+
+    def _populate_task_body(self, body, records, bucket):
+        for child in list(body.winfo_children()):
+            child.destroy()
+        if not records:
+            tk.Label(body, text=tr("task_progress_empty"), anchor="w", justify="left").pack(fill=tk.X, padx=12, pady=12)
+            return
+        for record in records:
+            self._create_task_row(body, record, bucket)
+        self._traverse_and_paint(body)
+
+    def _refresh_task_progress_panel(self):
+        window = getattr(self, "_task_progress_window", None)
+        if not window:
+            return
+        try:
+            if not window.winfo_exists():
+                self._task_progress_window = None
+                return
+        except Exception:
+            self._task_progress_window = None
+            return
+        keep_front = self._task_progress_panel_has_focus(window)
+        bodies = getattr(self, "_task_progress_bodies", {})
+        snapshot = self._task_records_snapshot()
+        for key in ("running", "completed", "failed"):
+            body = bodies.get(key)
+            if body:
+                self._populate_task_body(body, snapshot.get(key, []), key)
+        self._refresh_task_action_buttons()
+        if keep_front:
+            try:
+                self.root.after(80, lambda win=window: self._restore_task_progress_panel_focus(win))
+            except Exception:
+                self._restore_task_progress_panel_focus(window)
+
+    def open_task_progress_panel(self):
+        existing = getattr(self, "_task_progress_window", None)
+        try:
+            if existing and existing.winfo_exists():
+                existing.deiconify()
+                existing.lift()
+                self._refresh_task_progress_panel()
+                return
+        except Exception:
+            pass
+        top = tk.Toplevel(self.root)
+        self._task_progress_window = top
+        self._task_progress_action_state = None
+        self._task_progress_refresh_job = None
+        self._configure_popup(top, tr("task_progress_title"), 820, 560, min_w=660, min_h=430, max_w_ratio=0.9, max_h_ratio=0.82, resizable=True, transient=False)
+        notebook = ttk.Notebook(top)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=12, pady=(12, 6))
+        notebook.bind("<<NotebookTabChanged>>", lambda _event: self._refresh_task_action_buttons(force=True))
+        self._task_progress_notebook = notebook
+        self._task_progress_bodies = {}
+        for key, title_key in (
+            ("running", "task_progress_running"),
+            ("completed", "task_progress_completed"),
+            ("failed", "task_progress_failed"),
+        ):
+            frame = tk.Frame(notebook, bg=self.current_bg)
+            notebook.add(frame, text=tr(title_key))
+            self._task_progress_bodies[key] = self._create_task_scroll_body(frame)
+        self._task_progress_action_frame = tk.Frame(top, bg=self.current_bg)
+        self._task_progress_action_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
+        self._traverse_and_paint(top)
+        self._refresh_task_progress_panel()
 
     def _on_root_focus_out(self, _event=None):
         self._window_has_focus = False
@@ -10670,12 +11448,18 @@ class JavaManagerApp:
             pass
         toolbar = tk.Frame(self.root)
         toolbar.pack(side=tk.TOP, fill=tk.X)
-        tk.Label(toolbar, text=tr("toolbar_search_label")).pack(side=tk.LEFT, padx=(10, 4), pady=5)
+        task_button_frame = tk.Frame(toolbar)
+        task_button_frame.pack(side=tk.RIGHT, padx=(4, 10), pady=5)
+        self.task_progress_button = tk.Button(task_button_frame, text="↓", command=self.open_task_progress_panel, width=4)
+        self.task_progress_button.pack()
+        self._task_badge_label = tk.Label(task_button_frame, text="", bg="#D40000", bd=0, padx=6, pady=1, font=("", 10, "bold"))
+        self._update_task_badge()
         self.search_var = tk.StringVar()
+        tk.Button(toolbar, text=tr("toolbar_clear_filter"), command=lambda: self.search_var.set(""), padx=8, pady=4).pack(side=tk.RIGHT, padx=4, pady=5)
         search_entry = tk.Entry(toolbar, textvariable=self.search_var, width=34)
-        search_entry.pack(side=tk.LEFT, padx=(0, 4), pady=5)
+        search_entry.pack(side=tk.RIGHT, padx=(0, 4), pady=5)
+        tk.Label(toolbar, text=tr("toolbar_search_label")).pack(side=tk.RIGHT, padx=(10, 4), pady=5)
         self.search_var.trace_add("write", lambda *_args: self.apply_java_filter())
-        tk.Button(toolbar, text=tr("toolbar_clear_filter"), command=lambda: self.search_var.set(""), padx=8, pady=4).pack(side=tk.LEFT, padx=4, pady=5)
 
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -10827,6 +11611,7 @@ class JavaManagerApp:
         select_frame.pack(fill=tk.X, padx=10, pady=(0, 4))
         tk.Button(select_frame, text=tr("select_all_java"), command=self.select_all_registered_java, width=12).pack(side=tk.LEFT, padx=(0, 6))
         tk.Button(select_frame, text=tr("select_no_java"), command=self.clear_registered_java_selection, width=12).pack(side=tk.LEFT)
+        tk.Button(select_frame, text=tr("choose_system_default_java"), command=self.open_default_java_panel).pack(side=tk.RIGHT)
         list_frame = tk.Frame(parent)
         list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         self.tree_reg = ttk.Treeview(
@@ -10882,7 +11667,6 @@ class JavaManagerApp:
         self.repair_mode_status_var = tk.StringVar()
         self.repair_action_text_var = tk.StringVar()
         tk.Label(action_frame, textvariable=self.repair_mode_status_var, justify="left", anchor="w").pack(fill=tk.X, padx=10, pady=(8, 2))
-        tk.Button(action_frame, text=self.env_button_text(), command=self.set_env_var).pack(side=tk.LEFT, padx=10, pady=5)
         tk.Button(action_frame, text=self.registry_fix_button_text(), command=self.fix_registry_structure).pack(side=tk.LEFT, padx=10, pady=5)
         tk.Button(action_frame, text=tr("repair_action", mode=self._repair_mode_label()), command=self.cloud_repair_java).pack(side=tk.RIGHT, padx=10, pady=5)
 
@@ -10920,7 +11704,6 @@ class JavaManagerApp:
         right_actions = tk.Frame(action_frame)
         right_actions.pack(side=tk.RIGHT, padx=10, pady=5)
 
-        tk.Button(left_actions, text=self.env_button_text(), command=self.set_env_var).pack(side=tk.LEFT, padx=(0, 8))
         tk.Button(left_actions, text=self.registry_fix_button_text(), command=self.fix_registry_structure).pack(side=tk.LEFT, padx=(0, 8))
         tk.Button(left_actions, text=tr("rollback_latest_backup"), command=self.rollback_latest_backup).pack(side=tk.LEFT)
 
@@ -10930,15 +11713,21 @@ class JavaManagerApp:
     def setup_update_tab(self):
         parent = getattr(self, "tab_update_body", self.tab_update)
         self._create_tab_motion_header(self.tab_update, parent, "tab_update")
+        select_frame = tk.Frame(parent)
+        select_frame.pack(fill=tk.X, padx=10, pady=(6, 0))
+        tk.Button(select_frame, text=tr("select_all_java"), command=lambda: self.select_all_checked_tree("tree_up", "update_items", "update_checked_items"), width=12).pack(side=tk.LEFT, padx=(0, 6))
+        tk.Button(select_frame, text=tr("select_no_java"), command=lambda: self.clear_checked_tree_selection("tree_up", "update_items", "update_checked_items"), width=12).pack(side=tk.LEFT)
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        self.tree_up = ttk.Treeview(table_frame, columns=("vendor", "path", "cur_ver", "new_ver", "has_update"), show="headings")
+        self.tree_up = ttk.Treeview(table_frame, columns=("selected", "vendor", "path", "cur_ver", "new_ver", "has_update"), show="headings", selectmode="none")
+        self.tree_up.heading("selected", text=tr("col_select"))
         self.tree_up.heading("vendor", text=tr("col_vendor"))
         self.tree_up.heading("path", text=tr("col_path"))
         self.tree_up.heading("cur_ver", text=tr("col_current_version"))
         self.tree_up.heading("new_ver", text=tr("col_latest_version"))
         self.tree_up.heading("has_update", text=tr("col_has_update"))
+        self.tree_up.column("selected", width=72, minwidth=64, anchor=tk.CENTER, stretch=False)
         self.tree_up.column("vendor", width=150, minwidth=135, anchor=tk.CENTER, stretch=False)
         self.tree_up.column("path", width=360, minwidth=280, stretch=True)
         self.tree_up.column("cur_ver", width=170, minwidth=150, anchor=tk.CENTER, stretch=False)
@@ -10953,6 +11742,7 @@ class JavaManagerApp:
         x_scroll.grid(row=1, column=0, sticky="ew")
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
+        self.tree_up.bind("<ButtonRelease-1>", lambda event: self.on_checked_tree_click(event, "tree_up", "update_items", "update_checked_items"))
 
         action_frame = tk.Frame(parent)
         action_frame.pack(fill=tk.X, padx=10, pady=5)
@@ -11148,14 +11938,20 @@ class JavaManagerApp:
     def setup_move_tab(self):
         parent = getattr(self, "tab_move_body", self.tab_move)
         self._create_tab_motion_header(self.tab_move, parent, "tab_move")
+        select_frame = tk.Frame(parent)
+        select_frame.pack(fill=tk.X, padx=10, pady=(6, 0))
+        tk.Button(select_frame, text=tr("select_all_java"), command=lambda: self.select_all_checked_tree("tree_move", "move_items", "move_checked_items"), width=12).pack(side=tk.LEFT, padx=(0, 6))
+        tk.Button(select_frame, text=tr("select_no_java"), command=lambda: self.clear_checked_tree_selection("tree_move", "move_items", "move_checked_items"), width=12).pack(side=tk.LEFT)
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
 
-        self.tree_move = ttk.Treeview(table_frame, columns=("vendor", "path", "version", "status"), show="headings")
+        self.tree_move = ttk.Treeview(table_frame, columns=("selected", "vendor", "path", "version", "status"), show="headings", selectmode="none")
+        self.tree_move.heading("selected", text=tr("col_select"))
         self.tree_move.heading("vendor", text=tr("col_vendor"))
         self.tree_move.heading("path", text=tr("col_path"))
         self.tree_move.heading("version", text=tr("col_current_version"))
         self.tree_move.heading("status", text=tr("col_health"))
+        self.tree_move.column("selected", width=72, minwidth=64, anchor=tk.CENTER, stretch=False)
         self.tree_move.column("vendor", width=150, minwidth=130, anchor=tk.CENTER, stretch=False)
         self.tree_move.column("path", width=420, minwidth=280, stretch=True)
         self.tree_move.column("version", width=170, minwidth=140, anchor=tk.CENTER, stretch=False)
@@ -11168,7 +11964,7 @@ class JavaManagerApp:
         move_scroll.grid(row=1, column=0, sticky="ew")
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
-        self.tree_move.bind("<<TreeviewSelect>>", lambda _event: self.refresh_move_target_preview())
+        self.tree_move.bind("<ButtonRelease-1>", lambda event: self.on_checked_tree_click(event, "tree_move", "move_items", "move_checked_items", after=self.refresh_move_target_preview))
 
         action = ttk.LabelFrame(parent, text=tr("move_java_section"))
         action.pack(fill=tk.X, padx=10, pady=(5, 10))
@@ -11197,14 +11993,20 @@ class JavaManagerApp:
     def setup_delete_tab(self):
         parent = getattr(self, "tab_delete_body", self.tab_delete)
         self._create_tab_motion_header(self.tab_delete, parent, "tab_delete")
+        select_frame = tk.Frame(parent)
+        select_frame.pack(fill=tk.X, padx=10, pady=(6, 0))
+        tk.Button(select_frame, text=tr("select_all_java"), command=lambda: self.select_all_checked_tree("tree_delete", "delete_items", "delete_checked_items"), width=12).pack(side=tk.LEFT, padx=(0, 6))
+        tk.Button(select_frame, text=tr("select_no_java"), command=lambda: self.clear_checked_tree_selection("tree_delete", "delete_items", "delete_checked_items"), width=12).pack(side=tk.LEFT)
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
 
-        self.tree_delete = ttk.Treeview(table_frame, columns=("vendor", "path", "version", "status"), show="headings")
+        self.tree_delete = ttk.Treeview(table_frame, columns=("selected", "vendor", "path", "version", "status"), show="headings", selectmode="none")
+        self.tree_delete.heading("selected", text=tr("col_select"))
         self.tree_delete.heading("vendor", text=tr("col_vendor"))
         self.tree_delete.heading("path", text=tr("col_path"))
         self.tree_delete.heading("version", text=tr("col_current_version"))
         self.tree_delete.heading("status", text=tr("col_health"))
+        self.tree_delete.column("selected", width=72, minwidth=64, anchor=tk.CENTER, stretch=False)
         self.tree_delete.column("vendor", width=150, minwidth=130, anchor=tk.CENTER, stretch=False)
         self.tree_delete.column("path", width=420, minwidth=280, stretch=True)
         self.tree_delete.column("version", width=170, minwidth=140, anchor=tk.CENTER, stretch=False)
@@ -11217,6 +12019,7 @@ class JavaManagerApp:
         x_scroll.grid(row=1, column=0, sticky="ew")
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
+        self.tree_delete.bind("<ButtonRelease-1>", lambda event: self.on_checked_tree_click(event, "tree_delete", "delete_items", "delete_checked_items"))
 
         action = ttk.LabelFrame(parent, text=tr("delete_java_section"))
         action.pack(fill=tk.X, padx=10, pady=(5, 10))
@@ -11230,20 +12033,27 @@ class JavaManagerApp:
     def setup_backup_tab(self):
         parent = getattr(self, "tab_backup_body", self.tab_backup)
         self._create_tab_motion_header(self.tab_backup, parent, "tab_backup")
+        select_frame = tk.Frame(parent)
+        select_frame.pack(fill=tk.X, padx=10, pady=(6, 0))
+        tk.Button(select_frame, text=tr("select_all_java"), command=lambda: self.select_all_checked_tree("tree_backup", "backup_items", "backup_checked_items"), width=12).pack(side=tk.LEFT, padx=(0, 6))
+        tk.Button(select_frame, text=tr("select_no_java"), command=lambda: self.clear_checked_tree_selection("tree_backup", "backup_items", "backup_checked_items"), width=12).pack(side=tk.LEFT)
         table_frame = tk.Frame(parent)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 5))
 
         self.tree_backup = ttk.Treeview(
             table_frame,
-            columns=("time", "operation", "target", "size", "entries", "names"),
+            columns=("selected", "time", "operation", "target", "size", "entries", "names"),
             show="headings",
+            selectmode="none",
         )
+        self.tree_backup.heading("selected", text=tr("col_select"))
         self.tree_backup.heading("time", text=tr("backup_col_time"))
         self.tree_backup.heading("operation", text=tr("backup_col_operation"))
         self.tree_backup.heading("target", text=tr("backup_col_target"))
         self.tree_backup.heading("size", text=tr("backup_col_size"))
         self.tree_backup.heading("entries", text=tr("backup_col_entries"))
         self.tree_backup.heading("names", text=tr("backup_col_names"))
+        self.tree_backup.column("selected", width=72, minwidth=64, anchor=tk.CENTER, stretch=False)
         self.tree_backup.column("time", width=150, minwidth=135, anchor=tk.CENTER, stretch=False)
         self.tree_backup.column("operation", width=90, minwidth=80, anchor=tk.CENTER, stretch=False)
         self.tree_backup.column("target", width=360, minwidth=260, stretch=True)
@@ -11258,6 +12068,7 @@ class JavaManagerApp:
         x_scroll.grid(row=1, column=0, sticky="ew")
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
+        self.tree_backup.bind("<ButtonRelease-1>", lambda event: self.on_checked_tree_click(event, "tree_backup", "backup_items", "backup_checked_items"))
 
         action = ttk.LabelFrame(parent, text=tr("tab_backup"))
         action.pack(fill=tk.X, padx=10, pady=(5, 10))
@@ -11274,6 +12085,9 @@ class JavaManagerApp:
     def selected_backup_record(self):
         if not hasattr(self, "tree_backup"):
             return None
+        checked = self.checked_tree_items("tree_backup", "backup_items", "backup_checked_items")
+        if checked:
+            return checked[0]
         selected = self.tree_backup.selection()
         if not selected:
             return None
@@ -11289,10 +12103,13 @@ class JavaManagerApp:
         if self.backup_status_var is not None:
             self.backup_status_var.set(tr("backup_empty") if not records else f"{len(records)} {tr('tab_backup')}")
         for record in records:
+            key = self.checked_row_key(record.get("backup_dir"))
+            checked = key in self.backup_checked_items
             item_id = self.tree_backup.insert(
                 "",
                 tk.END,
                 values=(
+                    self.registration_checked_text(checked),
                     record["created_text"],
                     record["operation"],
                     record["target_path"],
@@ -11301,6 +12118,7 @@ class JavaManagerApp:
                     ", ".join(record["registry_names"]) or "-",
                 ),
             )
+            record["key"] = key
             self.backup_items[item_id] = record
 
     def restore_selected_backup(self):
@@ -11319,17 +12137,22 @@ class JavaManagerApp:
         self.refresh_backup_tab()
 
     def delete_selected_backup(self):
-        record = self.selected_backup_record()
-        if not record:
+        records = self.checked_tree_items("tree_backup", "backup_items", "backup_checked_items")
+        if not records:
+            record = self.selected_backup_record()
+            records = [record] if record else []
+        if not records:
             return messagebox.showwarning(tr("backup_no_selection_title"), tr("backup_no_selection_text"))
-        backup_dir = record.get("backup_dir")
+        backup_dir = records[0].get("backup_dir") if len(records) == 1 else f"{len(records)} backups"
         if not messagebox.askyesno(
             tr("backup_delete_confirm_title"),
             tr("backup_delete_confirm_text", backup_dir=backup_dir),
         ):
             return
-        delete_java_backup(backup_dir)
+        for record in records:
+            delete_java_backup(record.get("backup_dir"))
         messagebox.showinfo(tr("backup_delete_done"), backup_dir)
+        self.clear_checked_tree_selection("tree_backup", "backup_items", "backup_checked_items")
         self.refresh_backup_tab()
 
     def browse_download_parent(self):
@@ -11380,6 +12203,9 @@ class JavaManagerApp:
     def selected_move_runtime(self):
         if not hasattr(self, "tree_move"):
             return None
+        checked = self.checked_tree_items("tree_move", "move_items", "move_checked_items")
+        if checked:
+            return checked[0]
         selected = self.tree_move.selection()
         if not selected:
             return None
@@ -11388,6 +12214,9 @@ class JavaManagerApp:
     def selected_delete_runtime(self):
         if not hasattr(self, "tree_delete"):
             return None
+        checked = self.checked_tree_items("tree_delete", "delete_items", "delete_checked_items")
+        if checked:
+            return checked[0]
         selected = self.tree_delete.selection()
         if not selected:
             return None
@@ -11398,6 +12227,78 @@ class JavaManagerApp:
 
     def registration_checked_text(self, checked):
         return "☑" if checked else "☐"
+
+    def checked_row_key(self, *parts):
+        return "\n".join(normalize_text(part) for part in parts if normalize_text(part))
+
+    def set_checked_tree_item(self, tree_attr, items_attr, checked_attr, item_id, checked):
+        tree = getattr(self, tree_attr, None)
+        items = getattr(self, items_attr, {})
+        checked_set = getattr(self, checked_attr, set())
+        if not tree or item_id not in items:
+            return
+        key = items[item_id]["key"]
+        if checked:
+            checked_set.add(key)
+        else:
+            checked_set.discard(key)
+        setattr(self, checked_attr, checked_set)
+        try:
+            tree.set(item_id, "selected", self.registration_checked_text(checked))
+        except Exception:
+            pass
+
+    def toggle_checked_tree_item(self, tree_attr, items_attr, checked_attr, item_id):
+        items = getattr(self, items_attr, {})
+        if item_id not in items:
+            return
+        checked_set = getattr(self, checked_attr, set())
+        self.set_checked_tree_item(tree_attr, items_attr, checked_attr, item_id, items[item_id]["key"] not in checked_set)
+
+    def on_checked_tree_click(self, event, tree_attr, items_attr, checked_attr, after=None):
+        tree = getattr(self, tree_attr, None)
+        if not tree:
+            return
+        try:
+            item_id = tree.identify_row(event.y)
+            region = tree.identify("region", event.x, event.y)
+        except Exception:
+            return
+        if item_id and region in ("cell", "tree"):
+            self.toggle_checked_tree_item(tree_attr, items_attr, checked_attr, item_id)
+            if after:
+                after()
+            return "break"
+
+    def select_all_checked_tree(self, tree_attr, items_attr, checked_attr):
+        tree = getattr(self, tree_attr, None)
+        if not tree:
+            return
+        for item_id in tree.get_children():
+            self.set_checked_tree_item(tree_attr, items_attr, checked_attr, item_id, True)
+
+    def clear_checked_tree_selection(self, tree_attr, items_attr, checked_attr):
+        tree = getattr(self, tree_attr, None)
+        checked_set = getattr(self, checked_attr, set())
+        checked_set.clear()
+        setattr(self, checked_attr, checked_set)
+        if not tree:
+            return
+        for item_id in tree.get_children():
+            self.set_checked_tree_item(tree_attr, items_attr, checked_attr, item_id, False)
+
+    def checked_tree_items(self, tree_attr, items_attr, checked_attr):
+        tree = getattr(self, tree_attr, None)
+        if not tree:
+            return []
+        items = getattr(self, items_attr, {})
+        checked_set = getattr(self, checked_attr, set())
+        result = []
+        for item_id in tree.get_children():
+            meta = items.get(item_id)
+            if meta and meta.get("key") in checked_set:
+                result.append(meta)
+        return result
 
     def set_registration_item_checked(self, item_id, checked):
         if not hasattr(self, "tree_reg") or item_id not in self.reg_items:
@@ -11453,6 +12354,129 @@ class JavaManagerApp:
                 result.append(meta)
         return result
 
+    def _default_java_status_text(self):
+        return describe_current_default_java_home().get("text") or tr("default_java_current_missing")
+
+    def _default_java_rows(self):
+        rows = []
+        seen = set()
+        for version_name, java_home in JavaRegistryAdapter.get_all():
+            home_key = normalize_path(java_home)
+            if home_key in seen:
+                continue
+            seen.add(home_key)
+            runtime = read_java_runtime_info(java_home)
+            report = get_java_health_report(java_home)
+            rows.append(
+                {
+                    "registry_name": version_name,
+                    "java_home": java_home,
+                    "runtime": runtime,
+                    "report": report,
+                    "status": report.get("status", ""),
+                }
+            )
+        return rows
+
+    def open_default_java_panel(self):
+        top = tk.Toplevel(self.root)
+        self._configure_popup(top, tr("default_java_title"), 820, 560, min_w=650, min_h=430, max_w_ratio=0.9, max_h_ratio=0.84, resizable=True, transient=False)
+        status_var = tk.StringVar(value=self._default_java_status_text())
+        tk.Label(top, textvariable=status_var, justify="left", anchor="w", wraplength=760).pack(fill=tk.X, padx=14, pady=(14, 8))
+
+        list_frame = tk.Frame(top)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=(0, 10))
+        tree = ttk.Treeview(list_frame, columns=("name", "major", "vendor", "path", "status"), show="headings")
+        tree.heading("name", text=tr("col_registry_name"))
+        tree.heading("major", text=tr("col_major"))
+        tree.heading("vendor", text=tr("col_vendor"))
+        tree.heading("path", text=tr("col_path"))
+        tree.heading("status", text=tr("col_health"))
+        tree.column("name", width=190, anchor=tk.W, stretch=False)
+        tree.column("major", width=80, anchor=tk.CENTER, stretch=False)
+        tree.column("vendor", width=150, anchor=tk.CENTER, stretch=False)
+        tree.column("path", width=360, anchor=tk.W, stretch=True)
+        tree.column("status", width=130, anchor=tk.CENTER, stretch=False)
+        y_scroll = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=tree.yview)
+        x_scroll = ttk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=tree.xview)
+        tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+        tree.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+        list_frame.grid_rowconfigure(0, weight=1)
+        list_frame.grid_columnconfigure(0, weight=1)
+
+        default_info = describe_current_default_java_home()
+        default_home = default_info.get("java_home", "")
+        item_map = {}
+        selected_default = ""
+        for row in self._default_java_rows():
+            runtime = row["runtime"]
+            item_id = tree.insert(
+                "",
+                tk.END,
+                values=(
+                    row["registry_name"],
+                    runtime.get("major", ""),
+                    runtime.get("vendor", ""),
+                    row["java_home"],
+                    row["status"],
+                ),
+            )
+            item_map[item_id] = row
+            if default_home and java_home_matches_registered_path(default_home, row["java_home"]):
+                selected_default = item_id
+        if selected_default:
+            tree.selection_set(selected_default)
+            tree.see(selected_default)
+
+        button_frame = tk.Frame(top)
+        button_frame.pack(fill=tk.X, padx=14, pady=(0, 14))
+
+        def refresh_rows():
+            status_var.set(self._default_java_status_text())
+            item_map.clear()
+            for item_id in tree.get_children():
+                tree.delete(item_id)
+            default_home_now = describe_current_default_java_home().get("java_home", "")
+            selected = ""
+            for row in self._default_java_rows():
+                runtime = row["runtime"]
+                item_id = tree.insert(
+                    "",
+                    tk.END,
+                    values=(row["registry_name"], runtime.get("major", ""), runtime.get("vendor", ""), row["java_home"], row["status"]),
+                )
+                item_map[item_id] = row
+                if default_home_now and java_home_matches_registered_path(default_home_now, row["java_home"]):
+                    selected = item_id
+            if selected:
+                tree.selection_set(selected)
+                tree.see(selected)
+            self.refresh_all_data()
+
+        def apply_default_java():
+            selected = tree.selection()
+            if not selected:
+                return messagebox.showwarning(tr("default_java_no_selection_title"), tr("default_java_no_selection_text"))
+            row = item_map.get(selected[0])
+            if not row:
+                return messagebox.showwarning(tr("default_java_no_selection_title"), tr("default_java_no_selection_text"))
+            path = row["java_home"]
+            try:
+                written = configure_registered_java_environment(path)
+                status_var.set(self._default_java_status_text())
+                if IS_WIN:
+                    messagebox.showinfo(tr("default_java_done_title"), tr("default_java_done_win", path=path))
+                else:
+                    messagebox.showinfo(tr("default_java_done_title"), tr("default_java_done_unix", path=path, files="\n".join(written)))
+            except Exception as exc:
+                messagebox.showerror(tr("default_java_failed_title"), str(exc))
+
+        tk.Button(button_frame, text=tr("default_java_apply"), command=apply_default_java, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 6))
+        tk.Button(button_frame, text=tr("default_java_refresh"), command=refresh_rows, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(6, 0))
+        self._traverse_and_paint(top)
+
     def refresh_move_target_preview(self):
         if not self.move_preview_var:
             return
@@ -11490,77 +12514,53 @@ class JavaManagerApp:
     def run_download_java(self, vendor, major, parent):
         if not self._guard_java_transfer_start():
             return
-        top = tk.Toplevel(self.root)
-        self._configure_popup(top, tr("transfer_title_download"), 540, 220, min_w=440, min_h=190, max_w_ratio=0.76, max_h_ratio=0.42, resizable=False, transient=False)
         task_label = tr("tray_task_download")
-        task_id = self._register_java_transfer("download", task_label, top)
+        control = self._create_transfer_control()
+        cancel_event = control["cancel_event"]
+        pause_event = control["pause_event"]
+        task_id = self._register_java_transfer("download", task_label, cancel_event=cancel_event, pause_event=pause_event)
         self._begin_active_transfer(task_label)
 
-        cancel_event = threading.Event()
         finished_state = {"done": False}
-        progress = ttk.Progressbar(top, orient=tk.HORIZONTAL, mode="determinate")
-        progress.pack(fill=tk.X, padx=24, pady=(22, 12))
-        status_label = tk.Label(top, text=tr("connecting_vendor"), justify="center", wraplength=470)
-        status_label.pack(fill=tk.X, padx=16, pady=(0, 10))
-        button_frame = tk.Frame(top, bg=self.current_bg)
-        button_frame.pack(fill=tk.X, padx=20, pady=(0, 16))
-        cancel_button = tk.Button(button_frame, text=tr("cancel_download"), width=14)
-        cancel_button.pack(side=tk.RIGHT)
-        minimize_button = tk.Button(button_frame, text=tr("minimize_task"), width=12, command=top.iconify)
-        minimize_button.pack(side=tk.RIGHT, padx=(0, 8))
-        self._traverse_and_paint(top)
 
-        def mark_finished():
+        def mark_finished(status="completed", detail=""):
             if finished_state["done"]:
                 return
             finished_state["done"] = True
-            self._clear_java_transfer(task_id)
+            self._clear_java_transfer(task_id, status=status, detail=detail)
             self._end_active_transfer()
 
-        def request_cancel():
-            if finished_state["done"] or cancel_event.is_set():
-                return
-            cancel_event.set()
-            cancel_button.config(state=tk.DISABLED, text=tr("canceling"))
-            status_label.config(text=tr("cancel_requested"))
-
-        cancel_button.config(command=request_cancel)
-        top.protocol("WM_DELETE_WINDOW", request_cancel)
-
         def update_progress(percent, downloaded, total):
-            self.root.after(0, lambda: progress.config(value=percent))
+            self._wait_if_task_paused(task_id)
             if total > 0:
                 text = tr("download_progress_total", downloaded=downloaded / 1024 / 1024, total=total / 1024 / 1024)
             else:
                 text = tr("download_progress", downloaded=downloaded / 1024 / 1024)
-            self.root.after(0, lambda: status_label.config(text=text))
+            self._update_task_record(task_id, progress=percent, detail=text, status=tr("task_status_running"))
 
         def update_status(message):
-            self.root.after(0, lambda: status_label.config(text=message))
+            self._wait_if_task_paused(task_id)
+            self._update_task_record(task_id, detail=message, status=tr("task_status_running"))
 
         def task():
             try:
                 NetworkEngine.apply_proxy_settings()
                 result = download_and_install_java(vendor, major, parent, update_progress, update_status, cancel_event=cancel_event)
-                mark_finished()
-                self.root.after(0, top.destroy)
+                done_text = tr("download_done_text", path=result["java_home"], version=result["latest_version"], source=result.get("source") or "")
+                mark_finished("completed", done_text)
                 self.root.after(
                     0,
-                    lambda: messagebox.showinfo(
-                        tr("download_done"),
-                        tr("download_done_text", path=result["java_home"], version=result["latest_version"], source=result.get("source") or ""),
-                    ),
+                    lambda title=tr("download_done"), text=done_text: self._show_task_message("showinfo", title, text),
                 )
                 self.root.after(0, self.refresh_all_data)
             except OperationCancelled:
-                mark_finished()
-                self.root.after(0, top.destroy)
-                self.root.after(0, lambda: messagebox.showinfo(tr("task_cancelled_title"), tr("task_cancelled_text")))
+                mark_finished("cancelled")
+                self.root.after(0, lambda: self._show_task_message("showinfo", tr("task_cancelled_title"), tr("task_cancelled_text")))
             except Exception as exc:
                 logging.error("Java 下载失败: %s\n%s", exc, traceback.format_exc())
-                mark_finished()
-                self.root.after(0, top.destroy)
-                self.root.after(0, lambda: messagebox.showerror(tr("task_interrupted_title"), tr("task_interrupted_text", error=exc, rollback="")))
+                mark_finished("failed", str(exc))
+                error_text = tr("task_interrupted_text", error=exc, rollback="")
+                self.root.after(0, lambda text=error_text: self._show_task_message("showerror", tr("task_interrupted_title"), text))
             finally:
                 mark_finished()
 
@@ -11640,23 +12640,53 @@ class JavaManagerApp:
         threading.Thread(target=task, daemon=True).start()
 
     def start_delete_java(self, delete_files=False):
-        meta = self.selected_delete_runtime()
-        if not meta:
+        metas = self.checked_tree_items("tree_delete", "delete_items", "delete_checked_items")
+        if not metas:
+            meta = self.selected_delete_runtime()
+            metas = [meta] if meta else []
+        if not metas:
             return messagebox.showwarning(tr("delete_no_selection_title"), tr("delete_no_selection_text"))
-        java_home = meta.get("java_home")
-        if delete_files:
-            try:
-                validate_java_delete_target(java_home)
-            except Exception as exc:
-                return messagebox.showerror(tr("task_interrupted_title"), str(exc))
-            if not self._confirm_process_usage(java_home, tr("delete_files")):
-                return
-            confirm_text = tr("delete_confirm_files", path=java_home)
+        if len(metas) == 1:
+            java_home = metas[0].get("java_home")
+            if delete_files:
+                try:
+                    validate_java_delete_target(java_home)
+                except Exception as exc:
+                    return messagebox.showerror(tr("task_interrupted_title"), str(exc))
+                if not self._confirm_process_usage(java_home, tr("delete_files")):
+                    return
+                confirm_text = tr("delete_confirm_files", path=java_home)
+            else:
+                confirm_text = tr("delete_confirm_unregister", path=java_home)
         else:
-            confirm_text = tr("delete_confirm_unregister", path=java_home)
+            confirm_text = f"即将处理 {len(metas)} 个 Java 环境。\n\n删除文件: {'是' if delete_files else '否'}\n\n是否继续？"
         if not messagebox.askyesno(tr("delete_java_section"), confirm_text):
             return
-        self.run_delete_java(meta, delete_files=delete_files)
+        if len(metas) == 1:
+            self.run_delete_java(metas[0], delete_files=delete_files)
+        else:
+            self.run_delete_java_batch(metas, delete_files=delete_files)
+
+    def run_delete_java_batch(self, metas, delete_files=False):
+        self._begin_active_transfer(tr("tray_task_delete"))
+        processed = []
+        try:
+            for meta in metas:
+                java_home = meta.get("java_home")
+                if delete_files:
+                    validate_java_delete_target(java_home)
+                    if not self._confirm_process_usage(java_home, tr("delete_files")):
+                        continue
+                result = delete_java_home(java_home, delete_files=delete_files, preferred_name=meta.get("registry_name"))
+                processed.append(result["java_home"])
+            messagebox.showinfo(tr("delete_done"), "\n".join(processed) if processed else "-")
+            self.clear_checked_tree_selection("tree_delete", "delete_items", "delete_checked_items")
+            self.refresh_all_data()
+        except Exception as exc:
+            logging.error("批量 Java 删除/注销失败: %s\n%s", exc, traceback.format_exc())
+            messagebox.showerror(tr("task_interrupted_title"), str(exc))
+        finally:
+            self._end_active_transfer()
 
     def run_delete_java(self, meta, delete_files=False):
         java_home = meta.get("java_home")
@@ -12592,6 +13622,9 @@ class JavaManagerApp:
             return
         query = self._java_filter_query()
         previous_checked = set(getattr(self, "reg_checked_items", set()))
+        previous_update_checked = set(getattr(self, "update_checked_items", set()))
+        previous_move_checked = set(getattr(self, "move_checked_items", set()))
+        previous_delete_checked = set(getattr(self, "delete_checked_items", set()))
         for item_id in self.tree_reg.get_children():
             self.tree_reg.delete(item_id)
         for item_id in self.tree_fix.get_children():
@@ -12608,8 +13641,11 @@ class JavaManagerApp:
         self.reg_checked_items.clear()
         self.fix_items.clear()
         self.update_items.clear()
+        self.update_checked_items.clear()
         self.move_items.clear()
+        self.move_checked_items.clear()
         self.delete_items.clear()
+        self.delete_checked_items.clear()
 
         for row in self._java_rows:
             if not self._row_matches_java_filter(row, query):
@@ -12646,34 +13682,49 @@ class JavaManagerApp:
                 "report": report,
             }
             if report["usable"]:
+                update_key = self.checked_row_key(version_name, java_home)
+                update_checked = update_key in previous_update_checked
+                if update_checked:
+                    self.update_checked_items.add(update_key)
                 item_id = self.tree_up.insert(
                     "",
                     tk.END,
-                    values=(runtime["vendor"], java_home, version_display_text(runtime["version"]), "等待自动检测...", ""),
+                    values=(self.registration_checked_text(update_checked), runtime["vendor"], java_home, version_display_text(runtime["version"]), "等待自动检测...", ""),
                 )
                 runtime_info = dict(runtime)
+                runtime_info["key"] = update_key
                 runtime_info["registry_name"] = version_name
                 runtime_info["health_status"] = status
                 self.update_items[item_id] = runtime_info
             if hasattr(self, "tree_move"):
+                move_key = self.checked_row_key(version_name, java_home)
+                move_checked = move_key in previous_move_checked
+                if move_checked:
+                    self.move_checked_items.add(move_key)
                 move_item_id = self.tree_move.insert(
                     "",
                     tk.END,
-                    values=(runtime["vendor"], java_home, version_display_text(runtime["version"]), status),
+                    values=(self.registration_checked_text(move_checked), runtime["vendor"], java_home, version_display_text(runtime["version"]), status),
                 )
                 self.move_items[move_item_id] = {
+                    "key": move_key,
                     "registry_name": version_name,
                     "java_home": java_home,
                     "runtime": runtime,
                     "report": report,
                 }
             if hasattr(self, "tree_delete"):
+                delete_key = self.checked_row_key(version_name, java_home)
+                delete_checked = delete_key in previous_delete_checked
+                if delete_checked:
+                    self.delete_checked_items.add(delete_key)
                 delete_item_id = self.tree_delete.insert(
                     "",
                     tk.END,
-                    values=(runtime["vendor"], java_home, version_display_text(runtime["version"]), status),
+                    values=(self.registration_checked_text(delete_checked), runtime["vendor"], java_home, version_display_text(runtime["version"]), status),
                 )
                 self.delete_items[delete_item_id] = {
+                    "key": delete_key,
                     "registry_name": version_name,
                     "java_home": java_home,
                     "runtime": runtime,
@@ -12732,7 +13783,7 @@ class JavaManagerApp:
             if java_home:
                 unregister_java_home(java_home, preferred_name=version_name)
             else:
-                JavaRegistryAdapter.unregister(version_name)
+                unregister_java_registry_name(version_name)
         self.refresh_all_data()
 
     def env_button_text(self):
@@ -12774,13 +13825,13 @@ class JavaManagerApp:
         java_home = meta.get("java_home") or self.tree_fix.item(selected[0])["values"][2]
         preferred_name = meta.get("registry_name") or build_registry_name(read_java_runtime_info(java_home))
         try:
-            synced = JavaRegistryAdapter.sync_runtime_registration(java_home, preferred_name=preferred_name, raise_environment_errors=True)
+            synced = JavaRegistryAdapter.sync_runtime_registration(java_home, preferred_name=preferred_name)
         except Exception as exc:
-            return messagebox.showerror("注册失败", f"Java 注册信息已尝试写入，但同步 JAVA_HOME 失败:\n{exc}")
+            return messagebox.showerror("注册失败", f"Java 注册信息写入失败:\n{exc}")
         if not synced:
             return messagebox.showerror("注册失败", "未能写回 Java 注册信息。")
         title = "注册表急救" if IS_WIN else "本机索引修复"
-        message = "底层关联路径和 JAVA_HOME 已经重写完成。" if IS_WIN else "用户级 Java 索引和 JAVA_HOME 已经重写完成。"
+        message = "底层 Java 注册关联路径已经重写完成。" if IS_WIN else "用户级 Java 索引已经重写完成。"
         messagebox.showinfo(title, message)
         self.refresh_all_data()
 
@@ -13041,57 +14092,33 @@ class JavaManagerApp:
         if not self._guard_java_transfer_start():
             return
         package_type = normalize_java_package_type(package_type)
-        top = tk.Toplevel(self.root)
-        title = tr("transfer_title_repair") if is_repair else tr("transfer_title_update")
-        self._configure_popup(top, title, 540, 220, min_w=440, min_h=190, max_w_ratio=0.76, max_h_ratio=0.42, resizable=False, transient=False)
         task_label = tr("tray_task_repair") if is_repair else tr("tray_task_update")
-        task_id = self._register_java_transfer("repair" if is_repair else "update", task_label, top)
+        control = self._create_transfer_control()
+        cancel_event = control["cancel_event"]
+        pause_event = control["pause_event"]
+        task_id = self._register_java_transfer("repair" if is_repair else "update", task_label, cancel_event=cancel_event, pause_event=pause_event)
         self._begin_active_transfer(task_label)
 
-        cancel_event = threading.Event()
         finished_state = {"done": False}
 
-        progress = ttk.Progressbar(top, orient=tk.HORIZONTAL, mode="determinate")
-        progress.pack(fill=tk.X, padx=24, pady=(22, 12))
-        status_label = tk.Label(top, text=tr("connecting_vendor"), justify="center", wraplength=470)
-        status_label.pack(fill=tk.X, padx=16, pady=(0, 10))
-
-        button_frame = tk.Frame(top, bg=self.current_bg)
-        button_frame.pack(fill=tk.X, padx=20, pady=(0, 16))
-        cancel_text = tr("cancel_repair") if is_repair else tr("cancel_update")
-        cancel_button = tk.Button(button_frame, text=cancel_text, width=14)
-        cancel_button.pack(side=tk.RIGHT)
-        minimize_button = tk.Button(button_frame, text=tr("minimize_task"), width=12, command=top.iconify)
-        minimize_button.pack(side=tk.RIGHT, padx=(0, 8))
-        self._traverse_and_paint(top)
-
-        def mark_finished():
+        def mark_finished(status="completed", detail=""):
             if finished_state["done"]:
                 return
             finished_state["done"] = True
-            self._clear_java_transfer(task_id)
+            self._clear_java_transfer(task_id, status=status, detail=detail)
             self._end_active_transfer()
 
-        def request_cancel():
-            if finished_state["done"] or cancel_event.is_set():
-                return
-            cancel_event.set()
-            cancel_button.config(state=tk.DISABLED, text=tr("canceling"))
-            status_label.config(text=tr("cancel_requested"))
-
-        cancel_button.config(command=request_cancel)
-        top.protocol("WM_DELETE_WINDOW", request_cancel)
-
         def update_progress(percent, downloaded, total):
-            self.root.after(0, lambda: progress.config(value=percent))
+            self._wait_if_task_paused(task_id)
             if total > 0:
                 text = tr("download_progress_total", downloaded=downloaded / 1024 / 1024, total=total / 1024 / 1024)
             else:
                 text = tr("download_progress", downloaded=downloaded / 1024 / 1024)
-            self.root.after(0, lambda: status_label.config(text=text))
+            self._update_task_record(task_id, progress=percent, detail=text, status=tr("task_status_running"))
 
         def update_status(message):
-            self.root.after(0, lambda: status_label.config(text=message))
+            self._wait_if_task_paused(task_id)
+            self._update_task_record(task_id, detail=message, status=tr("task_status_running"))
 
         def task():
             info = None
@@ -13139,8 +14166,6 @@ class JavaManagerApp:
                     write_archive_metadata(temp_archive, info, source_url, expected_sha256)
 
                 ensure_not_cancelled(cancel_event)
-                self.root.after(0, lambda: progress.config(mode="indeterminate"))
-                self.root.after(0, progress.start)
                 update_status(tr("verifying_extracting"))
 
                 extract_dir = tempfile.mkdtemp()
@@ -13191,19 +14216,17 @@ class JavaManagerApp:
                 if synced:
                     logging.info("修复/更新后已同步注册信息: %s -> %s", target_path, synced)
 
-                mark_finished()
-                self.root.after(0, top.destroy)
                 if is_repair:
                     done_text = tr("smart_repair_done") if repair_mode == "smart" else tr("full_repair_done")
                 else:
                     done_text = tr("update_done")
-                self.root.after(0, lambda: messagebox.showinfo(tr("task_done_title"), done_text))
+                mark_finished("completed", done_text)
+                self.root.after(0, lambda text=done_text: self._show_task_message("showinfo", tr("task_done_title"), text))
                 self.root.after(0, self.refresh_all_data)
             except OperationCancelled:
                 logging.info("任务已取消: vendor=%s major=%s path=%s", vendor, major_version, target_path)
-                mark_finished()
-                self.root.after(0, top.destroy)
-                self.root.after(0, lambda: messagebox.showinfo(tr("task_cancelled_title"), tr("task_cancelled_text")))
+                mark_finished("cancelled")
+                self.root.after(0, lambda: self._show_task_message("showinfo", tr("task_cancelled_title"), tr("task_cancelled_text")))
             except Exception as exc:
                 logging.error("下载或解压失败: %s\n%s", exc, traceback.format_exc())
                 rollback_text = ""
@@ -13216,9 +14239,9 @@ class JavaManagerApp:
                         rollback_text = tr("rollback_auto_failed")
                 if temp_archive_is_cache and not archive_verified:
                     remove_cached_archive(temp_archive)
-                mark_finished()
-                self.root.after(0, top.destroy)
-                self.root.after(0, lambda: messagebox.showerror(tr("task_interrupted_title"), tr("task_interrupted_text", error=exc, rollback=rollback_text)))
+                mark_finished("failed", str(exc))
+                error_text = tr("task_interrupted_text", error=exc, rollback=rollback_text)
+                self.root.after(0, lambda text=error_text: self._show_task_message("showerror", tr("task_interrupted_title"), text))
             finally:
                 mark_finished()
                 if temp_archive and os.path.exists(temp_archive) and not temp_archive_is_cache:
@@ -13323,20 +14346,26 @@ class JavaManagerApp:
     def perform_update(self):
         if not self._guard_java_transfer_start():
             return
-        selected = self.tree_up.selection()
-        if not selected:
+        targets = self.checked_tree_items("tree_up", "update_items", "update_checked_items")
+        if not targets:
+            selected = self.tree_up.selection()
+            if selected:
+                runtime = self.update_items.get(selected[0])
+                targets = [runtime] if runtime else []
+        if not targets:
             return
-        item_id = selected[0]
-        runtime = self.update_items.get(item_id)
-        if not runtime:
-            return
-        target_path = runtime_update_java_home(runtime)
-        if not self._confirm_process_usage(target_path, tr("perform_update")):
-            return
-        if messagebox.askyesno(
-            tr("confirm_update_title"),
-            tr("confirm_update_text", path=target_path),
-        ):
+        if len(targets) > 1:
+            if not messagebox.askyesno(tr("confirm_update_title"), f"即将更新 {len(targets)} 个 Java 环境，是否继续？"):
+                return
+        for runtime in targets:
+            target_path = runtime_update_java_home(runtime)
+            if not self._confirm_process_usage(target_path, tr("perform_update")):
+                continue
+            if len(targets) == 1 and not messagebox.askyesno(
+                tr("confirm_update_title"),
+                tr("confirm_update_text", path=target_path),
+            ):
+                return
             self.download_and_extract(
                 runtime["vendor"],
                 runtime["major"],
@@ -13345,6 +14374,8 @@ class JavaManagerApp:
                 preferred_registry_name=runtime.get("registry_name"),
                 package_type=runtime_update_package_type(runtime),
             )
+        if len(targets) > 1:
+            self.clear_checked_tree_selection("tree_up", "update_items", "update_checked_items")
 
 
 if __name__ == "__main__":

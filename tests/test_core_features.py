@@ -38,9 +38,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_31(self):
-        self.assertEqual(self.core.VERSION, "3.1")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1")
+    def test_version_and_user_agent_are_311(self):
+        self.assertEqual(self.core.VERSION, "3.1.1")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1.1")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -49,7 +49,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("3.1", query["body"][0])
+        self.assertIn("3.1.1", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -1007,10 +1007,24 @@ class CoreFeatureTests(unittest.TestCase):
             "setup_download_tab",
             "setup_move_tab",
             "setup_delete_tab",
+            "setup_backup_tab",
         ):
             match = re.search(rf"    def {function_name}\(self\):\n(?P<body>.*?)(?=\n    def |\nclass |\Z)", source, re.S)
             self.assertIsNotNone(match, function_name)
             self.assertIn("_create_tab_motion_header", match.group("body"), function_name)
+
+    def test_management_tabs_use_checkbox_selection(self):
+        for function_name, tree_name in (
+            ("setup_update_tab", "tree_up"),
+            ("setup_move_tab", "tree_move"),
+            ("setup_delete_tab", "tree_delete"),
+            ("setup_backup_tab", "tree_backup"),
+        ):
+            source = inspect.getsource(getattr(self.core.JavaManagerApp, function_name))
+            self.assertIn('"selected"', source, function_name)
+            self.assertIn("selectmode=\"none\"", source, function_name)
+            self.assertIn("on_checked_tree_click", source, function_name)
+            self.assertIn(tree_name, source, function_name)
 
     def test_unregister_selected_uses_equivalent_java_home_cleanup(self):
         calls = []
@@ -1097,11 +1111,13 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("select_all_registered_java", source)
         self.assertIn("clear_registered_java_selection", source)
         self.assertIn("on_registration_tree_click", source)
+        self.assertIn("open_default_java_panel", source)
+        self.assertIn("choose_system_default_java", source)
         self.assertNotIn("Listbox", source)
 
     def test_release_notes_and_workflows_are_bilingual(self):
         root = Path(__file__).resolve().parents[1]
-        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.md").read_text(encoding="utf-8")
+        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.1.md").read_text(encoding="utf-8")
         template = (root / "docs" / "releases" / "RELEASE_NOTES_TEMPLATE_BILINGUAL.md").read_text(encoding="utf-8")
         gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
         nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
@@ -1109,14 +1125,14 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("## 更新内容", notes)
         self.assertIn("## Update Content", notes)
         self.assertIn("JAVA_HOME", notes)
-        self.assertIn("self-update", notes)
+        self.assertIn("task", notes.lower())
         self.assertLessEqual(len(notes.splitlines()), 32)
         self.assertIn("## 更新内容", template)
         self.assertIn("## Update Content", template)
         for workflow in (gui_workflow, nogui_workflow):
             self.assertIn("RELEASE_NOTES_FILE", workflow)
             self.assertIn('RELEASE_VERSION="${RELEASE_TAG#v}"', workflow)
-            self.assertIn('default: "v3.1"', workflow)
+            self.assertIn('default: "v3.1.1"', workflow)
             self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
             self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
             self.assertIn("chmod +x src/LJM_nogui nogui/LJM_nogui", workflow)
@@ -1147,7 +1163,7 @@ class CoreFeatureTests(unittest.TestCase):
         ):
             self.assertIn(marker, docs)
         self.assertIn("docs/NOGUI_USAGE.md", readme)
-        self.assertIn("3.1", readme)
+        self.assertIn("3.1.1", readme)
         self.assertIn("python .\\src\\LJM_nogui.py", readme)
         self.assertIn("./src/LJM_nogui", readme)
         self.assertNotIn("Current version:", readme)
@@ -1218,81 +1234,217 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("chmod +x", script)
         self.assertNotIn("cp -R", script)
 
-    def test_java_transfer_popups_are_minimizable_and_non_modal(self):
+    def test_java_transfer_tasks_are_embedded_in_task_progress_panel(self):
         download_source = inspect.getsource(self.core.JavaManagerApp.run_download_java)
         update_source = inspect.getsource(self.core.JavaManagerApp.download_and_extract_popup_v2)
         start_source = inspect.getsource(self.core.JavaManagerApp.start_download_java)
         repair_source = inspect.getsource(self.core.JavaManagerApp.cloud_repair_java)
         perform_update_source = inspect.getsource(self.core.JavaManagerApp.perform_update)
+        task_panel_source = inspect.getsource(self.core.JavaManagerApp.open_task_progress_panel)
         tray_setup_source = inspect.getsource(self.core.JavaManagerApp._setup_tray_icon)
 
         for source in (download_source, update_source):
-            self.assertIn("transient=False", source)
-            self.assertIn("minimize_task", source)
-            self.assertIn("top.iconify", source)
-            self.assertNotIn("grab_set", source)
+            self.assertNotIn("tk.Toplevel", source)
+            self.assertNotIn("top.iconify", source)
+            self.assertNotIn("minimize_task", source)
             self.assertIn("_register_java_transfer", source)
             self.assertIn("_clear_java_transfer", source)
+            self.assertIn("_create_transfer_control", source)
+            self.assertIn("_update_task_record", source)
         for source in (start_source, repair_source, perform_update_source):
             self.assertIn("_guard_java_transfer_start", source)
+        action_source = inspect.getsource(self.core.JavaManagerApp._refresh_task_action_buttons)
+        self.assertIn("task_progress_pause_all", action_source)
+        self.assertIn("task_progress_cancel_all", action_source)
+        self.assertIn("Clean.Vertical.TScrollbar", inspect.getsource(self.core.JavaManagerApp._create_task_scroll_body))
         self.assertIn("show_active_java_transfer_from_tray", tray_setup_source)
 
-    def test_active_java_transfer_guard_restores_existing_window(self):
+    def test_active_java_transfer_records_can_be_completed_or_failed(self):
         app = object.__new__(self.core.JavaManagerApp)
         app._active_java_transfer = None
         app._active_java_transfer_lock = self.core.threading.RLock()
+        app._task_records_lock = self.core.threading.RLock()
+        app._task_records = {"running": {}, "completed": [], "failed": []}
         events = []
 
         class FakeRoot:
-            def deiconify(self):
-                events.append("root-deiconify")
-
-            def state(self, value):
-                events.append(("root-state", value))
-
-            def lift(self):
-                events.append("root-lift")
-
-        class FakeWindow:
-            def __init__(self):
-                self.exists = True
-
-            def winfo_exists(self):
-                return self.exists
-
-            def deiconify(self):
-                events.append("window-deiconify")
-
-            def state(self, value):
-                events.append(("window-state", value))
-
-            def lift(self):
-                events.append("window-lift")
-
-            def focus_force(self):
-                events.append("window-focus")
-
-            def attributes(self, name, value):
-                events.append(("window-attr", name, value))
-
             def after(self, _delay, callback):
                 callback()
 
+        class FakeWindow:
+            def winfo_exists(self):
+                return True
+
         app.root = FakeRoot()
+        app._update_task_badge = lambda: None
+        app._refresh_task_progress_panel = lambda: None
         window = FakeWindow()
         original_info = self.core.messagebox.showinfo
         try:
             self.core.messagebox.showinfo = lambda title, text: events.append(("info", title, text))
             task_id = self.core.JavaManagerApp._register_java_transfer(app, "download", "下载 Java", window)
 
-            self.assertFalse(self.core.JavaManagerApp._guard_java_transfer_start(app))
-            self.assertIn("window-deiconify", events)
-            self.assertTrue(any(item[0] == "info" for item in events if isinstance(item, tuple)))
+            self.assertTrue(self.core.JavaManagerApp._guard_java_transfer_start(app))
+            self.assertIn(task_id, app._task_records["running"])
+            self.assertFalse(any(item[0] == "info" for item in events if isinstance(item, tuple)))
 
-            self.core.JavaManagerApp._clear_java_transfer(app, task_id)
+            self.core.JavaManagerApp._clear_java_transfer(app, task_id, status="completed", detail="done")
+            self.assertEqual(app._task_records["completed"][0]["detail"], "done")
             self.assertTrue(self.core.JavaManagerApp._guard_java_transfer_start(app))
         finally:
             self.core.messagebox.showinfo = original_info
+
+    def test_task_progress_refresh_keeps_focused_panel_in_front(self):
+        app = object.__new__(self.core.JavaManagerApp)
+        app._task_records_lock = self.core.threading.RLock()
+        app._task_records = {"running": {}, "completed": [], "failed": []}
+        events = []
+
+        class Root:
+            def after(self, delay, callback):
+                events.append(("after", delay))
+                callback()
+
+        class FocusedChild:
+            def __init__(self, top):
+                self.top = top
+
+            def winfo_toplevel(self):
+                return self.top
+
+        class Window:
+            def __init__(self):
+                self.focused_child = FocusedChild(self)
+
+            def winfo_exists(self):
+                return True
+
+            def focus_displayof(self):
+                return self.focused_child
+
+            def deiconify(self):
+                events.append("deiconify")
+
+            def state(self, value):
+                events.append(("state", value))
+
+            def lift(self):
+                events.append("lift")
+
+            def focus_force(self):
+                events.append("focus")
+
+            def attributes(self, *args):
+                events.append(("attributes", args))
+
+            def after(self, delay, callback):
+                events.append(("window-after", delay))
+                callback()
+
+        app.root = Root()
+        app._task_progress_window = Window()
+        app._task_progress_bodies = {"running": object(), "completed": object(), "failed": object()}
+        app._populate_task_body = lambda _body, _records, bucket: events.append(("populate", bucket))
+        app._refresh_task_action_buttons = lambda: events.append("actions")
+
+        self.core.JavaManagerApp._refresh_task_progress_panel(app)
+
+        self.assertIn(("populate", "running"), events)
+        self.assertIn("lift", events)
+        self.assertIn("focus", events)
+
+    def test_task_progress_refresh_is_coalesced_during_active_downloads(self):
+        app = object.__new__(self.core.JavaManagerApp)
+        app._task_records_lock = self.core.threading.RLock()
+        app._task_records = {"running": {}, "completed": [], "failed": []}
+        app._task_progress_refresh_job = None
+        app._task_progress_window = type("Window", (), {"winfo_exists": lambda self: True})()
+        events = []
+        delayed = []
+
+        class Root:
+            def after(self, delay, callback):
+                events.append(("after", delay))
+                if delay == 0:
+                    callback()
+                    return "immediate"
+                delayed.append(callback)
+                return f"job-{len(delayed)}"
+
+        app.root = Root()
+        app._update_task_badge = lambda: events.append("badge")
+        app._refresh_task_progress_panel = lambda: events.append("refresh")
+
+        self.core.JavaManagerApp._queue_task_ui_refresh(app)
+        self.core.JavaManagerApp._queue_task_ui_refresh(app)
+
+        self.assertEqual(events.count(("after", 180)), 1)
+        self.assertEqual(events.count("refresh"), 0)
+        delayed[0]()
+        self.assertEqual(events.count("refresh"), 1)
+        self.assertIsNone(app._task_progress_refresh_job)
+
+    def test_task_action_buttons_are_not_rebuilt_when_state_is_unchanged(self):
+        app = object.__new__(self.core.JavaManagerApp)
+        app._task_records_lock = self.core.threading.RLock()
+        app._task_records = {
+            "running": {"task-1": {"id": "task-1", "started_at": 1}},
+            "completed": [],
+            "failed": [],
+        }
+        app._task_progress_action_state = None
+        events = []
+
+        class FakeFrame:
+            def __init__(self):
+                self.children = []
+
+            def winfo_children(self):
+                return list(self.children)
+
+        class FakeButton:
+            def __init__(self, parent, **kwargs):
+                self.parent = parent
+                self.kwargs = kwargs
+                parent.children.append(self)
+                events.append(("create", kwargs.get("text")))
+
+            def pack(self, **_kwargs):
+                return None
+
+            def destroy(self):
+                events.append(("destroy", self.kwargs.get("text")))
+                self.parent.children.remove(self)
+
+        app._task_progress_action_frame = FakeFrame()
+        app._active_task_tab_key = lambda: "running"
+        app._traverse_and_paint = lambda _frame: events.append("paint")
+        app._refresh_task_progress_panel = lambda: None
+        app.cancel_all_running_tasks = lambda: None
+        app.resume_all_running_tasks = lambda: None
+        app.pause_all_running_tasks = lambda: None
+
+        original_button = self.core.tk.Button
+        try:
+            self.core.tk.Button = FakeButton
+            self.core.JavaManagerApp._refresh_task_action_buttons(app)
+            first_create_count = len([event for event in events if event[0] == "create"])
+            self.core.JavaManagerApp._refresh_task_action_buttons(app)
+        finally:
+            self.core.tk.Button = original_button
+
+        self.assertEqual(first_create_count, 4)
+        self.assertEqual(len([event for event in events if event[0] == "create"]), 4)
+        self.assertFalse(any(event[0] == "destroy" for event in events))
+
+    def test_transfer_task_messages_use_task_panel_parent(self):
+        download_source = inspect.getsource(self.core.JavaManagerApp.run_download_java)
+        update_source = inspect.getsource(self.core.JavaManagerApp.download_and_extract_popup_v2)
+
+        self.assertIn("_show_task_message", download_source)
+        self.assertIn("_show_task_message", update_source)
+        self.assertNotIn("lambda: messagebox.showinfo(tr(\"download_done\")", download_source)
+        self.assertNotIn("lambda: messagebox.showinfo(tr(\"task_done_title\")", update_source)
 
     def test_new_vendor_registry_tokens_are_clear(self):
         cases = [
@@ -1833,7 +1985,89 @@ class CoreFeatureTests(unittest.TestCase):
             self.assertNotIn("Path", [call[1] for call in calls if call[0] == "SetValueEx"])
             self.assertEqual(os.environ.get("PATH"), original_path)
 
-    def test_sync_runtime_registration_updates_java_home_only(self):
+    def test_windows_unregister_removes_external_java_entries_by_home(self):
+        class FakeKey:
+            def __init__(self, hive, path):
+                self.hive = hive
+                self.path = path
+
+        class FakeWinreg:
+            HKEY_LOCAL_MACHINE = "HKLM"
+            HKEY_CURRENT_USER = "HKCU"
+            KEY_READ = 1
+            KEY_WRITE = 2
+            KEY_ALL_ACCESS = 3
+            KEY_WOW64_64KEY = 0x100
+            KEY_WOW64_32KEY = 0x200
+
+            registry = {
+                ("HKLM", r"SOFTWARE\JavaSoft\JDK"): {
+                    "17": r"C:\Java\jdk-17",
+                },
+                ("HKCU", r"SOFTWARE\JavaSoft\Java Development Kit"): {
+                    "21": r"C:\Users\User\Apps\jdk-21",
+                },
+            }
+            deleted = []
+
+            @staticmethod
+            def OpenKey(root, path, _reserved, _access):
+                if isinstance(root, FakeKey):
+                    entries = FakeWinreg.registry.get((root.hive, root.path), {})
+                    if path not in entries:
+                        raise FileNotFoundError(path)
+                    return FakeKey(root.hive, f"{root.path}\\{path}")
+                if (root, path) not in FakeWinreg.registry:
+                    raise FileNotFoundError(path)
+                return FakeKey(root, path)
+
+            @staticmethod
+            def EnumKey(key, index):
+                names = list(FakeWinreg.registry.get((key.hive, key.path), {}).keys())
+                if index >= len(names):
+                    raise OSError()
+                return names[index]
+
+            @staticmethod
+            def QueryValueEx(key, name):
+                if name != "JavaHome":
+                    raise FileNotFoundError(name)
+                parent_path, version_name = key.path.rsplit("\\", 1)
+                return (FakeWinreg.registry[(key.hive, parent_path)][version_name], None)
+
+            @staticmethod
+            def DeleteKey(parent, version_name):
+                entries = FakeWinreg.registry.get((parent.hive, parent.path), {})
+                if version_name not in entries:
+                    raise FileNotFoundError(version_name)
+                del entries[version_name]
+                FakeWinreg.deleted.append((parent.hive, parent.path, version_name))
+
+            @staticmethod
+            def CloseKey(_key):
+                return None
+
+        original_is_win = self.core.IS_WIN
+        original_winreg = getattr(self.core, "winreg", None)
+        try:
+            self.core.IS_WIN = True
+            self.core.winreg = FakeWinreg
+
+            removed = self.core.JavaRegistryAdapter.unregister(
+                "Display_Name_Does_Not_Matter",
+                java_home=r"C:\Users\User\Apps\jdk-21",
+            )
+        finally:
+            self.core.IS_WIN = original_is_win
+            if original_winreg is not None:
+                self.core.winreg = original_winreg
+
+        self.assertTrue(removed)
+        self.assertIn(("HKCU", r"SOFTWARE\JavaSoft\Java Development Kit", "21"), FakeWinreg.deleted)
+        self.assertIn("17", FakeWinreg.registry[("HKLM", r"SOFTWARE\JavaSoft\JDK")])
+        self.assertNotIn("21", FakeWinreg.registry[("HKCU", r"SOFTWARE\JavaSoft\Java Development Kit")])
+
+    def test_sync_runtime_registration_does_not_change_java_home(self):
         with tempfile.TemporaryDirectory() as tmp:
             java_home = Path(tmp) / "jdk-21"
             bin_dir = java_home / "bin"
@@ -1857,7 +2091,7 @@ class CoreFeatureTests(unittest.TestCase):
                 self.core.configure_registered_java_environment = original_configure
 
             self.assertEqual(synced, ["Temurin_21"])
-            self.assertEqual(calls, [str(java_home)])
+            self.assertEqual(calls, [])
 
     def test_scan_folder_uses_registration_sync(self):
         root = Path(__file__).resolve().parents[1]
@@ -2316,6 +2550,11 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("self.notebook.add(self.tab_changelog, text=tr(\"tab_changelog\"))", source)
         self.assertIn("def setup_home_tab", source)
         self.assertIn("def setup_changelog_tab", source)
+        self.assertIn("def open_default_java_panel", source)
+        self.assertIn("def read_current_default_java_home", source)
+        self.assertIn("def open_task_progress_panel", source)
+        self.assertIn("self.task_progress_button", source)
+        self.assertIn("side=tk.RIGHT", source)
         self.assertIn("command=self.open_feedback", source)
         self.assertIn("command=self.open_settings", source)
         self.assertIn("command=self.open_about", source)
@@ -2741,7 +2980,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("3.1", payload["body"])
+        self.assertIn("3.1.1", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_defaults_use_nogui_name(self):

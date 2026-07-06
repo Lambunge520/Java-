@@ -6,7 +6,7 @@ on:
       tag_name:
         description: "Release tag to create or update"
         required: false
-        default: "v3.1"
+        default: "v3.1.1"
   push:
     tags:
       - "v*"
