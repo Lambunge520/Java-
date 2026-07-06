@@ -4,6 +4,14 @@
 
 NoGUI 是 LJM Java Manager 的命令行版本，不启动桌面窗口和托盘，适合服务器、无桌面环境、脚本批处理、计划任务和 CI 使用。它复用桌面版核心逻辑，支持扫描、注册、下载、修复、更新、移动、删除 Java，并可设置默认 `JAVA_HOME`。
 
+### 3.1.1 重要变化
+
+- Java 注册、下载、更新和修复不再自动修改 `JAVA_HOME`。
+- 如需修改系统默认 Java，请使用 `set-default` 命令。
+- NoGUI 会读取工具自身注册的 Java，也会扫描系统里其他安装器注册过的 Java，方便统一管理。
+- Windows 会额外读取 JDK/JRE、旧版 JavaSoft、HKLM/HKCU 以及 32/64 位注册表视图。
+- 下载、更新、修复结果仍以 JSON 和日志为准；NoGUI 不显示桌面端的任务管理窗口。
+
 ### 下载哪个包
 
 前往 [Releases](https://github.com/Lambunge520/Java-/releases) 下载名称带 `nogui` 的资产：
@@ -153,17 +161,31 @@ NoGUI 默认把执行结果写入程序目录下的 `ljm_nogui_result.json`，�
 - LJM 注册名，例如 `Java 21`、`Temurin_21`
 - Java Home 路径，例如 `D:\Java\jdk-21`
 
+目标既可以来自 LJM 自己注册的 Java，也可以来自系统或其他安装器已注册的 Java。Windows 上常见的 `.msi`、`.exe` 安装器注册项会在 `list` 中一起显示。
+
 如果不确定名称，先运行：
 
 ```powershell
 .\LJM-Java-Manager-nogui.exe list --stdout
 ```
 
+### 注册和默认 Java 的区别
+
+`scan`、`download`、`repair`、`update` 会维护 LJM 可识别的 Java 注册信息，但不会改动系统默认 `JAVA_HOME`。
+
+只有 `set-default` 会把目标 Java 设置为默认 `JAVA_HOME`：
+
+```powershell
+.\LJM-Java-Manager-nogui.exe set-default "Temurin_21" --stdout
+```
+
+这适合 IDE、命令行脚本或其他依赖 `JAVA_HOME` 的工具。Minecraft 启动器通常有自己的 Java 选择逻辑，是否使用系统默认 Java 取决于启动器设置。
+
 ### 权限提示
 
 - Windows 设置系统级 `JAVA_HOME` 可能需要管理员权限。
 - 删除或移动正在被进程占用的 Java 会失败；确认无风险后可加 `--force`。
-- Linux/macOS 如果无法执行，确认 `.run`、`.command` 和主程序都有执行权限。
+- Linux/macOS 如果无法执行，优先使用包内 `.run` 或 `.command` 入口；如果权限丢失，确认 `.run`、`.command` 和主程序都有执行权限。
 - 下载、更新和修复需要联网；失败时可查看 `ljm_nogui.log`。
 
 ### 本地打包
@@ -182,6 +204,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_nogui_windows.ps1
 ## Instructions for use
 
 NoGUI is the command-line edition of LJM Java Manager. It does not start a desktop window or tray icon, so it is suitable for servers, headless systems, scripts, scheduled tasks, and CI jobs. It reuses the desktop core logic and supports scanning, registering, downloading, repairing, updating, moving, deleting Java runtimes, and setting the default `JAVA_HOME`.
+
+### Important Changes In 3.1.1
+
+- Java registration, download, update, and repair no longer change `JAVA_HOME` automatically.
+- To change the system default Java, use the `set-default` command.
+- NoGUI reads Java registered by LJM and Java registered by other installers, so both can be managed in one place.
+- On Windows, NoGUI scans JDK/JRE, legacy JavaSoft keys, HKLM/HKCU, and 32-bit/64-bit registry views.
+- Download, update, and repair results are reported through JSON and logs. NoGUI does not show the desktop task manager window.
 
 ### Which Package To Download
 
@@ -332,17 +362,31 @@ The target argument for `repair`, `update`, `set-default`, `move`, and `delete` 
 - An LJM registry name, such as `Java 21` or `Temurin_21`
 - A Java Home path, such as `D:\Java\jdk-21`
 
+Targets can come from Java registered by LJM or from Java registered by the operating system or another installer. On Windows, common `.msi` and `.exe` installer registry entries are shown by `list` too.
+
 If you are not sure, run:
 
 ```powershell
 .\LJM-Java-Manager-nogui.exe list --stdout
 ```
 
+### Registration Versus Default Java
+
+`scan`, `download`, `repair`, and `update` maintain Java registration data that LJM can manage, but they do not change the system default `JAVA_HOME`.
+
+Only `set-default` sets a target Java as the default `JAVA_HOME`:
+
+```powershell
+.\LJM-Java-Manager-nogui.exe set-default "Temurin_21" --stdout
+```
+
+This is useful for IDEs, command-line scripts, and tools that rely on `JAVA_HOME`. Minecraft launchers usually have their own Java selection logic, so whether they use the system default Java depends on launcher settings.
+
 ### Permission Notes
 
 - Setting a system-level `JAVA_HOME` on Windows may require administrator privileges.
 - Deleting or moving a Java runtime that is still used by a process can fail; use `--force` only when it is safe.
-- On Linux/macOS, make sure `.run`, `.command`, and the main executable have execute permission.
+- On Linux/macOS, prefer the bundled `.run` or `.command` launcher. If execute permission is lost, make sure `.run`, `.command`, and the main executable are executable.
 - Download, update, and repair commands require network access. Check `ljm_nogui.log` if a command fails.
 
 ### Local Build
