@@ -1,6 +1,6 @@
 # NoGUI Usage / NoGUI 使用文档
 
-## 中文
+## nogui使用说明
 
 NoGUI 是 LJM Java Manager 的命令行版本，不启动桌面窗口和托盘，适合服务器、无桌面环境、脚本批处理、计划任务和 CI 使用。它复用桌面版核心逻辑，支持扫描、注册、下载、修复、更新、移动、删除 Java，并可设置默认 `JAVA_HOME`。
 
@@ -179,7 +179,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_nogui_windows.ps1
 
 产物会输出到 `dist/`。GitHub Actions 发布时会上传到 Release。
 
-## English
+## Instructions for use
 
 NoGUI is the command-line edition of LJM Java Manager. It does not start a desktop window or tray icon, so it is suitable for servers, headless systems, scripts, scheduled tasks, and CI jobs. It reuses the desktop core logic and supports scanning, registering, downloading, repairing, updating, moving, deleting Java runtimes, and setting the default `JAVA_HOME`.
 
