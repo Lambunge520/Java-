@@ -98,7 +98,7 @@ except Exception as exc:
     messagebox = _UnavailableMessageBox()
 
 
-VERSION = "3.1.1"
+VERSION = "3.1.2"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -6650,26 +6650,44 @@ def sanitize_path_token(value):
     return text or "JDK_Unknown"
 
 
-def java_install_dir_name(info):
+def java_install_dir_prefix(info):
     vendor = sanitize_path_token(info.get("vendor") or "JDK")
     package_type = sanitize_path_token(normalize_java_package_type(info.get("package_type")))
     major = sanitize_path_token(info.get("major_version") or extract_major_from_version(info.get("version"), fallback="jdk"))
+    return f"{vendor}_{package_type}{major}_"
+
+
+def java_install_dir_name(info):
     version = sanitize_path_token(version_display_text(info.get("version")))
-    return f"{vendor}_{package_type}{major}_{version}"
+    return f"{java_install_dir_prefix(info)}{version}"
 
 
-def next_available_java_install_dir(parent_dir, info):
+def next_available_named_path(parent_dir, base_name, current_path=""):
     parent = os.path.abspath(os.path.expanduser(normalize_text(parent_dir)))
-    base_name = java_install_dir_name(info)
+    base_name = sanitize_path_token(base_name)
+    current_norm = normalize_path(current_path) if current_path else ""
     candidate = os.path.join(parent, base_name)
-    if not os.path.exists(candidate):
+    if normalize_path(candidate) == current_norm or not os.path.exists(candidate):
         return candidate
     index = 2
     while True:
         candidate = os.path.join(parent, f"{base_name}_{index}")
-        if not os.path.exists(candidate):
+        if normalize_path(candidate) == current_norm or not os.path.exists(candidate):
             return candidate
         index += 1
+
+
+def next_available_java_install_dir(parent_dir, info):
+    return next_available_named_path(parent_dir, java_install_dir_name(info))
+
+
+def resolve_update_java_home_target_path(current_java_home, info):
+    current_path = os.path.abspath(os.path.expanduser(normalize_text(current_java_home)))
+    current_name = os.path.basename(current_path)
+    prefix = java_install_dir_prefix(info)
+    if not current_name.startswith(prefix):
+        return current_path
+    return next_available_named_path(os.path.dirname(current_path), java_install_dir_name(info), current_path)
 
 
 def build_registry_name(runtime):
@@ -6921,6 +6939,9 @@ JAVA_BACKUP_ENTRIES = (
     "NOTICE",
 )
 
+JAVA_BACKUP_ARCHIVE = "java_home.zip"
+JAVA_BACKUP_ARCHIVE_ROOT = "java_home"
+
 
 def copy_path_with_cancel(source, dest, cancel_event=None):
     ensure_not_cancelled(cancel_event)
@@ -6930,6 +6951,42 @@ def copy_path_with_cancel(source, dest, cancel_event=None):
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         shutil.copy2(source, dest)
     ensure_not_cancelled(cancel_event)
+
+
+def _zip_write_path(zip_ref, source, arcname, cancel_event=None):
+    ensure_not_cancelled(cancel_event)
+    source = os.path.abspath(source)
+    arcname = arcname.replace(os.sep, "/")
+    if os.path.isdir(source) and not os.path.islink(source):
+        for root_dir, dirs, files in os.walk(source):
+            ensure_not_cancelled(cancel_event)
+            dirs.sort()
+            files.sort()
+            rel_root = os.path.relpath(root_dir, source)
+            archive_root = arcname if rel_root == "." else f"{arcname}/{rel_root.replace(os.sep, '/')}"
+            if not files and not dirs:
+                zip_ref.write(root_dir, archive_root.rstrip("/") + "/")
+            for filename in files:
+                ensure_not_cancelled(cancel_event)
+                file_path = os.path.join(root_dir, filename)
+                rel_file = os.path.relpath(file_path, source).replace(os.sep, "/")
+                zip_ref.write(file_path, f"{arcname}/{rel_file}")
+        return
+    zip_ref.write(source, arcname)
+
+
+def write_java_backup_archive(target_path, archive_path, entries, cancel_event=None):
+    copied = []
+    os.makedirs(os.path.dirname(archive_path), exist_ok=True)
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zip_ref:
+        for entry in entries:
+            ensure_not_cancelled(cancel_event)
+            source = os.path.join(target_path, entry)
+            if not os.path.exists(source):
+                continue
+            _zip_write_path(zip_ref, source, f"{JAVA_BACKUP_ARCHIVE_ROOT}/{entry}", cancel_event=cancel_event)
+            copied.append(entry)
+    return copied
 
 
 def force_remove_tree(path):
@@ -6972,18 +7029,10 @@ def create_java_backup(target_path, operation="update", cancel_event=None):
     stamp = time.strftime("%Y%m%d_%H%M%S")
     slug = sanitize_registry_name(os.path.basename(target_path) or "java_home")
     backup_dir = os.path.join(backup_root_dir(), f"{stamp}_{slug}")
-    content_dir = os.path.join(backup_dir, "java_home")
-    os.makedirs(content_dir, exist_ok=True)
-
-    copied = []
-    for entry in JAVA_BACKUP_ENTRIES:
-        ensure_not_cancelled(cancel_event)
-        source = os.path.join(target_path, entry)
-        if not os.path.exists(source):
-            continue
-        dest = os.path.join(content_dir, entry)
-        copy_path_with_cancel(source, dest, cancel_event=cancel_event)
-        copied.append(entry)
+    os.makedirs(backup_dir, exist_ok=True)
+    archive_name = JAVA_BACKUP_ARCHIVE
+    archive_path = os.path.join(backup_dir, archive_name)
+    copied = write_java_backup_archive(target_path, archive_path, JAVA_BACKUP_ENTRIES, cancel_event=cancel_event)
 
     manifest = {
         "created_at": time.time(),
@@ -6991,6 +7040,9 @@ def create_java_backup(target_path, operation="update", cancel_event=None):
         "operation": operation,
         "target_path": target_path,
         "entries": copied,
+        "backup_format": "zip",
+        "content_archive": archive_name,
+        "archive_root": JAVA_BACKUP_ARCHIVE_ROOT,
         "registry_names": JavaRegistryAdapter.find_version_names_by_home(target_path),
     }
     with open(os.path.join(backup_dir, "manifest.json"), "w", encoding="utf-8") as f:
@@ -7099,30 +7151,44 @@ def restore_java_backup(backup_dir, cancel_event=None):
         raise Exception("备份信息缺失目标路径，无法回滚。")
     target_path = os.path.abspath(target_raw)
     content_dir = os.path.join(backup_dir, "java_home")
+    temp_extract_dir = ""
+    archive_name = normalize_text(manifest.get("content_archive")) or JAVA_BACKUP_ARCHIVE
+    archive_path = os.path.join(backup_dir, archive_name)
+    if os.path.exists(archive_path):
+        temp_extract_dir = tempfile.mkdtemp(prefix="ljm_backup_restore_")
+        with zipfile.ZipFile(archive_path, "r") as zip_ref:
+            safe_extract_zip(zip_ref, temp_extract_dir)
+        content_dir = os.path.join(temp_extract_dir, normalize_text(manifest.get("archive_root")) or JAVA_BACKUP_ARCHIVE_ROOT)
     if not target_path or not os.path.isdir(content_dir):
+        if temp_extract_dir and os.path.exists(temp_extract_dir):
+            shutil.rmtree(temp_extract_dir, ignore_errors=True)
         raise Exception("备份信息不完整，无法回滚。")
-    os.makedirs(target_path, exist_ok=True)
+    try:
+        os.makedirs(target_path, exist_ok=True)
 
-    for entry in manifest.get("entries", []) or JAVA_BACKUP_ENTRIES:
-        ensure_not_cancelled(cancel_event)
-        target_entry = os.path.join(target_path, entry)
-        if os.path.isdir(target_entry):
-            shutil.rmtree(target_entry, ignore_errors=True)
-        elif os.path.exists(target_entry):
-            os.remove(target_entry)
+        for entry in manifest.get("entries", []) or JAVA_BACKUP_ENTRIES:
+            ensure_not_cancelled(cancel_event)
+            target_entry = os.path.join(target_path, entry)
+            if os.path.isdir(target_entry):
+                shutil.rmtree(target_entry, ignore_errors=True)
+            elif os.path.exists(target_entry):
+                os.remove(target_entry)
 
-    for entry in manifest.get("entries", []) or os.listdir(content_dir):
-        source = os.path.join(content_dir, entry)
-        if os.path.exists(source):
-            copy_path_with_cancel(source, os.path.join(target_path, entry), cancel_event=cancel_event)
+        for entry in manifest.get("entries", []) or os.listdir(content_dir):
+            source = os.path.join(content_dir, entry)
+            if os.path.exists(source):
+                copy_path_with_cancel(source, os.path.join(target_path, entry), cancel_event=cancel_event)
 
-    preferred_name = None
-    names = manifest.get("registry_names") or []
-    if names:
-        preferred_name = names[0]
-    JavaRegistryAdapter.sync_runtime_registration(target_path, preferred_name=preferred_name)
-    logging.info("已从备份回滚 Java: %s -> %s", backup_dir, target_path)
-    return target_path
+        preferred_name = None
+        names = manifest.get("registry_names") or []
+        if names:
+            preferred_name = names[0]
+        JavaRegistryAdapter.sync_runtime_registration(target_path, preferred_name=preferred_name)
+        logging.info("已从备份回滚 Java: %s -> %s", backup_dir, target_path)
+        return target_path
+    finally:
+        if temp_extract_dir and os.path.exists(temp_extract_dir):
+            shutil.rmtree(temp_extract_dir, ignore_errors=True)
 
 
 def process_output_lines():
@@ -14091,6 +14157,7 @@ class JavaManagerApp:
     def download_and_extract_popup_v2(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None, package_type="jdk", repair_mode_override=None):
         if not self._guard_java_transfer_start():
             return
+        target_path = os.path.abspath(os.path.expanduser(normalize_text(target_path)))
         package_type = normalize_java_package_type(package_type)
         task_label = tr("tray_task_repair") if is_repair else tr("tray_task_update")
         control = self._create_transfer_control()
@@ -14128,6 +14195,8 @@ class JavaManagerApp:
             temp_archive_is_cache = False
             archive_verified = False
             modification_started = False
+            replacement_target_path = ""
+            final_preferred_name = preferred_registry_name
             try:
                 ensure_not_cancelled(cancel_event)
                 info = JavaDownloadEngine.get_latest_download_info(vendor, major_version, package_type=package_type)
@@ -14208,13 +14277,27 @@ class JavaManagerApp:
                 if is_repair and repair_mode == "smart":
                     update_status(tr("smart_repair_running"))
                     repair_java_home_smart(source_jdk_dir, target_path, cancel_event=cancel_event)
+                    final_target_path = target_path
                 else:
                     update_status(tr("full_update_running"))
-                    replace_java_home_atomically(source_jdk_dir, target_path, cancel_event=cancel_event)
+                    final_target_path = target_path if is_repair else resolve_update_java_home_target_path(target_path, info)
+                    if normalize_path(final_target_path) != normalize_path(target_path):
+                        old_names = JavaRegistryAdapter.find_version_names_by_home(target_path)
+                        replace_java_home_atomically(source_jdk_dir, final_target_path, cancel_event=cancel_event)
+                        replacement_target_path = final_target_path
+                        ensure_not_cancelled(cancel_event)
+                        if os.path.exists(target_path):
+                            force_remove_tree(target_path)
+                        for name in old_names:
+                            unregister_java_registry_name(name, java_home=target_path)
+                        if not final_preferred_name and old_names:
+                            final_preferred_name = old_names[0]
+                    else:
+                        replace_java_home_atomically(source_jdk_dir, final_target_path, cancel_event=cancel_event)
                 ensure_not_cancelled(cancel_event)
-                synced = JavaRegistryAdapter.sync_runtime_registration(target_path, preferred_name=preferred_registry_name)
+                synced = JavaRegistryAdapter.sync_runtime_registration(final_target_path, preferred_name=final_preferred_name)
                 if synced:
-                    logging.info("修复/更新后已同步注册信息: %s -> %s", target_path, synced)
+                    logging.info("修复/更新后已同步注册信息: %s -> %s", final_target_path, synced)
 
                 if is_repair:
                     done_text = tr("smart_repair_done") if repair_mode == "smart" else tr("full_repair_done")
@@ -14232,6 +14315,8 @@ class JavaManagerApp:
                 rollback_text = ""
                 if backup_dir and modification_started:
                     try:
+                        if replacement_target_path and normalize_path(replacement_target_path) != normalize_path(target_path) and os.path.exists(replacement_target_path):
+                            force_remove_tree(replacement_target_path)
                         restore_java_backup(backup_dir)
                         rollback_text = tr("rollback_auto_done")
                     except Exception as rollback_exc:

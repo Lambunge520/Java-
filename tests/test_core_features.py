@@ -38,9 +38,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_311(self):
-        self.assertEqual(self.core.VERSION, "3.1.1")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1.1")
+    def test_version_and_user_agent_are_312(self):
+        self.assertEqual(self.core.VERSION, "3.1.2")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1.2")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -49,7 +49,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("3.1.1", query["body"][0])
+        self.assertIn("3.1.2", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -657,6 +657,27 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertEqual(Path(first).name, "IBM_Semeru_OpenJ9_jdk26_26.0.1_9")
         self.assertEqual(Path(second).name, "IBM_Semeru_OpenJ9_jdk26_26.0.1_9_2")
 
+    def test_update_target_path_renames_tool_versioned_java_folder(self):
+        info = {
+            "vendor": "Eclipse Temurin",
+            "major_version": "21",
+            "version": "21.0.8+9",
+            "package_type": "jdk",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            old_path = Path(tmp) / "Eclipse_Temurin_jdk21_21.0.1"
+            old_path.mkdir()
+            custom_path = Path(tmp) / "MyCustomJava"
+            custom_path.mkdir()
+            occupied = Path(tmp) / "Eclipse_Temurin_jdk21_21.0.8_9"
+            occupied.mkdir()
+
+            renamed = self.core.resolve_update_java_home_target_path(str(old_path), info)
+            custom = self.core.resolve_update_java_home_target_path(str(custom_path), info)
+
+        self.assertEqual(Path(renamed).name, "Eclipse_Temurin_jdk21_21.0.8_9_2")
+        self.assertEqual(Path(custom).name, "MyCustomJava")
+
     def test_java_vendor_profiles_include_scenarios_and_foojay_ids(self):
         expected = {
             "Eclipse Temurin": "temurin",
@@ -1117,22 +1138,22 @@ class CoreFeatureTests(unittest.TestCase):
 
     def test_release_notes_and_workflows_are_bilingual(self):
         root = Path(__file__).resolve().parents[1]
-        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.1.md").read_text(encoding="utf-8")
+        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.2.md").read_text(encoding="utf-8")
         template = (root / "docs" / "releases" / "RELEASE_NOTES_TEMPLATE_BILINGUAL.md").read_text(encoding="utf-8")
         gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
         nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
 
         self.assertIn("## 更新内容", notes)
         self.assertIn("## Update Content", notes)
-        self.assertIn("JAVA_HOME", notes)
-        self.assertIn("task", notes.lower())
+        self.assertIn("备份", notes)
+        self.assertIn("backup", notes.lower())
         self.assertLessEqual(len(notes.splitlines()), 32)
         self.assertIn("## 更新内容", template)
         self.assertIn("## Update Content", template)
         for workflow in (gui_workflow, nogui_workflow):
             self.assertIn("RELEASE_NOTES_FILE", workflow)
             self.assertIn('RELEASE_VERSION="${RELEASE_TAG#v}"', workflow)
-            self.assertIn('default: "v3.1.1"', workflow)
+            self.assertIn('default: "v3.1.2"', workflow)
             self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
             self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
             self.assertIn("chmod +x src/LJM_nogui nogui/LJM_nogui", workflow)
@@ -1163,7 +1184,7 @@ class CoreFeatureTests(unittest.TestCase):
         ):
             self.assertIn(marker, docs)
         self.assertIn("docs/NOGUI_USAGE.md", readme)
-        self.assertIn("3.1.1", readme)
+        self.assertIn("3.1.2", readme)
         self.assertIn("python .\\src\\LJM_nogui.py", readme)
         self.assertIn("./src/LJM_nogui", readme)
         self.assertNotIn("Current version:", readme)
@@ -2242,6 +2263,48 @@ class CoreFeatureTests(unittest.TestCase):
             self.assertFalse(related_backup.exists())
             self.assertTrue(unrelated_backup.exists())
 
+    def test_java_backup_is_compressed_and_restorable_without_plain_java_home(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backup_root = Path(tmp) / "backups"
+            java_home = Path(tmp) / "Eclipse_Temurin_jdk21_21.0.1"
+            java_bin = java_home / "bin"
+            java_bin.mkdir(parents=True)
+            java_exe = "java.exe" if self.core.IS_WIN else "java"
+            (java_bin / java_exe).write_text("java", encoding="utf-8")
+            (java_home / "release").write_text('JAVA_VERSION="21.0.1"\nIMPLEMENTOR="Eclipse Temurin"\n', encoding="utf-8")
+
+            original_backup_root = self.core.backup_root_dir
+            original_find = self.core.JavaRegistryAdapter.find_version_names_by_home
+            original_sync = self.core.JavaRegistryAdapter.sync_runtime_registration
+            synced = []
+            try:
+                self.core.backup_root_dir = lambda: str(backup_root)
+                self.core.JavaRegistryAdapter.find_version_names_by_home = staticmethod(lambda _home: ["Temurin_21"])
+                self.core.JavaRegistryAdapter.sync_runtime_registration = staticmethod(lambda path, preferred_name=None: synced.append((path, preferred_name)) or ["Temurin_21"])
+
+                backup_dir = Path(self.core.create_java_backup(str(java_home), operation="update"))
+                archive_path = backup_dir / "java_home.zip"
+                plain_java_home = backup_dir / "java_home"
+
+                (java_home / "release").write_text('JAVA_VERSION="broken"\n', encoding="utf-8")
+                (java_bin / java_exe).unlink()
+                restored_path = self.core.restore_java_backup(str(backup_dir))
+            finally:
+                self.core.backup_root_dir = original_backup_root
+                self.core.JavaRegistryAdapter.find_version_names_by_home = original_find
+                self.core.JavaRegistryAdapter.sync_runtime_registration = original_sync
+
+            self.assertTrue(archive_path.exists())
+            self.assertFalse(plain_java_home.exists())
+            with zipfile.ZipFile(archive_path, "r") as archive:
+                names = set(archive.namelist())
+            self.assertIn("java_home/release", names)
+            self.assertIn(f"java_home/bin/{java_exe}", names)
+            self.assertEqual(Path(restored_path), java_home)
+            self.assertIn('JAVA_VERSION="21.0.1"', (java_home / "release").read_text(encoding="utf-8"))
+            self.assertTrue((java_bin / java_exe).exists())
+            self.assertEqual(synced, [(str(java_home), "Temurin_21")])
+
     def test_backup_management_records_include_size_and_can_delete_backup(self):
         with tempfile.TemporaryDirectory() as tmp:
             backup_root = Path(tmp) / "backups"
@@ -2828,9 +2891,18 @@ class NoguiFeatureTests(unittest.TestCase):
         terminal_attach_args = parser.parse_args(["terminal", "--attach-console"])
         version_args = parser.parse_args(["version"])
         status_args = parser.parse_args(["status"])
+        language_args = parser.parse_args(["language", "en"])
+        short_download_args = parser.parse_args(["dl", "Eclipse Temurin", "21", r"D:\Java"])
+        short_update_args = parser.parse_args(["u", "Temurin_21"])
+        short_repair_args = parser.parse_args(["r", "Temurin_21"])
+        short_version_args = parser.parse_args(["v"])
+        short_status_args = parser.parse_args(["st"])
 
         self.assertEqual(download_args.command, "download")
         self.assertIs(download_args.func, self.nogui.command_download)
+        self.assertIs(short_download_args.func, self.nogui.command_download)
+        self.assertIs(short_update_args.func, self.nogui.command_update)
+        self.assertIs(short_repair_args.func, self.nogui.command_repair)
         self.assertEqual(move_args.command, "move")
         self.assertIs(move_args.func, self.nogui.command_move)
         self.assertEqual(delete_args.command, "delete")
@@ -2846,8 +2918,13 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(terminal_attach_args.attach_console)
         self.assertEqual(version_args.command, "version")
         self.assertIs(version_args.func, self.nogui.command_version)
+        self.assertIs(short_version_args.func, self.nogui.command_version)
         self.assertEqual(status_args.command, "status")
         self.assertIs(status_args.func, self.nogui.command_status)
+        self.assertIs(short_status_args.func, self.nogui.command_status)
+        self.assertEqual(language_args.command, "language")
+        self.assertEqual(language_args.value, "en")
+        self.assertIs(language_args.func, self.nogui.command_language)
 
     def test_nogui_terminal_environment_helpers(self):
         argv = self.nogui.terminal_split(r'download "Eclipse Temurin" 21 D:\Java --package-type jdk', platform_name="nt")
@@ -2856,13 +2933,27 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertEqual(posix_argv, ["scan", "/opt/java runtimes", "--stdout"])
         self.assertEqual(self.nogui.normalize_terminal_argv(["LIST"]), ["list"])
         self.assertEqual(self.nogui.normalize_terminal_argv(["列表"]), ["list"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["dl"]), ["download"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["u"]), ["update"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["r"]), ["repair"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["st"]), ["status"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["v"]), ["version"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["任务"]), ["tasks"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["c", "all"]), ["cancel", "all"])
+        self.assertTrue(self.nogui.is_terminal_task_ref_input("1 2"))
+        self.assertTrue(self.nogui.is_terminal_task_ref_input("1,2"))
+        self.assertFalse(self.nogui.is_terminal_task_ref_input("cancel 1"))
         self.assertEqual(self.nogui.normalize_terminal_argv(["检查更新"]), ["check-updates"])
+        self.assertEqual(self.nogui.normalize_terminal_argv(["语言", "中文"]), ["language", "中文"])
         self.assertIn("check-updates", self.nogui.terminal_help_text("en_US"))
+        self.assertIn("language", self.nogui.terminal_help_text("en_US"))
+        self.assertIn("cancel", self.nogui.terminal_help_text("en_US"))
         self.assertIn("exit", self.nogui.terminal_help_text("en_US"))
         self.assertIn("已成功接入", self.nogui.terminal_text("connected", "zh_CN"))
         self.assertIn("Successfully connected", self.nogui.terminal_text("connected", "en_US"))
         self.assertIn("ljm", self.nogui.terminal_text("prompt", "zh_CN"))
         self.assertEqual(self.nogui.decode_terminal_input_bytes("状态\n".encode("utf-8-sig")).strip(), "状态")
+        self.assertEqual(self.nogui.format_progress_bar(50, width=10), "[#####-----]")
 
         class FakeStdin:
             def __init__(self, is_tty):
@@ -2880,6 +2971,133 @@ class NoguiFeatureTests(unittest.TestCase):
             self.assertTrue(self.nogui.should_start_terminal([]))
         finally:
             self.nogui.sys.stdin = original_stdin
+
+    def test_nogui_terminal_background_tasks_can_report_progress_and_cancel(self):
+        events = []
+        original_print = self.nogui.safe_print
+        original_tasks = dict(self.nogui.TERMINAL_TASKS)
+        original_counter = self.nogui.TERMINAL_TASK_COUNTER
+        release = self.nogui.threading.Event()
+
+        class Args:
+            command = "download"
+            vendor = "Eclipse Temurin"
+            major = "21"
+            output = ""
+            stdout = False
+
+        def fake_download(args):
+            progress_cb, status_cb = self.nogui.progress_logger("fake-download", task=args.terminal_task)
+            status_cb("connecting")
+            progress_cb(50, 5, 10)
+            release.wait(2)
+            if args.cancel_event.is_set():
+                raise self.nogui.core.OperationCancelled()
+            progress_cb(100, 10, 10)
+            return {"ok": True, "action": "download", "result": {"java_home": "fake"}}
+
+        try:
+            with self.nogui.TERMINAL_TASK_LOCK:
+                self.nogui.TERMINAL_TASKS.clear()
+                self.nogui.TERMINAL_TASK_COUNTER = 0
+            self.nogui.safe_print = lambda message, end="\n": events.append(str(message))
+            with tempfile.TemporaryDirectory() as tmp:
+                args = Args()
+                args.func = fake_download
+                args.output = str(Path(tmp) / "result.json")
+                task = self.nogui.start_terminal_task(args, ["download", "Eclipse Temurin", "21", r"D:\Java"], language="en_US")
+                deadline = time.time() + 2
+                while task["progress"] < 50 and time.time() < deadline:
+                    time.sleep(0.02)
+                self.assertEqual(task["status"], "running")
+                self.assertGreaterEqual(task["progress"], 50)
+                task_line = self.nogui.format_task_line(task, "en_US")
+                self.assertIn("#1", task_line)
+                self.assertIn("Download", task_line)
+                self.assertIn("Eclipse Temurin jdk 21", task_line)
+
+                cancelled = self.nogui.request_cancel_terminal_tasks(str(task["id"]), "en_US")
+                self.assertEqual(cancelled, [task])
+                release.set()
+                task["thread"].join(2)
+
+                self.assertEqual(task["status"], "cancelled")
+                self.assertTrue(Path(args.output).exists())
+                self.assertTrue(any("started" in item.lower() for item in events))
+                self.assertTrue(any("cancel" in item.lower() for item in events))
+        finally:
+            release.set()
+            self.nogui.safe_print = original_print
+            with self.nogui.TERMINAL_TASK_LOCK:
+                self.nogui.TERMINAL_TASKS.clear()
+                self.nogui.TERMINAL_TASKS.update(original_tasks)
+                self.nogui.TERMINAL_TASK_COUNTER = original_counter
+
+    def test_nogui_ctrl_c_enters_cancel_selection_mode(self):
+        events = []
+        original_print = self.nogui.safe_print
+        original_tasks = dict(self.nogui.TERMINAL_TASKS)
+        original_counter = self.nogui.TERMINAL_TASK_COUNTER
+        original_configure = self.nogui.configure_terminal_environment
+        original_stdin = self.nogui.sys.stdin
+        interrupt_marker = self.nogui.TERMINAL_INTERRUPT
+
+        class Args:
+            command = "download"
+            vendor = "Eclipse Temurin"
+            major = "21"
+            output = ""
+            stdout = False
+
+        def fake_download(args):
+            progress_cb, _status_cb = self.nogui.progress_logger("fake-download", task=args.terminal_task)
+            progress_cb(25, 1, 4)
+            deadline = time.time() + 2
+            while not args.cancel_event.is_set() and time.time() < deadline:
+                time.sleep(0.02)
+            if args.cancel_event.is_set():
+                raise self.nogui.core.OperationCancelled()
+            return {"ok": True, "action": "download"}
+
+        class FakeStdin:
+            def __init__(self):
+                self.lines = iter([interrupt_marker, "1\n", "exit\n"])
+
+            def isatty(self):
+                return True
+
+            def readline(self):
+                item = next(self.lines, "")
+                if item is interrupt_marker:
+                    raise KeyboardInterrupt()
+                return item
+
+        try:
+            with self.nogui.TERMINAL_TASK_LOCK:
+                self.nogui.TERMINAL_TASKS.clear()
+                self.nogui.TERMINAL_TASK_COUNTER = 0
+            self.nogui.safe_print = lambda message, end="\n": events.append(str(message))
+            self.nogui.configure_terminal_environment = lambda: None
+            self.nogui.sys.stdin = FakeStdin()
+            args = Args()
+            args.func = fake_download
+            task = self.nogui.start_terminal_task(args, ["download", "Eclipse Temurin", "21", r"D:\Java"], language="en_US")
+            self.assertEqual(task["id"], 1)
+
+            self.assertEqual(self.nogui.run_terminal(self.nogui.build_parser()), 0)
+            task["thread"].join(2)
+
+            self.assertEqual(task["status"], "cancelled")
+            self.assertTrue(any("Enter the task number" in item or "任务编号" in item for item in events))
+            self.assertTrue(any("#1" in item and ("Download" in item or "下载" in item) for item in events))
+        finally:
+            self.nogui.safe_print = original_print
+            self.nogui.configure_terminal_environment = original_configure
+            self.nogui.sys.stdin = original_stdin
+            with self.nogui.TERMINAL_TASK_LOCK:
+                self.nogui.TERMINAL_TASKS.clear()
+                self.nogui.TERMINAL_TASKS.update(original_tasks)
+                self.nogui.TERMINAL_TASK_COUNTER = original_counter
 
     def test_nogui_terminal_console_fallback_handles_empty_stdin(self):
         original_stdin = self.nogui.sys.stdin
@@ -2971,6 +3189,57 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(any(item[0] == "prompt" and "ljm" in item[1] for item in events if isinstance(item, tuple)))
         self.assertTrue(any("已退出" in item for item in events if isinstance(item, str)))
 
+    def test_nogui_language_command_follows_system_and_can_switch(self):
+        parser = self.nogui.build_parser()
+        original_language = self.nogui.core.APP_CONFIG.get("language", "auto")
+        original_save_config = self.nogui.core.save_config
+        original_detect = self.nogui.core.detect_system_language
+        saved = []
+        try:
+            self.nogui.core.APP_CONFIG["language"] = "auto"
+            self.nogui.core.save_config = lambda config: saved.append(dict(config))
+            self.nogui.core.detect_system_language = lambda: "en_US"
+
+            self.assertEqual(self.nogui.terminal_language(), "en_US")
+            show_payload = self.nogui.command_language(parser.parse_args(["language"]))
+            self.assertFalse(show_payload["changed"])
+            self.assertEqual(show_payload["configured"], "auto")
+            self.assertEqual(show_payload["active"], "en_US")
+
+            switch_payload = self.nogui.command_language(parser.parse_args(["language", "中文"]))
+            self.assertTrue(switch_payload["changed"])
+            self.assertEqual(switch_payload["configured"], "zh_CN")
+            self.assertEqual(switch_payload["active"], "zh_CN")
+            self.assertEqual(self.nogui.terminal_language(), "zh_CN")
+            self.assertEqual(saved[-1]["language"], "zh_CN")
+
+            auto_payload = self.nogui.command_language(parser.parse_args(["language", "windows-default"]))
+            self.assertEqual(auto_payload["configured"], "auto")
+            self.assertEqual(auto_payload["active"], "en_US")
+        finally:
+            self.nogui.core.APP_CONFIG["language"] = original_language
+            self.nogui.core.save_config = original_save_config
+            self.nogui.core.detect_system_language = original_detect
+
+    def test_nogui_entry_and_build_scripts_keep_dynamic_core_imports_visible(self):
+        root = Path(__file__).resolve().parents[1]
+        entry = (root / "src" / "LJM_nogui_entry.py").read_text(encoding="utf-8")
+        scripts = "\n".join(
+            (root / path).read_text(encoding="utf-8")
+            for path in (
+                "scripts/build_windows.ps1",
+                "scripts/build_linux.sh",
+                "scripts/build_macos.sh",
+                "scripts/build_nogui_windows.ps1",
+                "scripts/build_nogui_linux.sh",
+                "scripts/build_nogui_macos.sh",
+            )
+        )
+
+        for module_name in ("plistlib", "hashlib", "locale", "socket", "stat"):
+            self.assertIn(f"import {module_name}", entry)
+            self.assertIn(f"--hidden-import {module_name}", scripts)
+
     def test_nogui_feedback_exports_github_issue_url(self):
         parser = self.nogui.build_parser()
         args = parser.parse_args(["feedback", "--message", "Java update list is blocked"])
@@ -2980,8 +3249,15 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("3.1.1", payload["body"])
+        self.assertIn("3.1.2", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
+
+    def test_nogui_full_update_uses_versioned_target_rename(self):
+        source = inspect.getsource(self.nogui.repair_or_update_target)
+
+        self.assertIn("resolve_update_java_home_target_path", source)
+        self.assertIn("unregister_java_registry_name", source)
+        self.assertIn("final_java_home", source)
 
     def test_nogui_defaults_use_nogui_name(self):
         self.assertEqual(Path(self.nogui.DEFAULT_RESULT_FILE).name, "ljm_nogui_result.json")

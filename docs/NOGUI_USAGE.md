@@ -1,15 +1,18 @@
 # NoGUI Usage / NoGUI 使用文档
 
-## nogui使用说明
+## 中文
 
 NoGUI 是 LJM Java Manager 的命令行版本，不启动桌面窗口和托盘，适合服务器、无桌面环境、脚本批处理、计划任务和 CI 使用。它复用桌面版核心逻辑，支持扫描、注册、下载、修复、更新、移动、删除 Java，并可设置默认 `JAVA_HOME`。
 
-### 3.1.1 重要变化
+### 3.1.2 重要变化
 
 - Java 注册、下载、更新和修复不再自动修改 `JAVA_HOME`。
 - 如需修改系统默认 Java，请使用 `set-default` 命令。
 - NoGUI 会读取工具自身注册的 Java，也会扫描系统里其他安装器注册过的 Java，方便统一管理。
 - Windows 会额外读取 JDK/JRE、旧版 JavaSoft、HKLM/HKCU 以及 32/64 位注册表视图。
+- LJM 备份会保存为压缩包，避免启动器扫描到备份里的 Java。
+- 完整更新工具命名的 Java 文件夹后，目录名会同步到新版本号。
+- NoGUI 新增 `language` 命令，可切换 `auto`、`zh_CN`、`en_US`；默认 `auto` 会跟随 Windows 或当前系统语言。
 - 下载、更新、修复结果仍以 JSON 和日志为准；NoGUI 不显示桌面端的任务管理窗口。
 
 ### 下载哪个包
@@ -99,6 +102,10 @@ Linux/macOS 使用对应入口：
 
 成功接入后会显示“已成功接入 LJM Java Manager NoGUI 终端环境”。终端提示词和帮助内容会跟随系统语言自动切换；Windows 的 cmd、PowerShell，以及 Linux/macOS 常见终端都可以直接输入 NoGUI 命令。终端内还支持 `帮助`、`退出`、`清屏`、`状态`、`版本`、`pwd` 和 `cd <目录>` 等辅助命令。
 
+终端环境支持短命令：`l`/`ls` 列表，`s` 扫描，`cu` 检查更新，`dl` 下载，`r` 修复，`u` 更新，`mv` 移动，`rm` 删除，`def` 设置默认 Java，`lang` 切换语言，`t`/`tasks` 查看任务，`c`/`cancel` 取消任务，`w`/`wait` 等待任务。
+
+在交互终端里执行 `download`/`dl`、`update`/`u`、`repair`/`r` 时会自动作为后台任务运行并显示下载进度条，终端仍可继续输入其他命令。第一个开始的任务标记为 `1`，后续任务依次为 `2`、`3`、`4`。输入 `tasks` 查看进度和任务类型，输入 `c 1`、`cancel 2` 或 `cancel all` 取消任务；按 `Ctrl+C` 后会列出可取消任务，再输入 `1`、`2` 或 `1 3` 即可取消指定任务。
+
 ### 输出和日志
 
 NoGUI 默认把执行结果写入程序目录下的 `ljm_nogui_result.json`，错误日志写入 `ljm_nogui.log`。
@@ -127,6 +134,14 @@ NoGUI 默认把执行结果写入程序目录下的 `ljm_nogui_result.json`，�
 # 下载并注册 Java
 .\LJM-Java-Manager-nogui.exe download "Eclipse Temurin" 21 "D:\Java" --package-type jdk --stdout
 
+# 交互终端里的短命令示例
+dl "Eclipse Temurin" 21 "D:\Java" --package-type jdk
+u "Java 21"
+r "Java 21" --mode smart
+tasks
+cancel 1
+wait all
+
 # 检查更新
 .\LJM-Java-Manager-nogui.exe check-updates --stdout
 
@@ -138,6 +153,12 @@ NoGUI 默认把执行结果写入程序目录下的 `ljm_nogui_result.json`，�
 
 # 设置默认 JAVA_HOME
 .\LJM-Java-Manager-nogui.exe set-default "Java 21" --stdout
+
+# 查看或切换显示语言
+.\LJM-Java-Manager-nogui.exe language --stdout
+.\LJM-Java-Manager-nogui.exe language zh_CN --stdout
+.\LJM-Java-Manager-nogui.exe language en_US --stdout
+.\LJM-Java-Manager-nogui.exe language auto --stdout
 
 # 移动 Java 目录
 .\LJM-Java-Manager-nogui.exe move "Java 21" "D:\Java\jdk-21-new" --stdout
@@ -201,16 +222,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_nogui_windows.ps1
 
 产物会输出到 `dist/`。GitHub Actions 发布时会上传到 Release。
 
-## Instructions for use
+## English
 
 NoGUI is the command-line edition of LJM Java Manager. It does not start a desktop window or tray icon, so it is suitable for servers, headless systems, scripts, scheduled tasks, and CI jobs. It reuses the desktop core logic and supports scanning, registering, downloading, repairing, updating, moving, deleting Java runtimes, and setting the default `JAVA_HOME`.
 
-### Important Changes In 3.1.1
+### Important Changes In 3.1.2
 
 - Java registration, download, update, and repair no longer change `JAVA_HOME` automatically.
 - To change the system default Java, use the `set-default` command.
 - NoGUI reads Java registered by LJM and Java registered by other installers, so both can be managed in one place.
 - On Windows, NoGUI scans JDK/JRE, legacy JavaSoft keys, HKLM/HKCU, and 32-bit/64-bit registry views.
+- LJM backups are stored as archives so launchers do not scan backup Java runtimes.
+- After a full update of an LJM-named Java folder, the folder name follows the new Java version.
+- NoGUI adds the `language` command to switch between `auto`, `zh_CN`, and `en_US`; `auto` follows Windows or the current system language.
 - Download, update, and repair results are reported through JSON and logs. NoGUI does not show the desktop task manager window.
 
 ### Which Package To Download
@@ -300,6 +324,10 @@ When started with no arguments in a real terminal, NoGUI also enters this enviro
 
 After connecting, NoGUI prints `Successfully connected to the LJM Java Manager NoGUI terminal environment.` The prompt and help text follow the detected system language. Windows cmd, PowerShell, and common Linux/macOS terminals can call NoGUI commands directly. Built-in helpers include `help`, `exit`, `clear`/`cls`, `status`, `version`, `pwd`, and `cd <folder>`.
 
+The terminal supports short commands: `l`/`ls` for list, `s` for scan, `cu` for check updates, `dl` for download, `r` for repair, `u` for update, `mv` for move, `rm` for delete, `def` for default Java, `lang` for language, `t`/`tasks` for task status, `c`/`cancel` for cancellation, and `w`/`wait` for waiting.
+
+Inside the interactive terminal, `download`/`dl`, `update`/`u`, and `repair`/`r` run as background tasks and show a download progress bar while the prompt keeps accepting other commands. The first started task is marked `1`, then `2`, `3`, `4`, and so on. Use `tasks` to view progress and task type, `c 1`, `cancel 2`, or `cancel all` to cancel. Pressing `Ctrl+C` lists cancellable tasks; then enter `1`, `2`, or `1 3` to cancel selected tasks.
+
 ### Output And Logs
 
 NoGUI writes the result JSON to `ljm_nogui_result.json` and errors to `ljm_nogui.log` by default.
@@ -328,6 +356,14 @@ Example:
 # Download and register Java
 .\LJM-Java-Manager-nogui.exe download "Eclipse Temurin" 21 "D:\Java" --package-type jdk --stdout
 
+# Short commands inside the interactive terminal
+dl "Eclipse Temurin" 21 "D:\Java" --package-type jdk
+u "Java 21"
+r "Java 21" --mode smart
+tasks
+cancel 1
+wait all
+
 # Check updates
 .\LJM-Java-Manager-nogui.exe check-updates --stdout
 
@@ -339,6 +375,12 @@ Example:
 
 # Set default JAVA_HOME
 .\LJM-Java-Manager-nogui.exe set-default "Java 21" --stdout
+
+# Show or switch display language
+.\LJM-Java-Manager-nogui.exe language --stdout
+.\LJM-Java-Manager-nogui.exe language zh_CN --stdout
+.\LJM-Java-Manager-nogui.exe language en_US --stdout
+.\LJM-Java-Manager-nogui.exe language auto --stdout
 
 # Move a Java directory
 .\LJM-Java-Manager-nogui.exe move "Java 21" "D:\Java\jdk-21-new" --stdout

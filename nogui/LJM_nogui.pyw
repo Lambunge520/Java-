@@ -30,6 +30,12 @@ TERMINAL_HELP_COMMANDS = {"help", "?", "h", "帮助", "幫助"}
 TERMINAL_CLEAR_COMMANDS = {"clear", "cls", "清屏"}
 TERMINAL_VERSION_COMMANDS = {"version", "ver", "版本"}
 TERMINAL_STATUS_COMMANDS = {"status", "状态", "狀態"}
+TERMINAL_TASKS_COMMANDS = {"tasks", "task", "jobs", "ps", "任务", "任務"}
+TERMINAL_CANCEL_COMMANDS = {"cancel", "stop", "kill", "取消", "停止"}
+TERMINAL_WAIT_COMMANDS = {"wait", "等待"}
+TERMINAL_INTERRUPT = object()
+TERMINAL_PROGRESS_BAR_WIDTH = 24
+TERMINAL_PROGRESS_RENDER_INTERVAL = 0.8
 TERMINAL_CANONICAL_COMMANDS = {
     "list",
     "scan",
@@ -42,13 +48,57 @@ TERMINAL_CANONICAL_COMMANDS = {
     "move",
     "delete",
     "set-default",
+    "language",
+    "tasks",
+    "cancel",
+    "wait",
     "terminal",
 }
 TERMINAL_COMMAND_ALIASES = {
+    "l": "list",
     "ls": "list",
+    "s": "scan",
+    "cscan": "scan",
+    "cu": "check-updates",
+    "check": "check-updates",
+    "checks": "check-updates",
+    "updcheck": "check-updates",
+    "r": "repair",
+    "fix": "repair",
+    "u": "update",
+    "up": "update",
+    "upd": "update",
+    "dl": "download",
+    "d": "download",
+    "ven": "vendors",
+    "vendor": "vendors",
+    "vds": "vendors",
+    "fb": "feedback",
+    "mv": "move",
+    "rm": "delete",
+    "del": "delete",
+    "def": "set-default",
+    "default": "set-default",
+    "java-default": "set-default",
+    "lang": "language",
+    "la": "language",
+    "st": "status",
+    "stat": "status",
+    "v": "version",
+    "jobs": "tasks",
+    "job": "tasks",
+    "ps": "tasks",
+    "task": "tasks",
+    "t": "tasks",
+    "c": "cancel",
+    "x": "cancel",
+    "stop": "cancel",
+    "kill": "cancel",
+    "w": "wait",
     "列表": "list",
     "扫描": "scan",
     "掃描": "scan",
+    "查更新": "check-updates",
     "下载": "download",
     "下載": "download",
     "修复": "repair",
@@ -66,6 +116,13 @@ TERMINAL_COMMAND_ALIASES = {
     "發行商": "vendors",
     "反馈": "feedback",
     "反饋": "feedback",
+    "语言": "language",
+    "語言": "language",
+    "任务": "tasks",
+    "任務": "tasks",
+    "取消": "cancel",
+    "停止": "cancel",
+    "等待": "wait",
 }
 
 TERMINAL_TEXT = {
@@ -75,18 +132,25 @@ TERMINAL_TEXT = {
         "hint": "输入 help/帮助 查看命令，输入 exit/退出 离开终端环境。",
         "prompt": "ljm无桌面> ",
         "commands_title": "可用命令:",
-        "cmd_list": "  list / 列表",
-        "cmd_scan": "  scan <文件夹> / 扫描 <文件夹>",
-        "cmd_vendors": "  vendors / 发行商",
-        "cmd_check": "  check-updates / 检查更新",
-        "cmd_download": "  download \"Eclipse Temurin\" 21 <安装父目录> --package-type jdk",
-        "cmd_repair": "  repair <注册名或Java目录> --mode smart",
-        "cmd_update": "  update <注册名或Java目录>",
-        "cmd_move": "  move <注册名或Java目录> <新的Java目录>",
-        "cmd_delete": "  delete <注册名或Java目录> [--files] [--force]",
-        "cmd_default": "  set-default <注册名或Java目录>",
+        "cmd_list": "  list / l / ls / 列表",
+        "cmd_scan": "  scan / s <文件夹> / 扫描 <文件夹>",
+        "cmd_vendors": "  vendors / ven / 发行商",
+        "cmd_check": "  check-updates / cu / 检查更新",
+        "cmd_download": "  download / dl \"Eclipse Temurin\" 21 <安装父目录> --package-type jdk",
+        "cmd_repair": "  repair / r <注册名或Java目录> --mode smart",
+        "cmd_update": "  update / u <注册名或Java目录>",
+        "cmd_move": "  move / mv <注册名或Java目录> <新的Java目录>",
+        "cmd_delete": "  delete / rm <注册名或Java目录> [--files] [--force]",
+        "cmd_default": "  set-default / def <注册名或Java目录>",
+        "cmd_language": "  language / lang [auto|zh_CN|en_US] / 语言 [自动|中文|English]",
+        "cmd_tasks": "  tasks / t 查看后台任务，cancel / c [任务ID|all] 取消，wait / w [任务ID|all] 等待",
         "cmd_feedback": "  feedback --message \"反馈内容\"",
         "cmd_builtin": "  help/帮助, status/状态, version/版本, pwd, cd <目录>, clear/清屏, exit/退出",
+        "language_auto": "自动跟随系统语言",
+        "language_zh_CN": "简体中文",
+        "language_en_US": "English",
+        "language_show": "显示语言: {configured}; 当前生效: {active}; 系统检测: {detected}",
+        "language_set": "显示语言已切换为: {configured}; 当前生效: {active}; 系统检测: {detected}",
         "parse_error": "命令解析失败: {error}",
         "unknown_error": "命令执行失败: {error}",
         "version": "当前 NoGUI 版本: {version}",
@@ -95,6 +159,25 @@ TERMINAL_TEXT = {
         "cd_missing": "请提供要进入的目录。",
         "cd_done": "当前目录已切换到: {cwd}",
         "cd_failed": "目录不存在: {path}",
+        "task_started": "后台任务 #{task_id} 已开始: {label}",
+        "task_progress": "任务 #{task_id} {label} {bar} {percent} {size} {message}",
+        "task_completed": "任务 #{task_id} 已完成: {label}",
+        "task_failed": "任务 #{task_id} 失败: {label} - {error}",
+        "task_cancelled": "任务 #{task_id} 已取消: {label}",
+        "task_cancel_requested": "已请求取消任务: {targets}",
+        "task_cancel_none": "没有可取消的运行中任务。",
+        "task_none": "暂无后台任务。",
+        "task_list_header": "后台任务:",
+        "task_line": "  #{task_id} [{status}] {task_type}: {detail} {bar} {percent} {size} {message}",
+        "task_type_download": "下载",
+        "task_type_update": "更新",
+        "task_type_repair": "修复",
+        "task_type_task": "任务",
+        "task_wait_done": "等待完成: {targets}",
+        "task_wait_none": "没有可等待的任务。",
+        "task_ctrl_c_cancel": "已收到 Ctrl+C，请输入要取消的任务编号，例如 1；也可以输入 1 2 或 all。",
+        "task_ctrl_c_no_task": "已收到 Ctrl+C；当前没有运行中的后台任务。再次输入 exit 可退出。",
+        "task_cancel_selection_empty": "没有输入任务编号，已退出取消选择。",
         "bye": "已退出 NoGUI 终端环境。",
     },
     "en_US": {
@@ -103,18 +186,25 @@ TERMINAL_TEXT = {
         "hint": "Type help for commands, exit to leave the terminal environment.",
         "prompt": "ljm-nogui> ",
         "commands_title": "Available commands:",
-        "cmd_list": "  list",
-        "cmd_scan": "  scan <folder>",
-        "cmd_vendors": "  vendors",
-        "cmd_check": "  check-updates",
-        "cmd_download": "  download \"Eclipse Temurin\" 21 <parent-folder> --package-type jdk",
-        "cmd_repair": "  repair <name-or-java-home> --mode smart",
-        "cmd_update": "  update <name-or-java-home>",
-        "cmd_move": "  move <name-or-java-home> <new-java-home>",
-        "cmd_delete": "  delete <name-or-java-home> [--files] [--force]",
-        "cmd_default": "  set-default <name-or-java-home>",
+        "cmd_list": "  list / l / ls",
+        "cmd_scan": "  scan / s <folder>",
+        "cmd_vendors": "  vendors / ven",
+        "cmd_check": "  check-updates / cu",
+        "cmd_download": "  download / dl \"Eclipse Temurin\" 21 <parent-folder> --package-type jdk",
+        "cmd_repair": "  repair / r <name-or-java-home> --mode smart",
+        "cmd_update": "  update / u <name-or-java-home>",
+        "cmd_move": "  move / mv <name-or-java-home> <new-java-home>",
+        "cmd_delete": "  delete / rm <name-or-java-home> [--files] [--force]",
+        "cmd_default": "  set-default / def <name-or-java-home>",
+        "cmd_language": "  language / lang [auto|zh_CN|en_US]",
+        "cmd_tasks": "  tasks / t, cancel / c [task-id|all], wait / w [task-id|all]",
         "cmd_feedback": "  feedback --message \"text\"",
         "cmd_builtin": "  help, status, version, pwd, cd <folder>, clear/cls, exit",
+        "language_auto": "Follow system language",
+        "language_zh_CN": "Simplified Chinese",
+        "language_en_US": "English",
+        "language_show": "Display language: {configured}; active: {active}; detected system language: {detected}",
+        "language_set": "Display language changed to: {configured}; active: {active}; detected system language: {detected}",
         "parse_error": "Command parse failed: {error}",
         "unknown_error": "Command failed: {error}",
         "version": "Current NoGUI version: {version}",
@@ -123,6 +213,25 @@ TERMINAL_TEXT = {
         "cd_missing": "Provide a folder to enter.",
         "cd_done": "Current directory changed to: {cwd}",
         "cd_failed": "Folder does not exist: {path}",
+        "task_started": "Background task #{task_id} started: {label}",
+        "task_progress": "Task #{task_id} {label} {bar} {percent} {size} {message}",
+        "task_completed": "Task #{task_id} completed: {label}",
+        "task_failed": "Task #{task_id} failed: {label} - {error}",
+        "task_cancelled": "Task #{task_id} cancelled: {label}",
+        "task_cancel_requested": "Cancel requested for: {targets}",
+        "task_cancel_none": "No running task can be cancelled.",
+        "task_none": "No background tasks.",
+        "task_list_header": "Background tasks:",
+        "task_line": "  #{task_id} [{status}] {task_type}: {detail} {bar} {percent} {size} {message}",
+        "task_type_download": "Download",
+        "task_type_update": "Update",
+        "task_type_repair": "Repair",
+        "task_type_task": "Task",
+        "task_wait_done": "Wait finished: {targets}",
+        "task_wait_none": "No task to wait for.",
+        "task_ctrl_c_cancel": "Ctrl+C received. Enter the task number to cancel, such as 1; you can also enter 1 2 or all.",
+        "task_ctrl_c_no_task": "Ctrl+C received; no running background task. Type exit to leave.",
+        "task_cancel_selection_empty": "No task number entered; cancel selection closed.",
         "bye": "Exited the NoGUI terminal environment.",
     },
 }
@@ -137,6 +246,53 @@ def load_core():
 
 
 core = load_core()
+
+TERMINAL_OUTPUT_LOCK = threading.RLock()
+TERMINAL_TASK_LOCK = threading.RLock()
+TERMINAL_TASKS = {}
+TERMINAL_TASK_COUNTER = 0
+
+LANGUAGE_CHOICES = ("auto", "zh_CN", "en_US")
+LANGUAGE_VALUE_ALIASES = {
+    "auto": "auto",
+    "system": "auto",
+    "systemdefault": "auto",
+    "default": "auto",
+    "follow-system": "auto",
+    "follow_system": "auto",
+    "followsystem": "auto",
+    "windows": "auto",
+    "windows-default": "auto",
+    "windows_default": "auto",
+    "windowsdefault": "auto",
+    "自动": "auto",
+    "自動": "auto",
+    "跟随系统": "auto",
+    "跟隨系統": "auto",
+    "系统": "auto",
+    "系統": "auto",
+    "系统默认": "auto",
+    "系統預設": "auto",
+    "windows默认": "auto",
+    "windows預設": "auto",
+    "zh": "zh_CN",
+    "zh-cn": "zh_CN",
+    "zh_cn": "zh_CN",
+    "cn": "zh_CN",
+    "chinese": "zh_CN",
+    "simplified-chinese": "zh_CN",
+    "simplified_chinese": "zh_CN",
+    "中文": "zh_CN",
+    "简体中文": "zh_CN",
+    "簡體中文": "zh_CN",
+    "汉语": "zh_CN",
+    "漢語": "zh_CN",
+    "en": "en_US",
+    "en-us": "en_US",
+    "en_us": "en_US",
+    "english": "en_US",
+    "英文": "en_US",
+}
 
 
 def log_line(message, log_file=DEFAULT_LOG_FILE):
@@ -161,6 +317,56 @@ def terminal_text(key, language=None, **kwargs):
         return template.format(**kwargs)
     except Exception:
         return template
+
+
+def normalize_language_value(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    key = raw.replace(" ", "").strip()
+    lower_key = key.lower()
+    if key in LANGUAGE_CHOICES:
+        return key
+    if lower_key in LANGUAGE_VALUE_ALIASES:
+        return LANGUAGE_VALUE_ALIASES[lower_key]
+    if key in LANGUAGE_VALUE_ALIASES:
+        return LANGUAGE_VALUE_ALIASES[key]
+    raise ValueError("language must be auto, zh_CN, or en_US")
+
+
+def language_label(value, language=None):
+    normalized = normalize_language_value(value) if value else "auto"
+    return terminal_text(f"language_{normalized}", language or terminal_language())
+
+
+def language_state_payload(changed=False):
+    configured = core.APP_CONFIG.get("language", "auto")
+    detected = core.detect_system_language()
+    active = core.active_language()
+    lang = active
+    message_key = "language_set" if changed else "language_show"
+    return {
+        "ok": True,
+        "action": "language",
+        "changed": bool(changed),
+        "configured": configured,
+        "configured_label": language_label(configured, lang),
+        "active": active,
+        "active_label": language_label(active, lang),
+        "detected": detected,
+        "detected_label": language_label(detected, lang),
+        "available": [
+            {"value": value, "label": language_label(value, lang)}
+            for value in LANGUAGE_CHOICES
+        ],
+        "message": terminal_text(
+            message_key,
+            lang,
+            configured=language_label(configured, lang),
+            active=language_label(active, lang),
+            detected=language_label(detected, lang),
+        ),
+    }
 
 
 def configure_terminal_environment():
@@ -191,17 +397,18 @@ def configure_terminal_environment():
 
 
 def safe_print(message, end="\n"):
-    try:
-        if sys.stdout:
-            print(str(message), end=end, flush=True)
-    except UnicodeEncodeError:
+    with TERMINAL_OUTPUT_LOCK:
         try:
-            sys.stdout.buffer.write((str(message) + end).encode("utf-8", errors="replace"))
-            sys.stdout.flush()
+            if sys.stdout:
+                print(str(message), end=end, flush=True)
+        except UnicodeEncodeError:
+            try:
+                sys.stdout.buffer.write((str(message) + end).encode("utf-8", errors="replace"))
+                sys.stdout.flush()
+            except Exception:
+                pass
         except Exception:
             pass
-    except Exception:
-        pass
 
 
 def write_result(payload, output_path=DEFAULT_RESULT_FILE, emit_stdout=False):
@@ -218,15 +425,198 @@ def write_result(payload, output_path=DEFAULT_RESULT_FILE, emit_stdout=False):
     return payload
 
 
-def progress_logger(prefix):
+def format_size_pair(downloaded, total):
+    try:
+        downloaded = int(downloaded or 0)
+    except Exception:
+        downloaded = 0
+    try:
+        total = int(total or 0)
+    except Exception:
+        total = 0
+    if total > 0:
+        return f"{core.format_file_size(downloaded)}/{core.format_file_size(total)}"
+    if downloaded > 0:
+        return core.format_file_size(downloaded)
+    return "-"
+
+
+def format_progress_bar(percent, width=TERMINAL_PROGRESS_BAR_WIDTH):
+    try:
+        value = max(0.0, min(100.0, float(percent or 0.0)))
+    except Exception:
+        value = 0.0
+    filled = int(round(width * value / 100.0))
+    return "[" + ("#" * filled) + ("-" * (width - filled)) + "]"
+
+
+def task_snapshot(task):
+    with TERMINAL_TASK_LOCK:
+        return {
+            "id": task.get("id"),
+            "label": task.get("label", ""),
+            "kind": task.get("kind", "task"),
+            "detail": task.get("detail", task.get("label", "")),
+            "action": task.get("action", ""),
+            "status": task.get("status", ""),
+            "progress": float(task.get("progress", 0.0) or 0.0),
+            "downloaded": int(task.get("downloaded", 0) or 0),
+            "total": int(task.get("total", 0) or 0),
+            "message": task.get("message", ""),
+            "error": task.get("error", ""),
+            "started_at": task.get("started_at", 0),
+            "finished_at": task.get("finished_at", 0),
+        }
+
+
+def format_task_line(task, language=None):
+    item = task_snapshot(task)
+    percent = f"{item['progress']:.1f}%" if item["total"] or item["progress"] else "--"
+    task_type = terminal_text(f"task_type_{item['kind']}", language)
+    return terminal_text(
+        "task_line",
+        language,
+        task_id=item["id"],
+        status=item["status"],
+        task_type=task_type,
+        detail=item["detail"],
+        bar=format_progress_bar(item["progress"]),
+        percent=percent,
+        size=format_size_pair(item["downloaded"], item["total"]),
+        message=item["message"],
+    )
+
+
+def terminal_task_records():
+    with TERMINAL_TASK_LOCK:
+        return [task_snapshot(task) for task in sorted(TERMINAL_TASKS.values(), key=lambda item: item.get("id", 0))]
+
+
+def running_terminal_tasks():
+    with TERMINAL_TASK_LOCK:
+        return [task for task in sorted(TERMINAL_TASKS.values(), key=lambda item: item.get("id", 0)) if task.get("status") in ("running", "cancelling")]
+
+
+def split_terminal_task_refs(ref=""):
+    raw = str(ref or "").strip()
+    if not raw:
+        return []
+    return [part.strip().lstrip("#") for part in raw.replace(",", " ").split() if part.strip()]
+
+
+def is_terminal_task_ref_input(ref=""):
+    refs = split_terminal_task_refs(ref)
+    if not refs:
+        return False
+    for item in refs:
+        if item.lower() in ("all", "*", "全部"):
+            continue
+        if not item.isdigit():
+            return False
+    return True
+
+
+def resolve_terminal_task_refs(ref=""):
+    refs = split_terminal_task_refs(ref)
+    with TERMINAL_TASK_LOCK:
+        tasks = sorted(TERMINAL_TASKS.values(), key=lambda item: item.get("id", 0))
+        running = [task for task in tasks if task.get("status") in ("running", "cancelling")]
+        if not refs:
+            return running[-1:] if running else []
+        if any(item.lower() in ("all", "*", "全部") for item in refs):
+            return running
+        task_ids = set()
+        for item in refs:
+            try:
+                task_ids.add(int(item))
+            except Exception:
+                continue
+        return [task for task in tasks if int(task.get("id", -1)) in task_ids]
+
+
+def request_cancel_terminal_tasks(ref="", language=None):
+    targets = [task for task in resolve_terminal_task_refs(ref) if task.get("status") in ("running", "cancelling")]
+    if not targets:
+        safe_print(terminal_text("task_cancel_none", language))
+        return []
+    labels = []
+    with TERMINAL_TASK_LOCK:
+        for task in targets:
+            task["status"] = "cancelling"
+            task["message"] = "cancel requested"
+            task["cancel_event"].set()
+            labels.append(f"#{task.get('id')}")
+    safe_print(terminal_text("task_cancel_requested", language, targets=", ".join(labels)))
+    return targets
+
+
+def wait_terminal_tasks(ref="", language=None):
+    targets = resolve_terminal_task_refs(ref)
+    if not targets:
+        safe_print(terminal_text("task_wait_none", language))
+        return []
+    labels = []
+    for task in targets:
+        thread = task.get("thread")
+        if thread:
+            thread.join()
+        labels.append(f"#{task.get('id')}")
+    safe_print(terminal_text("task_wait_done", language, targets=", ".join(labels)))
+    return targets
+
+
+def print_terminal_tasks(language=None):
+    records = terminal_task_records()
+    if not records:
+        safe_print(terminal_text("task_none", language))
+        return
+    safe_print(terminal_text("task_list_header", language))
+    with TERMINAL_TASK_LOCK:
+        for task in sorted(TERMINAL_TASKS.values(), key=lambda item: item.get("id", 0)):
+            safe_print(format_task_line(task, language))
+
+
+def render_task_progress(task, force=False):
+    now = time.time()
+    with TERMINAL_TASK_LOCK:
+        if not force and now - float(task.get("last_render", 0) or 0) < TERMINAL_PROGRESS_RENDER_INTERVAL:
+            return
+        task["last_render"] = now
+        snapshot = task_snapshot(task)
+    percent = f"{snapshot['progress']:.1f}%" if snapshot["total"] or snapshot["progress"] else "--"
+    safe_print(
+        terminal_text(
+            "task_progress",
+            terminal_language(),
+            task_id=snapshot["id"],
+            label=snapshot["label"],
+            bar=format_progress_bar(snapshot["progress"]),
+            percent=percent,
+            size=format_size_pair(snapshot["downloaded"], snapshot["total"]),
+            message=snapshot["message"],
+        )
+    )
+
+
+def progress_logger(prefix, task=None):
     def update_progress(percent, downloaded, total):
         if total:
             log_line(f"{prefix}: {percent:.1f}% ({downloaded}/{total})")
         else:
             log_line(f"{prefix}: downloaded {downloaded}")
+        if task is not None:
+            with TERMINAL_TASK_LOCK:
+                task["progress"] = max(0.0, min(100.0, float(percent or 0.0)))
+                task["downloaded"] = int(downloaded or 0)
+                task["total"] = int(total or 0)
+            render_task_progress(task)
 
     def update_status(message):
         log_line(f"{prefix}: {message}")
+        if task is not None:
+            with TERMINAL_TASK_LOCK:
+                task["message"] = str(message or "")
+            render_task_progress(task)
 
     return update_progress, update_status
 
@@ -272,24 +662,28 @@ def find_source_jdk(extract_dir):
     return core.find_source_jdk_dir(extract_dir)
 
 
-def download_latest_jdk(vendor, major, log_prefix="download", package_type="jdk"):
+def download_latest_jdk(vendor, major, log_prefix="download", package_type="jdk", progress_callback=None, status_callback=None, cancel_event=None):
     package_type = core.normalize_java_package_type(package_type)
     primary_info = core.JavaDownloadEngine.get_latest_download_info(vendor, major, package_type=package_type)
     if not primary_info:
         raise RuntimeError(f"no available update source for {vendor} {package_type} {major}")
 
-    progress_cb, status_cb = progress_logger(log_prefix)
+    progress_cb, status_cb = progress_callback, status_callback
+    if not progress_cb or not status_cb:
+        progress_cb, status_cb = progress_logger(log_prefix)
     info_queue = [primary_info]
     seen_info = {core.JavaDownloadEngine._download_info_identity(primary_info)}
     fallback_loaded = False
     last_error = None
 
     while info_queue:
+        core.ensure_not_cancelled(cancel_event)
         info = dict(info_queue.pop(0))
         suffix = core.download_info_archive_suffix(info)
         fd, archive_path = tempfile.mkstemp(suffix=suffix)
         os.close(fd)
         try:
+            core.ensure_not_cancelled(cancel_event)
             expected_sha256 = core.resolve_download_sha256(info)
             urls = info.get("urls") or [info["url"]]
             used_url = core.NetworkEngine.download_from_candidates(
@@ -297,16 +691,19 @@ def download_latest_jdk(vendor, major, log_prefix="download", package_type="jdk"
                 archive_path,
                 progress_cb,
                 status_cb,
+                cancel_event=cancel_event,
                 expected_sha256=expected_sha256,
             )
             if core.APP_CONFIG.get("verify_download_sha256", True) and expected_sha256:
-                core.verify_file_sha256(archive_path, expected_sha256)
+                core.verify_file_sha256(archive_path, expected_sha256, cancel_event=cancel_event)
             if not core.archive_quick_check(archive_path, suffix):
                 raise RuntimeError("downloaded archive failed structure validation")
             info["used_url"] = used_url
             info["archive_path"] = archive_path
             info["archive_suffix"] = suffix
             return info
+        except core.OperationCancelled:
+            raise
         except Exception as exc:
             last_error = exc
             try:
@@ -336,7 +733,7 @@ def extract_archive(info):
     return extract_dir
 
 
-def repair_or_update_target(target, mode="smart", vendor=None, major=None):
+def repair_or_update_target(target, mode="smart", vendor=None, major=None, progress_callback=None, status_callback=None, cancel_event=None):
     java_home, registry_name = resolve_target(target)
     runtime = core.read_java_runtime_info(java_home)
     update_java_home = core.runtime_update_java_home(runtime)
@@ -346,19 +743,43 @@ def repair_or_update_target(target, mode="smart", vendor=None, major=None):
     info = None
     extract_dir = ""
     try:
-        info = download_latest_jdk(vendor, major, log_prefix=f"{vendor}-{package_type}-{major}", package_type=package_type)
+        core.ensure_not_cancelled(cancel_event)
+        info = download_latest_jdk(
+            vendor,
+            major,
+            log_prefix=f"{vendor}-{package_type}-{major}",
+            package_type=package_type,
+            progress_callback=progress_callback,
+            status_callback=status_callback,
+            cancel_event=cancel_event,
+        )
         extract_dir = extract_archive(info)
+        core.ensure_not_cancelled(cancel_event)
         source_jdk = find_source_jdk(extract_dir)
         if mode == "smart":
-            core.repair_java_home_smart(source_jdk, update_java_home)
+            core.repair_java_home_smart(source_jdk, update_java_home, cancel_event=cancel_event)
+            final_java_home = update_java_home
         elif mode == "full":
-            core.replace_java_home_atomically(source_jdk, update_java_home)
+            final_java_home = core.resolve_update_java_home_target_path(update_java_home, info)
+            if core.normalize_path(final_java_home) != core.normalize_path(update_java_home):
+                old_names = core.JavaRegistryAdapter.find_version_names_by_home(update_java_home)
+                core.replace_java_home_atomically(source_jdk, final_java_home, cancel_event=cancel_event)
+                core.ensure_not_cancelled(cancel_event)
+                if os.path.exists(update_java_home):
+                    core.force_remove_tree(update_java_home)
+                for name in old_names:
+                    core.unregister_java_registry_name(name, java_home=update_java_home)
+                if not registry_name and old_names:
+                    registry_name = old_names[0]
+            else:
+                core.replace_java_home_atomically(source_jdk, final_java_home, cancel_event=cancel_event)
         else:
             raise ValueError("mode must be smart or full")
-        synced = core.JavaRegistryAdapter.sync_runtime_registration(update_java_home, preferred_name=registry_name)
+        core.ensure_not_cancelled(cancel_event)
+        synced = core.JavaRegistryAdapter.sync_runtime_registration(final_java_home, preferred_name=registry_name)
         return {
             "requested_java_home": java_home,
-            "java_home": update_java_home,
+            "java_home": final_java_home,
             "nested_jre_home": runtime.get("nested_jre_home", ""),
             "registry_name": registry_name,
             "vendor": vendor,
@@ -445,18 +866,47 @@ def command_check_updates(_args):
 
 
 def command_repair(args):
-    result = repair_or_update_target(args.target, mode=args.mode, vendor=args.vendor, major=args.major)
+    task = getattr(args, "terminal_task", None)
+    progress_cb, status_cb = progress_logger(f"repair-{args.target}", task=task)
+    result = repair_or_update_target(
+        args.target,
+        mode=args.mode,
+        vendor=args.vendor,
+        major=args.major,
+        progress_callback=progress_cb,
+        status_callback=status_cb,
+        cancel_event=getattr(args, "cancel_event", None),
+    )
     return {"ok": True, "action": "repair", "result": result}
 
 
 def command_update(args):
-    result = repair_or_update_target(args.target, mode="full", vendor=args.vendor, major=args.major)
+    task = getattr(args, "terminal_task", None)
+    progress_cb, status_cb = progress_logger(f"update-{args.target}", task=task)
+    result = repair_or_update_target(
+        args.target,
+        mode="full",
+        vendor=args.vendor,
+        major=args.major,
+        progress_callback=progress_cb,
+        status_callback=status_cb,
+        cancel_event=getattr(args, "cancel_event", None),
+    )
     return {"ok": True, "action": "update", "result": result}
 
 
 def command_download(args):
-    progress_cb, status_cb = progress_logger(f"download-{args.vendor}-{args.major}")
-    result = core.download_and_install_java(args.vendor, args.major, args.parent, progress_cb, status_cb, package_type=args.package_type)
+    task = getattr(args, "terminal_task", None)
+    progress_cb, status_cb = progress_logger(f"download-{args.vendor}-{args.major}", task=task)
+    result = core.download_and_install_java(
+        args.vendor,
+        args.major,
+        args.parent,
+        progress_cb,
+        status_cb,
+        cancel_event=getattr(args, "cancel_event", None),
+        package_type=args.package_type,
+    )
     return {"ok": True, "action": "download", "result": result}
 
 
@@ -528,6 +978,16 @@ def command_version(_args):
     return {"ok": True, "action": "version", "version": getattr(core, "VERSION", "unknown")}
 
 
+def command_language(args):
+    value = getattr(args, "value", None)
+    changed = False
+    if value:
+        core.APP_CONFIG["language"] = normalize_language_value(value)
+        core.save_config(core.APP_CONFIG)
+        changed = True
+    return language_state_payload(changed=changed)
+
+
 def command_status(_args):
     return {
         "ok": True,
@@ -537,6 +997,8 @@ def command_status(_args):
         "log_file": DEFAULT_LOG_FILE,
         "cwd": os.getcwd(),
         "platform": sys.platform,
+        "language": language_state_payload(changed=False),
+        "tasks": terminal_task_records(),
     }
 
 
@@ -552,58 +1014,58 @@ def build_parser():
 
     sub = parser.add_subparsers(dest="command")
 
-    p_list = sub.add_parser("list", parents=[common], help="list registered/discovered Java runtimes")
+    p_list = sub.add_parser("list", aliases=["l", "ls"], parents=[common], help="list registered/discovered Java runtimes")
     p_list.set_defaults(func=command_list)
 
-    p_scan = sub.add_parser("scan", parents=[common], help="scan directories and register Java runtimes")
+    p_scan = sub.add_parser("scan", aliases=["s"], parents=[common], help="scan directories and register Java runtimes")
     p_scan.add_argument("paths", nargs="+", help="directories to scan")
     p_scan.add_argument("--max-depth", type=int, default=6)
     p_scan.set_defaults(func=command_scan)
 
-    p_check = sub.add_parser("check-updates", parents=[common], help="check all Java runtimes for updates")
+    p_check = sub.add_parser("check-updates", aliases=["cu", "check"], parents=[common], help="check all Java runtimes for updates")
     p_check.set_defaults(func=command_check_updates)
 
-    p_repair = sub.add_parser("repair", parents=[common], help="repair a Java runtime")
+    p_repair = sub.add_parser("repair", aliases=["r", "fix"], parents=[common], help="repair a Java runtime")
     p_repair.add_argument("target", help="registered name or Java home path")
     p_repair.add_argument("--mode", choices=("smart", "full"), default="smart")
     p_repair.add_argument("--vendor")
     p_repair.add_argument("--major")
     p_repair.set_defaults(func=command_repair)
 
-    p_update = sub.add_parser("update", parents=[common], help="download latest same-major runtime and fully replace target")
+    p_update = sub.add_parser("update", aliases=["u", "up", "upd"], parents=[common], help="download latest same-major runtime and fully replace target")
     p_update.add_argument("target", help="registered name or Java home path")
     p_update.add_argument("--vendor")
     p_update.add_argument("--major")
     p_update.set_defaults(func=command_update)
 
-    p_download = sub.add_parser("download", parents=[common], help="download and register a new Java runtime under a parent folder")
+    p_download = sub.add_parser("download", aliases=["dl", "d"], parents=[common], help="download and register a new Java runtime under a parent folder")
     p_download.add_argument("vendor", help="Java vendor, for example: Eclipse Temurin")
     p_download.add_argument("major", help="Java major version, for example: 21")
     p_download.add_argument("parent", help="parent folder for the new Java installation")
     p_download.add_argument("--package-type", choices=("jdk", "jre"), default="jdk", help="runtime package type to download")
     p_download.set_defaults(func=command_download)
 
-    p_vendors = sub.add_parser("vendors", parents=[common], help="list supported Java vendors and usage guidance")
+    p_vendors = sub.add_parser("vendors", aliases=["ven", "vendor", "vds"], parents=[common], help="list supported Java vendors and usage guidance")
     p_vendors.set_defaults(func=command_vendors)
 
-    p_feedback = sub.add_parser("feedback", parents=[common], help="generate a prefilled GitHub feedback issue URL")
+    p_feedback = sub.add_parser("feedback", aliases=["fb"], parents=[common], help="generate a prefilled GitHub feedback issue URL")
     p_feedback.add_argument("--message", default="", help="optional feedback text to prefill")
     p_feedback.add_argument("--title", default="", help="optional GitHub issue title")
     p_feedback.set_defaults(func=command_feedback)
 
-    p_move = sub.add_parser("move", parents=[common], help="move a registered Java runtime and update registry/index")
+    p_move = sub.add_parser("move", aliases=["mv"], parents=[common], help="move a registered Java runtime and update registry/index")
     p_move.add_argument("target", help="registered name or Java home path")
     p_move.add_argument("destination", help="new Java home path; must not already exist")
     p_move.add_argument("--force", action="store_true", help="move even when related Java processes are detected")
     p_move.set_defaults(func=command_move)
 
-    p_delete = sub.add_parser("delete", parents=[common], help="unregister a Java runtime and optionally delete its folder")
+    p_delete = sub.add_parser("delete", aliases=["rm", "del"], parents=[common], help="unregister a Java runtime and optionally delete its folder")
     p_delete.add_argument("target", help="registered name or Java home path")
     p_delete.add_argument("--files", action="store_true", help="delete the Java folder in addition to unregistering it")
     p_delete.add_argument("--force", action="store_true", help="delete even when related Java processes are detected")
     p_delete.set_defaults(func=command_delete)
 
-    p_default = sub.add_parser("set-default", parents=[common], help="set target as default JAVA_HOME")
+    p_default = sub.add_parser("set-default", aliases=["def", "default"], parents=[common], help="set target as default JAVA_HOME")
     p_default.add_argument("target", help="registered name or Java home path")
     p_default.set_defaults(func=command_set_default)
 
@@ -611,10 +1073,14 @@ def build_parser():
     p_terminal.add_argument("--attach-console", action="store_true", help=argparse.SUPPRESS)
     p_terminal.set_defaults(func=command_terminal)
 
-    p_version = sub.add_parser("version", parents=[common], help="print NoGUI version information")
+    p_version = sub.add_parser("version", aliases=["v", "ver"], parents=[common], help="print NoGUI version information")
     p_version.set_defaults(func=command_version)
 
-    p_status = sub.add_parser("status", parents=[common], help="print NoGUI terminal and file status")
+    p_language = sub.add_parser("language", aliases=["lang", "la"], parents=[common], help="show or set display language: auto, zh_CN, en_US")
+    p_language.add_argument("value", nargs="?", help="auto, zh_CN, en_US, or aliases such as zh/en/中文/English")
+    p_language.set_defaults(func=command_language)
+
+    p_status = sub.add_parser("status", aliases=["st", "stat"], parents=[common], help="print NoGUI terminal and file status")
     p_status.set_defaults(func=command_status)
 
     return parser
@@ -635,6 +1101,8 @@ def terminal_help_text(language=None):
             terminal_text("cmd_move", lang),
             terminal_text("cmd_delete", lang),
             terminal_text("cmd_default", lang),
+            terminal_text("cmd_language", lang),
+            terminal_text("cmd_tasks", lang),
             terminal_text("cmd_feedback", lang),
             terminal_text("cmd_builtin", lang),
         ]
@@ -702,7 +1170,10 @@ def terminal_text_lines_from_stream(stream, language=None, close_stream=False):
             try:
                 safe_print(terminal_text("prompt", lang), end="")
                 line = stream.readline()
-            except (EOFError, KeyboardInterrupt):
+            except KeyboardInterrupt:
+                yield TERMINAL_INTERRUPT
+                continue
+            except EOFError:
                 return
             if line == "":
                 return
@@ -789,6 +1260,15 @@ def handle_terminal_builtin(command_argv, language=None):
             )
         )
         return True
+    if command in TERMINAL_TASKS_COMMANDS:
+        print_terminal_tasks(lang)
+        return True
+    if command in TERMINAL_CANCEL_COMMANDS:
+        request_cancel_terminal_tasks(command_argv[1] if len(command_argv) > 1 else "", lang)
+        return True
+    if command in TERMINAL_WAIT_COMMANDS:
+        wait_terminal_tasks(command_argv[1] if len(command_argv) > 1 else "", lang)
+        return True
     if command == "pwd":
         safe_print(terminal_text("cwd", lang, cwd=os.getcwd()))
         return True
@@ -806,8 +1286,125 @@ def handle_terminal_builtin(command_argv, language=None):
     return False
 
 
+def should_run_as_terminal_task(args):
+    return getattr(args, "func", None) in {command_download, command_update, command_repair}
+
+
+def terminal_task_kind(args, command_argv=None):
+    if getattr(args, "func", None) is command_download:
+        return "download"
+    if getattr(args, "func", None) is command_update:
+        return "update"
+    if getattr(args, "func", None) is command_repair:
+        return "repair"
+    action = str(getattr(args, "command", "") or (command_argv[0] if command_argv else "task"))
+    if action in ("download", "dl", "d"):
+        return "download"
+    if action in ("update", "u", "up", "upd"):
+        return "update"
+    if action in ("repair", "r", "fix"):
+        return "repair"
+    return "task"
+
+
+def build_terminal_task_detail(args, command_argv):
+    kind = terminal_task_kind(args, command_argv)
+    if kind == "download":
+        package_type = getattr(args, "package_type", "jdk")
+        return f"{getattr(args, 'vendor', '')} {package_type} {getattr(args, 'major', '')}".strip()
+    if kind == "update":
+        return str(getattr(args, "target", "")).strip()
+    if kind == "repair":
+        mode = getattr(args, "mode", "smart")
+        target = str(getattr(args, "target", "")).strip()
+        return f"{target} ({mode})".strip()
+    return " ".join(command_argv).strip() or str(getattr(args, "command", "") or "task")
+
+
+def build_terminal_task_label(args, command_argv):
+    kind = terminal_task_kind(args, command_argv)
+    detail = build_terminal_task_detail(args, command_argv)
+    task_type = terminal_text(f"task_type_{kind}", terminal_language())
+    if detail:
+        return f"{task_type}: {detail}"
+    return task_type
+
+
+def start_terminal_task(args, command_argv, parser=None, language=None):
+    global TERMINAL_TASK_COUNTER
+    if not getattr(args, "output", ""):
+        args.output = DEFAULT_RESULT_FILE
+    if not hasattr(args, "stdout"):
+        args.stdout = False
+    with TERMINAL_TASK_LOCK:
+        TERMINAL_TASK_COUNTER += 1
+        task_id = TERMINAL_TASK_COUNTER
+        task_kind = terminal_task_kind(args, command_argv)
+        task_detail = build_terminal_task_detail(args, command_argv)
+        task = {
+            "id": task_id,
+            "action": str(getattr(args, "command", "") or ""),
+            "kind": task_kind,
+            "detail": task_detail,
+            "label": build_terminal_task_label(args, command_argv),
+            "argv": list(command_argv),
+            "status": "running",
+            "progress": 0.0,
+            "downloaded": 0,
+            "total": 0,
+            "message": "",
+            "error": "",
+            "result": None,
+            "started_at": time.time(),
+            "finished_at": 0,
+            "last_render": 0,
+            "cancel_event": threading.Event(),
+            "thread": None,
+        }
+        TERMINAL_TASKS[task_id] = task
+
+    args.cancel_event = task["cancel_event"]
+    args.terminal_task = task
+
+    def worker():
+        try:
+            core.NetworkEngine.apply_proxy_settings()
+            result = args.func(args)
+            with TERMINAL_TASK_LOCK:
+                task["status"] = "completed"
+                task["progress"] = max(float(task.get("progress", 0.0) or 0.0), 100.0)
+                task["result"] = result
+                task["finished_at"] = time.time()
+                task["message"] = ""
+            write_result({"ok": True, "task_id": task_id, **result}, args.output, False)
+            render_task_progress(task, force=True)
+            safe_print(terminal_text("task_completed", terminal_language(), task_id=task_id, label=task["label"]))
+        except core.OperationCancelled:
+            with TERMINAL_TASK_LOCK:
+                task["status"] = "cancelled"
+                task["finished_at"] = time.time()
+                task["message"] = ""
+            write_result({"ok": False, "task_id": task_id, "action": task["action"], "cancelled": True}, args.output, False)
+            safe_print(terminal_text("task_cancelled", terminal_language(), task_id=task_id, label=task["label"]))
+        except Exception as exc:
+            log_line(traceback.format_exc())
+            with TERMINAL_TASK_LOCK:
+                task["status"] = "failed"
+                task["error"] = str(exc)
+                task["finished_at"] = time.time()
+            write_result({"ok": False, "task_id": task_id, "action": task["action"], "error": str(exc), "traceback": traceback.format_exc()}, args.output, False)
+            safe_print(terminal_text("task_failed", terminal_language(), task_id=task_id, label=task["label"], error=exc))
+
+    thread = threading.Thread(target=worker, name=f"ljm-nogui-task-{task_id}", daemon=True)
+    with TERMINAL_TASK_LOCK:
+        task["thread"] = thread
+    thread.start()
+    safe_print(terminal_text("task_started", language, task_id=task_id, label=task["label"]))
+    return task
+
+
 def execute_parsed_args(args, parser=None, interactive=False):
-    if not hasattr(args, "output"):
+    if not getattr(args, "output", ""):
         args.output = DEFAULT_RESULT_FILE
     if not hasattr(args, "stdout"):
         args.stdout = False
@@ -835,19 +1432,47 @@ def run_terminal(parser=None, attach_console=False):
     configure_terminal_environment()
     parser = parser or build_parser()
     language = terminal_language()
+    cancel_selection_pending = False
     safe_print(terminal_text("connected", language))
     safe_print(terminal_text("title", language, version=getattr(core, "VERSION", "unknown")))
     safe_print(terminal_text("hint", language))
     for line in terminal_input_lines(language, attach_console=attach_console):
+        if line is TERMINAL_INTERRUPT:
+            language = terminal_language()
+            if running_terminal_tasks():
+                safe_print(terminal_text("task_ctrl_c_cancel", language))
+                print_terminal_tasks(language)
+                cancel_selection_pending = True
+            else:
+                safe_print(terminal_text("task_ctrl_c_no_task", language))
+            continue
         try:
             command_line = line.strip().lstrip("\ufeff")
         except KeyboardInterrupt:
-            safe_print("")
-            safe_print(terminal_text("bye", language))
-            return 0
-        if not command_line:
+            language = terminal_language()
+            if running_terminal_tasks():
+                safe_print(terminal_text("task_ctrl_c_cancel", language))
+                print_terminal_tasks(language)
+                cancel_selection_pending = True
+                continue
+            safe_print(terminal_text("task_ctrl_c_no_task", language))
             continue
+        if not command_line:
+            if cancel_selection_pending:
+                safe_print(terminal_text("task_cancel_selection_empty", language))
+                cancel_selection_pending = False
+            continue
+        if cancel_selection_pending and is_terminal_task_ref_input(command_line):
+            request_cancel_terminal_tasks(command_line, language)
+            cancel_selection_pending = False
+            continue
+        if cancel_selection_pending:
+            cancel_selection_pending = False
         if command_line.lower() in TERMINAL_EXIT_COMMANDS:
+            if running_terminal_tasks():
+                safe_print(terminal_text("task_ctrl_c_cancel", language))
+                request_cancel_terminal_tasks("all", language)
+                wait_terminal_tasks("all", language)
             safe_print(terminal_text("bye", language))
             return 0
         try:
@@ -858,6 +1483,10 @@ def run_terminal(parser=None, attach_console=False):
         if not command_argv:
             continue
         if command_argv[0].lower() in TERMINAL_EXIT_COMMANDS:
+            if running_terminal_tasks():
+                safe_print(terminal_text("task_ctrl_c_cancel", language))
+                request_cancel_terminal_tasks("all", language)
+                wait_terminal_tasks("all", language)
             safe_print(terminal_text("bye", language))
             return 0
         if handle_terminal_builtin(command_argv, language=language):
@@ -867,14 +1496,24 @@ def run_terminal(parser=None, attach_console=False):
         except SystemExit:
             safe_print(terminal_text("hint", language))
             continue
+        if should_run_as_terminal_task(args):
+            start_terminal_task(args, command_argv, parser=parser, language=language)
+            language = terminal_language()
+            continue
         result_code = execute_parsed_args(args, parser=parser, interactive=True)
+        language = terminal_language()
         if result_code:
             safe_print(terminal_text("unknown_error", language, error=f"exit code {result_code}"))
+    if running_terminal_tasks():
+        safe_print(terminal_text("task_ctrl_c_cancel", language))
+        request_cancel_terminal_tasks("all", language)
+        wait_terminal_tasks("all", language)
     safe_print(terminal_text("bye", language))
     return 0
 
 
 def main(argv=None):
+    configure_terminal_environment()
     parser = build_parser()
     auto_terminal = argv is None
     argv = list(sys.argv[1:] if argv is None else argv)

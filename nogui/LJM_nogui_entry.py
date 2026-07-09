@@ -9,14 +9,19 @@ import base64
 import concurrent.futures
 import ctypes
 from ctypes import wintypes
+import hashlib
 import importlib.util
 import json
+import locale
 import logging
 import platform
+import plistlib
 import re
 import shlex
 import shutil
+import socket
 import ssl
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -31,7 +36,7 @@ except Exception:
     messagebox = None
     ttk = None
 import traceback
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 import urllib.error
 import urllib.request
 import webbrowser

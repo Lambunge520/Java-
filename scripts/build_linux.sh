@@ -14,6 +14,11 @@ python3 -m PyInstaller \
   --onefile \
   --windowed \
   --name "LJM-Java-Manager" \
+  --hidden-import plistlib \
+  --hidden-import hashlib \
+  --hidden-import locale \
+  --hidden-import socket \
+  --hidden-import stat \
   --add-data "$ASSETS/java.ico:." \
   --add-data "$ASSETS/build/java.png:." \
   --add-data "$DEPS:deps" \

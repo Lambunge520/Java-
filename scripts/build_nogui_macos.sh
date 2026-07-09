@@ -14,6 +14,11 @@ python3 -m PyInstaller \
   --onefile \
   --console \
   --name "LJM-Java-Manager-nogui" \
+  --hidden-import plistlib \
+  --hidden-import hashlib \
+  --hidden-import locale \
+  --hidden-import socket \
+  --hidden-import stat \
   --add-data "$SRC/LJM_nogui.pyw:." \
   --add-data "$SRC/LJM.pyw:." \
   --add-data "$ASSETS/java.ico:." \

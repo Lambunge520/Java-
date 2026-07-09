@@ -13,6 +13,11 @@ python -m PyInstaller `
   --console `
   --name "LJM-Java-Manager-nogui" `
   --icon "$Assets\java.ico" `
+  --hidden-import plistlib `
+  --hidden-import hashlib `
+  --hidden-import locale `
+  --hidden-import socket `
+  --hidden-import stat `
   --add-data "$Src\LJM_nogui.pyw;." `
   --add-data "$Src\LJM.pyw;." `
   --add-data "$Assets\java.ico;." `
