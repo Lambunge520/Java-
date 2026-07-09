@@ -16,6 +16,22 @@ LJM 是一个跨平台 Java 运行时管理工具，用来扫描、注册、下�
 
 NoGUI 使用文档：[docs/NOGUI_USAGE.md](docs/NOGUI_USAGE.md)
 
+## NoGUI 快速入口
+
+无桌面版适合终端、服务器、脚本和 CI。解压后在目录里打开终端，直接运行对应入口即可接入 NoGUI 终端环境：
+
+```powershell
+.\LJM-Java-Manager-nogui.exe
+.\LJM-Java-Manager-nogui.exe list --stdout
+```
+
+```bash
+./LJM-Java-Manager-nogui.run
+./LJM-Java-Manager-nogui.command
+```
+
+进入 NoGUI 终端后可输入 `help` 查看命令，常用短命令包括 `dl` 下载、`u` 更新、`r` 修复、`tasks` 查看任务、`c 1` 取消指定任务、`lang zh_CN`/`lang en_US` 切换语言。
+
 ## 主要功能
 
 - 扫描、注册、注销、移动、删除、修复和更新本机 Java。

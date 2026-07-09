@@ -26,6 +26,36 @@ NoGUI 是 LJM Java Manager 的命令行版本，不启动桌面窗口和托盘�
 
 桌面版资产名称不带 `nogui`。如果只想在命令行里使用，优先选择 NoGUI 包。
 
+### 快速上手
+
+在解压目录打开终端后，直接运行 NoGUI 程序即可接入终端环境；终端不会因为命令执行完就自动关闭。接入成功后会显示成功提示，然后可以继续输入 LJM 的管理命令。
+
+Windows:
+
+```powershell
+.\LJM-Java-Manager-nogui.exe
+.\LJM-Java-Manager-nogui.exe terminal
+.\LJM-Java-Manager-nogui.exe list --stdout
+```
+
+Linux:
+
+```bash
+./LJM-Java-Manager-nogui.run
+./LJM-Java-Manager-nogui.run terminal
+./LJM-Java-Manager-nogui.run list --stdout
+```
+
+macOS:
+
+```bash
+./LJM-Java-Manager-nogui.command
+./LJM-Java-Manager-nogui.command terminal
+./LJM-Java-Manager-nogui.command list --stdout
+```
+
+普通用户优先使用上面的 `.exe`、`.run`、`.command` 入口，不需要额外写 `cmd` 脚本。
+
 ### 解压后运行
 
 Windows:
@@ -105,6 +135,28 @@ Linux/macOS 使用对应入口：
 终端环境支持短命令：`l`/`ls` 列表，`s` 扫描，`cu` 检查更新，`dl` 下载，`r` 修复，`u` 更新，`mv` 移动，`rm` 删除，`def` 设置默认 Java，`lang` 切换语言，`t`/`tasks` 查看任务，`c`/`cancel` 取消任务，`w`/`wait` 等待任务。
 
 在交互终端里执行 `download`/`dl`、`update`/`u`、`repair`/`r` 时会自动作为后台任务运行并显示下载进度条，终端仍可继续输入其他命令。第一个开始的任务标记为 `1`，后续任务依次为 `2`、`3`、`4`。输入 `tasks` 查看进度和任务类型，输入 `c 1`、`cancel 2` 或 `cancel all` 取消任务；按 `Ctrl+C` 后会列出可取消任务，再输入 `1`、`2` 或 `1 3` 即可取消指定任务。
+
+### 交互终端命令速查
+
+| 操作 | 命令 |
+| --- | --- |
+| 查看帮助 | `help` 或 `帮助` |
+| 查看 Java 列表 | `list`、`l`、`ls` |
+| 扫描并注册 Java | `scan "D:\Java" --max-depth 6` 或 `s "D:\Java"` |
+| 检查更新 | `check-updates`、`cu`、`检查更新` |
+| 下载 Java | `download "Eclipse Temurin" 21 "D:\Java" --package-type jdk` 或 `dl "Eclipse Temurin" 21 "D:\Java"` |
+| 修复 Java | `repair "Java 21" --mode smart` 或 `r "Java 21"` |
+| 更新 Java | `update "Java 21"` 或 `u "Java 21"` |
+| 移动 Java | `move "Java 21" "D:\Java\jdk-21-new"` 或 `mv "Java 21" "D:\Java\jdk-21-new"` |
+| 注销或删除 Java | `delete "Java 21"`、`delete "Java 21" --files --force`、`rm "Java 21"` |
+| 设置默认 Java | `set-default "Java 21"` 或 `def "Java 21"` |
+| 切换显示语言 | `language auto`、`lang zh_CN`、`lang en_US` |
+| 查看任务 | `tasks`、`t`、`ps`、`jobs` |
+| 取消任务 | `c 1`、`cancel 2`、`cancel all` |
+| 等待任务 | `wait all`、`w 1` |
+| 退出终端 | `exit` 或 `退出` |
+
+任务编号从 `1` 开始递增，不会因为前一个任务结束而重新从 `1` 开始。`tasks` 会显示任务类型、目标、状态、百分比和下载大小；下载、更新、修复都可以用编号单独取消。按 `Ctrl+C` 时不会直接关闭终端，而是进入取消选择流程；输入任务编号即可取消，留空则退出取消选择。
 
 ### 输出和日志
 
@@ -248,6 +300,36 @@ Go to [Releases](https://github.com/Lambunge520/Java-/releases) and download ass
 
 Desktop assets do not contain `nogui` in the file name. If you only need command-line usage, choose a NoGUI package.
 
+### Quick Start
+
+Open a terminal in the extracted folder and run the NoGUI program directly. It enters the terminal environment and keeps the terminal open. After the success message appears, you can keep typing LJM management commands.
+
+Windows:
+
+```powershell
+.\LJM-Java-Manager-nogui.exe
+.\LJM-Java-Manager-nogui.exe terminal
+.\LJM-Java-Manager-nogui.exe list --stdout
+```
+
+Linux:
+
+```bash
+./LJM-Java-Manager-nogui.run
+./LJM-Java-Manager-nogui.run terminal
+./LJM-Java-Manager-nogui.run list --stdout
+```
+
+macOS:
+
+```bash
+./LJM-Java-Manager-nogui.command
+./LJM-Java-Manager-nogui.command terminal
+./LJM-Java-Manager-nogui.command list --stdout
+```
+
+Regular users should prefer the bundled `.exe`, `.run`, or `.command` entry. No extra `cmd` wrapper script is needed.
+
 ### Run After Extracting
 
 Windows:
@@ -327,6 +409,28 @@ After connecting, NoGUI prints `Successfully connected to the LJM Java Manager N
 The terminal supports short commands: `l`/`ls` for list, `s` for scan, `cu` for check updates, `dl` for download, `r` for repair, `u` for update, `mv` for move, `rm` for delete, `def` for default Java, `lang` for language, `t`/`tasks` for task status, `c`/`cancel` for cancellation, and `w`/`wait` for waiting.
 
 Inside the interactive terminal, `download`/`dl`, `update`/`u`, and `repair`/`r` run as background tasks and show a download progress bar while the prompt keeps accepting other commands. The first started task is marked `1`, then `2`, `3`, `4`, and so on. Use `tasks` to view progress and task type, `c 1`, `cancel 2`, or `cancel all` to cancel. Pressing `Ctrl+C` lists cancellable tasks; then enter `1`, `2`, or `1 3` to cancel selected tasks.
+
+### Interactive Command Cheat Sheet
+
+| Action | Command |
+| --- | --- |
+| Show help | `help` |
+| List Java runtimes | `list`, `l`, `ls` |
+| Scan and register Java | `scan "D:\Java" --max-depth 6` or `s "D:\Java"` |
+| Check updates | `check-updates`, `cu` |
+| Download Java | `download "Eclipse Temurin" 21 "D:\Java" --package-type jdk` or `dl "Eclipse Temurin" 21 "D:\Java"` |
+| Repair Java | `repair "Java 21" --mode smart` or `r "Java 21"` |
+| Update Java | `update "Java 21"` or `u "Java 21"` |
+| Move Java | `move "Java 21" "D:\Java\jdk-21-new"` or `mv "Java 21" "D:\Java\jdk-21-new"` |
+| Unregister or delete Java | `delete "Java 21"`, `delete "Java 21" --files --force`, `rm "Java 21"` |
+| Set default Java | `set-default "Java 21"` or `def "Java 21"` |
+| Switch display language | `language auto`, `lang zh_CN`, `lang en_US` |
+| View tasks | `tasks`, `t`, `ps`, `jobs` |
+| Cancel tasks | `c 1`, `cancel 2`, `cancel all` |
+| Wait for tasks | `wait all`, `w 1` |
+| Exit terminal | `exit` |
+
+Task IDs start at `1` and keep increasing; they do not restart when an earlier task finishes. `tasks` shows task type, target, status, percentage, and downloaded size. Download, update, and repair tasks can all be cancelled by ID. Pressing `Ctrl+C` does not immediately close the terminal; it enters cancel-selection mode. Type task IDs to cancel them, or submit an empty line to leave cancel selection.
 
 ### Output And Logs
 
