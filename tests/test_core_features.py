@@ -1219,6 +1219,8 @@ class CoreFeatureTests(unittest.TestCase):
             self.assertIn('default: "v3.1.3"', workflow)
             self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
             self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
+            self.assertIn("group: ljm-release-", workflow)
+            self.assertIn("cancel-in-progress: false", workflow)
             self.assertNotIn("python-source.zip", workflow)
             self.assertNotIn("Prepare Python source package", workflow)
             self.assertNotIn("LJM_nogui.cmd", workflow)
