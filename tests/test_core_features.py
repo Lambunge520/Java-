@@ -38,9 +38,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_312(self):
-        self.assertEqual(self.core.VERSION, "3.1.2")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1.2")
+    def test_version_and_user_agent_are_313(self):
+        self.assertEqual(self.core.VERSION, "3.1.3")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1.3")
 
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
@@ -49,7 +49,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("3.1.2", query["body"][0])
+        self.assertIn("3.1.3", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -721,6 +721,50 @@ class CoreFeatureTests(unittest.TestCase):
                 self.assertTrue(profile["minecraft"])
                 self.assertTrue(profile["minecraft_perf"])
 
+    def test_oracle_graalvm_never_falls_back_to_community_assets(self):
+        profile = self.core.JAVA_VENDOR_PROFILES["GraalVM"]
+        self.assertNotIn("graalvm/graalvm-ce-builds", profile.get("github_repos", ()))
+        self.assertFalse(
+            self.core.JavaDownloadEngine._is_desired_asset_name(
+                "graalvm-community-jdk-21.0.2_windows-x64_bin.zip",
+                "GraalVM",
+            )
+        )
+        self.assertTrue(
+            self.core.JavaDownloadEngine._is_desired_asset_name(
+                "graalvm-community-jdk-21.0.2_windows-x64_bin.zip",
+                "GraalVM Community",
+            )
+        )
+
+        calls = []
+        original_foojay = self.core.JavaDownloadEngine._fetch_foojay_distribution
+        original_github = self.core.JavaDownloadEngine._request_github_releases
+        try:
+            def fake_foojay(distribution, vendor, major_version, **_kwargs):
+                calls.append((distribution, vendor, str(major_version)))
+                return {
+                    "version": "21.0.11",
+                    "url": "https://download.oracle.com/graalvm/21/latest/graalvm-jdk-21_windows-x64_bin.zip",
+                    "urls": ["https://download.oracle.com/graalvm/21/latest/graalvm-jdk-21_windows-x64_bin.zip"],
+                    "source": "Foojay graalvm",
+                    "vendor": vendor,
+                }
+
+            self.core.JavaDownloadEngine._fetch_foojay_distribution = staticmethod(fake_foojay)
+            self.core.JavaDownloadEngine._request_github_releases = staticmethod(
+                lambda *_args, **_kwargs: self.fail("Oracle GraalVM must not query the Community GitHub repository")
+            )
+            result = self.core.JavaDownloadEngine._fetch_graalvm("21")
+            mirror_result = self.core.JavaDownloadEngine._fetch_graalvm("21", mirrors_only=True)
+        finally:
+            self.core.JavaDownloadEngine._fetch_foojay_distribution = original_foojay
+            self.core.JavaDownloadEngine._request_github_releases = original_github
+
+        self.assertEqual(calls, [("graalvm", "GraalVM", "21")])
+        self.assertEqual(result["source"], "Oracle GraalVM via Foojay")
+        self.assertIsNone(mirror_result)
+
     def test_minecraft_java_guidance_matches_major_versions(self):
         guidance_21 = self.core.minecraft_java_guidance("21", language="en_US")
         guidance_17 = self.core.minecraft_java_guidance("17", language="en_US")
@@ -734,6 +778,19 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("Minecraft 26", guidance_25)
         self.assertIn("Java 25", guidance_25)
         self.assertIn("实验", guidance_22_zh)
+
+    def test_download_page_minecraft_advice_is_dynamic_and_explicit(self):
+        mainstream = self.core.minecraft_download_advice("Eclipse Temurin", "21", language="zh_CN")
+        graal = self.core.minecraft_download_advice("GraalVM", "21", language="zh_CN")
+        experimental = self.core.minecraft_download_advice("Eclipse Temurin", "22", language="en_US")
+
+        self.assertIn("MC 当前选择: Eclipse Temurin JDK 21", mainstream)
+        self.assertIn("MC 版本匹配: Minecraft 1.20.5-1.21.x", mainstream)
+        self.assertIn("MC 建议等级: 推荐", mainstream)
+        self.assertIn("MC 当前选择: GraalVM JDK 21", graal)
+        self.assertIn("性能实验", graal)
+        self.assertIn("MC selection: Eclipse Temurin JDK 22", experimental)
+        self.assertIn("MC recommendation: Experimental", experimental)
 
     def test_minecraft_jvm_profile_splits_launcher_argument_fields(self):
         pclce = self.core.build_minecraft_jvm_profile(
@@ -1138,31 +1195,26 @@ class CoreFeatureTests(unittest.TestCase):
 
     def test_release_notes_and_workflows_are_bilingual(self):
         root = Path(__file__).resolve().parents[1]
-        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.2.md").read_text(encoding="utf-8")
+        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.3.md").read_text(encoding="utf-8")
         template = (root / "docs" / "releases" / "RELEASE_NOTES_TEMPLATE_BILINGUAL.md").read_text(encoding="utf-8")
         gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
         nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
 
         self.assertIn("## 更新内容", notes)
         self.assertIn("## Update Content", notes)
-        self.assertIn("备份", notes)
-        self.assertIn("backup", notes.lower())
+        self.assertIn("GraalVM", notes)
+        self.assertIn("Minecraft", notes)
         self.assertLessEqual(len(notes.splitlines()), 32)
         self.assertIn("## 更新内容", template)
         self.assertIn("## Update Content", template)
         for workflow in (gui_workflow, nogui_workflow):
             self.assertIn("RELEASE_NOTES_FILE", workflow)
             self.assertIn('RELEASE_VERSION="${RELEASE_TAG#v}"', workflow)
-            self.assertIn('default: "v3.1.2"', workflow)
+            self.assertIn('default: "v3.1.3"', workflow)
             self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
             self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
-            self.assertIn("chmod +x src/LJM_nogui nogui/LJM_nogui", workflow)
-            self.assertIn("python-source.zip", workflow)
-            self.assertIn("src/LJM.pyw", workflow)
-            self.assertIn("src/LJM_nogui.py", workflow)
-            self.assertIn("src/LJM_nogui \\", workflow)
-            self.assertIn("nogui/LJM_nogui.py", workflow)
-            self.assertIn("nogui/LJM_nogui \\", workflow)
+            self.assertNotIn("python-source.zip", workflow)
+            self.assertNotIn("Prepare Python source package", workflow)
             self.assertNotIn("LJM_nogui.cmd", workflow)
 
     def test_nogui_usage_docs_are_bilingual_and_asset_focused(self):
@@ -1184,7 +1236,7 @@ class CoreFeatureTests(unittest.TestCase):
         ):
             self.assertIn(marker, docs)
         self.assertIn("docs/NOGUI_USAGE.md", readme)
-        self.assertIn("3.1.2", readme)
+        self.assertIn("3.1.3", readme)
         self.assertIn("python .\\src\\LJM_nogui.py", readme)
         self.assertIn("./src/LJM_nogui", readme)
         self.assertNotIn("Current version:", readme)
@@ -1193,6 +1245,13 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertNotIn("LJM_nogui.cmd", docs)
         self.assertNotIn("LJM_nogui.cmd", standalone)
         self.assertIn("../docs/NOGUI_USAGE.md", standalone)
+
+        for path in (root / "docs").rglob("*.md"):
+            text = path.read_text(encoding="utf-8").lower()
+            legacy_term = "head" + "less"
+            self.assertNotIn(legacy_term, text, str(path))
+            self.assertNotIn("ljm_" + legacy_term, text, str(path))
+            self.assertNotIn("sha256sums-" + legacy_term, text, str(path))
 
     def test_nogui_source_launchers_attach_to_terminal(self):
         root = Path(__file__).resolve().parents[1]
@@ -2972,6 +3031,68 @@ class NoguiFeatureTests(unittest.TestCase):
         finally:
             self.nogui.sys.stdin = original_stdin
 
+        self.assertTrue(self.nogui.core.IS_NOGUI)
+        self.assertTrue(self.nogui.command_status(None)["nogui_mode"])
+
+    def test_nogui_tab_completion_covers_commands_arguments_and_windows_editor(self):
+        self.assertEqual(self.nogui.terminal_completion_candidates("down"), ["download"])
+        self.assertEqual(self.nogui.terminal_complete_line("ver")[:2], ("version ", 8))
+        self.assertIn(
+            '"GraalVM Community"',
+            self.nogui.terminal_completion_candidates('download "Graal'),
+        )
+        self.assertIn(
+            "21",
+            self.nogui.terminal_completion_candidates('download "Eclipse Temurin" 2'),
+        )
+        self.assertEqual(self.nogui.terminal_completion_candidates("language zh"), ["zh_CN"])
+        self.assertIn("--mode", self.nogui.terminal_completion_candidates("repair Java --m"))
+        self.assertEqual(self.nogui.terminal_completion_candidates("repair --mode s"), ["smart"])
+        self.assertIn("all", self.nogui.terminal_completion_candidates("c "))
+        self.assertIn("input(prompt)", inspect.getsource(self.nogui.terminal_text_lines_from_stream))
+
+        original_get_all = self.nogui.core.JavaRegistryAdapter.get_all
+        original_msvcrt = self.nogui._msvcrt
+        original_print = self.nogui.safe_print
+        original_stdout = self.nogui.sys.stdout
+        try:
+            self.nogui.core.JavaRegistryAdapter.get_all = staticmethod(
+                lambda: [("Java 21", r"C:\Java\jdk21"), ("Temurin_17", r"C:\Java\jdk17")]
+            )
+            self.assertIn('"Java 21"', self.nogui.terminal_completion_candidates("update J"))
+
+            class FakeMsvcrt:
+                def __init__(self):
+                    self.keys = iter(["v", "e", "r", "\t", "\r"])
+
+                def getwch(self):
+                    return next(self.keys)
+
+            self.nogui._msvcrt = FakeMsvcrt()
+            self.nogui.safe_print = lambda *_args, **_kwargs: None
+            self.nogui.sys.stdout = io.StringIO()
+            self.assertEqual(self.nogui.windows_console_readline("ljm> "), "version \n")
+        finally:
+            self.nogui.core.JavaRegistryAdapter.get_all = original_get_all
+            self.nogui._msvcrt = original_msvcrt
+            self.nogui.safe_print = original_print
+            self.nogui.sys.stdout = original_stdout
+
+    def test_nogui_mode_keeps_windows_console_owned_by_terminal_entry(self):
+        root = Path(__file__).resolve().parents[1]
+        core_source = (root / "src" / "LJM.pyw").read_text(encoding="utf-8")
+        nogui_source = (root / "src" / "LJM_nogui.pyw").read_text(encoding="utf-8")
+        entry_source = (root / "src" / "LJM_nogui_entry.py").read_text(encoding="utf-8")
+        py_launcher = (root / "src" / "LJM_nogui.py").read_text(encoding="utf-8")
+        shell_launcher = (root / "src" / "LJM_nogui").read_text(encoding="utf-8")
+
+        self.assertIn('IS_NOGUI = str(os.environ.get("LJM_NOGUI", ""))', core_source)
+        self.assertIn("if not IS_NOGUI:", core_source)
+        self.assertIn('os.environ["LJM_NOGUI"] = "1"', nogui_source)
+        self.assertIn('os.environ["LJM_NOGUI"] = "1"', entry_source)
+        self.assertIn('os.environ["LJM_NOGUI"] = "1"', py_launcher)
+        self.assertIn("export LJM_NOGUI=1", shell_launcher)
+
     def test_nogui_terminal_background_tasks_can_report_progress_and_cancel(self):
         events = []
         original_print = self.nogui.safe_print
@@ -3240,6 +3361,12 @@ class NoguiFeatureTests(unittest.TestCase):
             self.assertIn(f"import {module_name}", entry)
             self.assertIn(f"--hidden-import {module_name}", scripts)
 
+        self.assertIn("import readline", entry)
+        self.assertIn("import msvcrt", entry)
+
+        self.assertIn("NoGUI terminal smoke test failed", scripts)
+        self.assertIn("printf 'status\\nexit\\n'", scripts)
+
     def test_nogui_feedback_exports_github_issue_url(self):
         parser = self.nogui.build_parser()
         args = parser.parse_args(["feedback", "--message", "Java update list is blocked"])
@@ -3249,7 +3376,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("3.1.2", payload["body"])
+        self.assertIn("3.1.3", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_full_update_uses_versioned_target_rename(self):

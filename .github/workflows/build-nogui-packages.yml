@@ -6,7 +6,7 @@ on:
       tag_name:
         description: "Release tag to create or update"
         required: false
-        default: "v3.1.2"
+        default: "v3.1.3"
   push:
     tags:
       - "v*"
@@ -27,6 +27,11 @@ jobs:
       - name: Build Windows exe
         shell: pwsh
         run: powershell -ExecutionPolicy Bypass -File .\scripts\build_nogui_windows.ps1
+      - name: Verify Windows terminal mode
+        shell: pwsh
+        run: |
+          $status = .\dist\LJM-Java-Manager-nogui.exe status --stdout | ConvertFrom-Json
+          if (-not $status.nogui_mode) { throw "NoGUI mode was not enabled in the packaged executable" }
       - name: Pack Windows artifact
         shell: pwsh
         run: Compress-Archive -Path dist\LJM-Java-Manager-nogui.exe -DestinationPath LJM-Java-Manager-nogui-windows.zip -Force
@@ -52,6 +57,8 @@ jobs:
         run: python3 -m pip install --upgrade "pip<25" "setuptools<76" wheel "pyinstaller<7"
       - name: Build Linux binary
         run: chmod +x ./scripts/build_nogui_linux.sh && ./scripts/build_nogui_linux.sh
+      - name: Verify Linux terminal mode
+        run: python3 -c 'import json, subprocess; data=json.loads(subprocess.check_output(["dist/LJM-Java-Manager-nogui", "status", "--stdout"], text=True)); assert data["nogui_mode"] is True'
       - name: Pack Linux artifact
         run: chmod +x dist/LJM-Java-Manager-nogui dist/LJM-Java-Manager-nogui.run && tar -czf LJM-Java-Manager-nogui-linux.tar.gz -C dist LJM-Java-Manager-nogui.run LJM-Java-Manager-nogui
       - uses: actions/upload-artifact@v4
@@ -70,6 +77,8 @@ jobs:
         run: python -m pip install --upgrade pip pyinstaller
       - name: Build macOS binary
         run: chmod +x ./scripts/build_nogui_macos.sh && ./scripts/build_nogui_macos.sh
+      - name: Verify macOS terminal mode
+        run: python3 -c 'import json, subprocess; data=json.loads(subprocess.check_output(["dist/LJM-Java-Manager-nogui", "status", "--stdout"], text=True)); assert data["nogui_mode"] is True'
       - name: Pack macOS artifact
         run: |
           chmod +x dist/LJM-Java-Manager-nogui dist/LJM-Java-Manager-nogui.command
@@ -93,21 +102,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
-      - name: Prepare Python source package
-        run: |
-          mkdir -p release-assets/python-source
-          chmod +x src/LJM_nogui nogui/LJM_nogui
-          zip -r release-assets/python-source/LJM-Java-Manager-nogui-python-source.zip \
-            src/LJM.pyw \
-            src/LJM_nogui.pyw \
-            src/LJM_nogui.py \
-            src/LJM_nogui \
-            src/LJM_nogui_entry.py \
-            nogui/LJM.pyw \
-            nogui/LJM_nogui.pyw \
-            nogui/LJM_nogui.py \
-            nogui/LJM_nogui \
-            nogui/LJM_nogui_entry.py
       - name: Prepare checksums
         run: |
           find release-assets -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS-nogui.txt
@@ -126,6 +120,5 @@ jobs:
             release-assets/LJM-Java-Manager-nogui-windows/LJM-Java-Manager-nogui-windows.zip \
             release-assets/LJM-Java-Manager-nogui-linux/LJM-Java-Manager-nogui-linux.tar.gz \
             release-assets/LJM-Java-Manager-nogui-macos/LJM-Java-Manager-nogui-macos.zip \
-            release-assets/python-source/LJM-Java-Manager-nogui-python-source.zip \
             SHA256SUMS-nogui.txt \
             --clobber

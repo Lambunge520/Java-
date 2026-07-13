@@ -14,6 +14,11 @@ python3 -m PyInstaller \
   --onefile \
   --console \
   --name "LJM-Java-Manager-nogui" \
+  --hidden-import plistlib \
+  --hidden-import hashlib \
+  --hidden-import locale \
+  --hidden-import socket \
+  --hidden-import stat \
   --add-data "$ROOT/LJM_nogui.pyw:." \
   --add-data "$ROOT/LJM.pyw:." \
   --add-data "$ROOT/java.ico:." \
@@ -28,5 +33,8 @@ exec "$APP_DIR/LJM-Java-Manager-nogui" "$@"
 EOF
 
 chmod +x "$ROOT/dist/LJM-Java-Manager-nogui" "$ROOT/dist/LJM-Java-Manager-nogui.command"
+
+"$ROOT/dist/LJM-Java-Manager-nogui.command" version --stdout
+printf 'status\nexit\n' | "$ROOT/dist/LJM-Java-Manager-nogui.command"
 
 echo "macOS nogui build finished: $ROOT/dist/LJM-Java-Manager-nogui.command"

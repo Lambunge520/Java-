@@ -47,6 +47,7 @@ def global_exception_handler(exc_type, exc_value, exc_tb):
 sys.excepthook = global_exception_handler
 
 IS_WIN = sys.platform == "win32"
+IS_NOGUI = str(os.environ.get("LJM_NOGUI", "")).strip().lower() in {"1", "true", "yes", "on"}
 
 if IS_WIN:
     import winreg
@@ -62,17 +63,18 @@ if IS_WIN:
         except Exception:
             return False
 
-    if not is_admin():
+    if not IS_NOGUI:
+        if not is_admin():
+            hide_console()
+            if getattr(sys, "frozen", False):
+                params = " ".join(sys.argv[1:])
+                target = sys.executable
+            else:
+                params = f'"{os.path.abspath(__file__)}"'
+                target = sys.executable
+            ctypes.windll.shell32.ShellExecuteW(None, "runas", target, params, None, 0)
+            sys.exit()
         hide_console()
-        if getattr(sys, "frozen", False):
-            params = " ".join(sys.argv[1:])
-            target = sys.executable
-        else:
-            params = f'"{os.path.abspath(__file__)}"'
-            target = sys.executable
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", target, params, None, 0)
-        sys.exit()
-    hide_console()
 else:
     def is_admin():
         return True
@@ -98,7 +100,7 @@ except Exception as exc:
     messagebox = _UnavailableMessageBox()
 
 
-VERSION = "3.1.2"
+VERSION = "3.1.3"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -3389,7 +3391,7 @@ I18N_ZH_CN = {
     "download_parent": "下载/安装到父目录",
     "browse_folder": "浏览...",
     "download_platform": "当前系统自动匹配: {platform}",
-    "download_vendor_profile": "适合场景: {scenario}\n平台覆盖: {platforms}\nMC 游玩建议: {minecraft}\nMC 性能差距: {minecraft_perf}\n优点: {pros}\n缺点: {cons}",
+    "download_vendor_profile": "适合场景: {scenario}\n平台覆盖: {platforms}\n{minecraft_advice}\n优点: {pros}\n缺点: {cons}",
     "download_preview": "预计安装目录: {path}",
     "download_start": "开始下载并注册 Java",
     "download_confirm_title": "确认下载 Java",
@@ -3717,7 +3719,7 @@ I18N_EN_US = {
     "download_parent": "Download/install parent folder",
     "browse_folder": "Browse...",
     "download_platform": "Current system auto match: {platform}",
-    "download_vendor_profile": "Best for: {scenario}\nPlatform coverage: {platforms}\nMinecraft play advice: {minecraft}\nMinecraft performance gap: {minecraft_perf}\nPros: {pros}\nCons: {cons}",
+    "download_vendor_profile": "Best for: {scenario}\nPlatform coverage: {platforms}\n{minecraft_advice}\nPros: {pros}\nCons: {cons}",
     "download_preview": "Planned install folder: {path}",
     "download_start": "Download and Register Java",
     "download_confirm_title": "Confirm Java Download",
@@ -5642,15 +5644,14 @@ JAVA_VENDOR_PROFILES = {
     },
     "GraalVM": {
         "foojay": "graalvm",
-        "github_repos": ("graalvm/graalvm-ce-builds",),
-        "scenario_zh": "高性能服务、Polyglot、Native Image 和框架 AOT 场景。",
-        "pros_zh": "支持 Native Image，JIT/编译器能力强，适合高级优化。",
-        "cons_zh": "体积和复杂度更高，部分原生镜像构建需要额外依赖。",
+        "scenario_zh": "Oracle GraalVM（非 Community）、高性能服务、Polyglot、Native Image 和框架 AOT 场景。",
+        "pros_zh": "Oracle GraalVM 官方发行版，支持 Native Image，JIT/编译器能力强，适合高级优化。",
+        "cons_zh": "不是 Community Edition；体积和复杂度更高，授权和 Native Image 使用条件需要按 Oracle 说明确认。",
         "minecraft_zh": "GraalVM 对普通 Minecraft 不一定比 Temurin/Zulu 更稳；可用于折腾性能测试，但模组兼容优先时不建议默认选择。",
         "minecraft_perf_zh": "性能差距：CPU 密集场景可能有惊喜，但启动、模组兼容和排错成本更高；整合包玩家建议当实验项。",
-        "scenario_en": "High-performance services, polyglot workloads, Native Image, and AOT frameworks.",
-        "pros_en": "Native Image support and strong compiler/runtime optimization capabilities.",
-        "cons_en": "Larger and more complex; native-image builds may require extra toolchains.",
+        "scenario_en": "Oracle GraalVM (not Community Edition), high-performance services, polyglot workloads, Native Image, and AOT frameworks.",
+        "pros_en": "The official Oracle GraalVM distribution with Native Image and strong compiler/runtime optimization capabilities.",
+        "cons_en": "This is not Community Edition; check Oracle licensing and Native Image terms for your use case.",
         "minecraft_en": "GraalVM is not always more stable for regular Minecraft than Temurin/Zulu; good for performance experiments, not the safest mod-compat default.",
         "minecraft_perf_en": "Performance gap: CPU-heavy cases can improve, but startup, mod compatibility, and troubleshooting cost are higher; treat it as an experiment for modpacks.",
     },
@@ -6019,6 +6020,96 @@ def minecraft_java_guidance(major_version, language=None):
     if suffix == "zh":
         return "该 Java 大版本更适合测试或特定服务端需求；Minecraft 兼容性优先时建议选 Java 21、17 或 8。"
     return "This Java major is better for testing or specific server needs; for Minecraft compatibility, prefer Java 21, 17, or 8."
+
+
+MINECRAFT_MAJOR_MATCH = {
+    "8": {
+        "zh": "Minecraft 1.16.5 及更老版本",
+        "en": "Minecraft 1.16.5 and older",
+        "tier": "recommended",
+    },
+    "11": {
+        "zh": "少数旧服务端、代理端或插件环境；普通客户端通常不选",
+        "en": "Some legacy servers, proxies, or plugin stacks; usually not for normal clients",
+        "tier": "conditional",
+    },
+    "17": {
+        "zh": "Minecraft 1.18-1.20.4",
+        "en": "Minecraft 1.18-1.20.4",
+        "tier": "recommended",
+    },
+    "21": {
+        "zh": "Minecraft 1.20.5-1.21.x",
+        "en": "Minecraft 1.20.5-1.21.x",
+        "tier": "recommended",
+    },
+    "22": {"zh": "实验性 JVM/服务端测试", "en": "Experimental JVM/server testing", "tier": "experimental"},
+    "23": {"zh": "实验性 JVM/服务端测试", "en": "Experimental JVM/server testing", "tier": "experimental"},
+    "24": {"zh": "实验性 JVM/服务端测试", "en": "Experimental JVM/server testing", "tier": "experimental"},
+    "25": {
+        "zh": "Minecraft 26 及更新版本",
+        "en": "Minecraft 26 and newer",
+        "tier": "recommended",
+    },
+    "26": {"zh": "前沿测试；等待 Minecraft 或服务端明确要求", "en": "Bleeding-edge testing until Minecraft or a server explicitly requires it", "tier": "experimental"},
+}
+
+MINECRAFT_EXPERIMENTAL_VENDORS = {
+    "GraalVM",
+    "GraalVM Community",
+    "Mandrel",
+    "Liberica Native Image Kit",
+    "Gluon GraalVM",
+}
+
+MINECRAFT_COMPAT_TEST_VENDORS = {
+    "IBM Semeru OpenJ9",
+    "IBM Semeru Certified",
+    "AOJ OpenJ9",
+}
+
+
+def minecraft_download_advice(vendor, major_version, language=None):
+    lang = language or active_language()
+    is_zh = str(lang).lower().startswith("zh")
+    suffix = "zh" if is_zh else "en"
+    vendor = canonical_java_vendor_name(vendor)
+    major = normalize_text(major_version)
+    profile = java_vendor_profile(vendor, language=lang)
+    match = MINECRAFT_MAJOR_MATCH.get(major, {})
+    match_text = match.get(suffix) or (
+        "未建立常用 Minecraft 版本对应关系" if is_zh else "No common Minecraft version mapping is defined"
+    )
+    tier = match.get("tier", "experimental")
+
+    if tier == "experimental":
+        level = "实验选择：除非实例明确要求，否则不要作为默认 Java" if is_zh else "Experimental: do not use as the default unless the instance explicitly requires it"
+    elif tier == "conditional":
+        level = "按需选择：只用于明确要求 Java 11 的服务端或组件" if is_zh else "Conditional: use only for servers or components that explicitly require Java 11"
+    elif vendor in MINECRAFT_EXPERIMENTAL_VENDORS:
+        level = "版本范围匹配，但该发行商更适合性能实验，不是模组兼容首选" if is_zh else "The Java major matches, but this vendor is better for performance experiments than mod compatibility"
+    elif vendor in MINECRAFT_COMPAT_TEST_VENDORS:
+        level = "版本范围匹配，但 OpenJ9 与模组兼容性需要实测" if is_zh else "The Java major matches, but OpenJ9 and mod compatibility must be tested"
+    else:
+        level = "推荐：Java 大版本匹配；仍需确认具体启动器、模组包或服务端要求" if is_zh else "Recommended: the Java major matches; still confirm launcher, modpack, or server requirements"
+
+    if is_zh:
+        return (
+            f"MC 当前选择: {vendor} JDK {major}\n"
+            f"MC 版本匹配: {match_text}\n"
+            f"MC 建议等级: {level}\n"
+            f"MC 发行商判断: {profile.get('minecraft', '')}\n"
+            f"MC 性能判断: {profile.get('minecraft_perf', '')}\n"
+            f"MC 大版本说明: {minecraft_java_guidance(major, language=lang)}"
+        )
+    return (
+        f"MC selection: {vendor} JDK {major}\n"
+        f"MC version match: {match_text}\n"
+        f"MC recommendation: {level}\n"
+        f"MC vendor note: {profile.get('minecraft', '')}\n"
+        f"MC performance note: {profile.get('minecraft_perf', '')}\n"
+        f"MC major-version note: {minecraft_java_guidance(major, language=lang)}"
+    )
 
 
 MINECRAFT_JVM_LAUNCHERS = ("PCL2", "PCLCE", "HMCL", "Generic")
@@ -8812,6 +8903,10 @@ class JavaDownloadEngine:
             return False
         if vendor in ("Eclipse Temurin", "Generic OpenJDK") and "openj9" in lower:
             return False
+        if vendor == "GraalVM" and ("community" in lower or re.search(r"graalvm[-_]?ce(?:[-_]|$)", lower)):
+            return False
+        if vendor == "GraalVM Community" and "community" not in lower and not re.search(r"graalvm[-_]?ce(?:[-_]|$)", lower):
+            return False
         required_tokens = {
             "Amazon Corretto": "corretto",
             "BellSoft Liberica": "liberica",
@@ -9397,21 +9492,16 @@ class JavaDownloadEngine:
 
     @staticmethod
     def _fetch_graalvm(major_version, direct_first=False, mirrors_only=False, package_type="jdk"):
-        if not mirrors_only:
-            try:
-                result = JavaDownloadEngine._fetch_foojay_distribution("graalvm", "GraalVM", major_version, package_type=package_type)
-                if result:
-                    return result
-            except Exception as exc:
-                logging.warning("GraalVM Foojay 源失败: %s", exc)
-        repo = "graalvm/graalvm-ce-builds"
-        data = JavaDownloadEngine._request_github_releases(repo, direct_first=direct_first, mirrors_only=mirrors_only, timeout=3)
-        if not isinstance(data, list) or not data:
+        if mirrors_only:
             return None
-        result = JavaDownloadEngine._pick_github_release_asset(data, major_version, "GraalVM", direct_first=direct_first, package_type=package_type)
-        if result:
-            result["source"] = "GraalVM GitHub Release"
-        return result
+        try:
+            result = JavaDownloadEngine._fetch_foojay_distribution("graalvm", "GraalVM", major_version, package_type=package_type)
+            if result:
+                result["source"] = "Oracle GraalVM via Foojay"
+                return result
+        except Exception as exc:
+            logging.warning("Oracle GraalVM Foojay 源失败: %s", exc)
+        return None
 
     @staticmethod
     def _github_checksum_asset_urls(release, asset_name):
@@ -12233,7 +12323,7 @@ class JavaManagerApp:
         if self.download_profile_var is not None:
             profile = java_vendor_profile(vendor)
             major = self.download_major_var.get() if self.download_major_var else "21"
-            minecraft_text = f"{profile.get('minecraft', '')}\n{minecraft_java_guidance(major)}"
+            minecraft_text = minecraft_download_advice(vendor, major)
             profile_text = "\n".join(
                 [
                     tr("download_platform", platform=current_java_download_platform_text()),
@@ -12241,8 +12331,7 @@ class JavaManagerApp:
                         "download_vendor_profile",
                         scenario=profile.get("scenario", ""),
                         platforms=profile.get("platforms", ""),
-                        minecraft=minecraft_text,
-                        minecraft_perf=profile.get("minecraft_perf", ""),
+                        minecraft_advice=minecraft_text,
                         pros=profile.get("pros", ""),
                         cons=profile.get("cons", ""),
                     ),

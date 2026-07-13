@@ -14,6 +14,22 @@ import time
 import traceback
 import zipfile
 
+try:
+    import readline as _readline
+except Exception:
+    _readline = None
+
+try:
+    import msvcrt as _msvcrt
+except Exception:
+    _msvcrt = None
+
+
+# The shared desktop core normally hides/elevates the Windows console during
+# startup. NoGUI must keep the caller's terminal and only request privileges
+# when a concrete operation actually needs them.
+os.environ["LJM_NOGUI"] = "1"
+
 
 if getattr(sys, "frozen", False):
     APP_DIR = os.path.dirname(os.path.abspath(sys.executable))
@@ -36,6 +52,47 @@ TERMINAL_WAIT_COMMANDS = {"wait", "等待"}
 TERMINAL_INTERRUPT = object()
 TERMINAL_PROGRESS_BAR_WIDTH = 24
 TERMINAL_PROGRESS_RENDER_INTERVAL = 0.8
+TERMINAL_COMPLETION_COMMANDS = (
+    "list",
+    "scan",
+    "check-updates",
+    "download",
+    "repair",
+    "update",
+    "move",
+    "delete",
+    "set-default",
+    "vendors",
+    "feedback",
+    "language",
+    "status",
+    "version",
+    "tasks",
+    "cancel",
+    "wait",
+    "help",
+    "clear",
+    "pwd",
+    "cd",
+    "exit",
+)
+TERMINAL_COMPLETION_OPTIONS = {
+    "list": ("--stdout", "--output"),
+    "scan": ("--max-depth", "--stdout", "--output"),
+    "check-updates": ("--stdout", "--output"),
+    "download": ("--package-type", "--stdout", "--output"),
+    "repair": ("--mode", "--vendor", "--major", "--stdout", "--output"),
+    "update": ("--vendor", "--major", "--stdout", "--output"),
+    "move": ("--force", "--stdout", "--output"),
+    "delete": ("--files", "--force", "--stdout", "--output"),
+    "set-default": ("--stdout", "--output"),
+    "vendors": ("--stdout", "--output"),
+    "feedback": ("--title", "--message", "--stdout", "--output"),
+    "language": ("--stdout", "--output"),
+    "status": ("--stdout", "--output"),
+    "version": ("--stdout", "--output"),
+}
+_READLINE_COMPLETION_MATCHES = []
 TERMINAL_CANONICAL_COMMANDS = {
     "list",
     "scan",
@@ -145,7 +202,7 @@ TERMINAL_TEXT = {
         "cmd_language": "  language / lang [auto|zh_CN|en_US] / 语言 [自动|中文|English]",
         "cmd_tasks": "  tasks / t 查看后台任务，cancel / c [任务ID|all] 取消，wait / w [任务ID|all] 等待",
         "cmd_feedback": "  feedback --message \"反馈内容\"",
-        "cmd_builtin": "  help/帮助, status/状态, version/版本, pwd, cd <目录>, clear/清屏, exit/退出",
+        "cmd_builtin": "  help/帮助, status/状态, version/版本, pwd, cd <目录>, clear/清屏, exit/退出；Tab 补全命令和参数",
         "language_auto": "自动跟随系统语言",
         "language_zh_CN": "简体中文",
         "language_en_US": "English",
@@ -199,7 +256,7 @@ TERMINAL_TEXT = {
         "cmd_language": "  language / lang [auto|zh_CN|en_US]",
         "cmd_tasks": "  tasks / t, cancel / c [task-id|all], wait / w [task-id|all]",
         "cmd_feedback": "  feedback --message \"text\"",
-        "cmd_builtin": "  help, status, version, pwd, cd <folder>, clear/cls, exit",
+        "cmd_builtin": "  help, status, version, pwd, cd <folder>, clear/cls, exit; Tab completes commands and arguments",
         "language_auto": "Follow system language",
         "language_zh_CN": "Simplified Chinese",
         "language_en_US": "English",
@@ -997,6 +1054,7 @@ def command_status(_args):
         "log_file": DEFAULT_LOG_FILE,
         "cwd": os.getcwd(),
         "platform": sys.platform,
+        "nogui_mode": bool(getattr(core, "IS_NOGUI", False)),
         "language": language_state_payload(changed=False),
         "tasks": terminal_task_records(),
     }
@@ -1123,6 +1181,231 @@ def terminal_split(command_line, platform_name=None):
     return shlex.split(command_line, posix=True)
 
 
+def terminal_completion_token(line, cursor=None):
+    text = str(line or "")
+    cursor = len(text) if cursor is None else max(0, min(int(cursor), len(text)))
+    prefix = text[:cursor]
+    quote = ""
+    token_start = 0
+    escaped = False
+    for index, char in enumerate(prefix):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and os.name != "nt":
+            escaped = True
+            continue
+        if char in ('"', "'"):
+            if quote == char:
+                quote = ""
+            elif not quote:
+                quote = char
+            continue
+        if char.isspace() and not quote:
+            token_start = index + 1
+    return token_start, prefix[token_start:], prefix[:token_start]
+
+
+def terminal_completion_tokens_before(text):
+    before = str(text or "").strip()
+    if not before:
+        return []
+    try:
+        return terminal_split(before)
+    except ValueError:
+        return before.split()
+
+
+def terminal_completion_format(value, quoted=False):
+    value = str(value or "")
+    if quoted or any(char.isspace() for char in value):
+        return f'"{value}"'
+    return value
+
+
+def terminal_registered_name_candidates():
+    try:
+        return [str(name).strip() for name, _path in core.JavaRegistryAdapter.get_all() if str(name).strip()]
+    except Exception:
+        return []
+
+
+def terminal_task_id_candidates():
+    with TERMINAL_TASK_LOCK:
+        ids = [str(task_id) for task_id in sorted(TERMINAL_TASKS)]
+    return ids + ["all"]
+
+
+def terminal_completion_candidates(line, cursor=None):
+    _start, raw_current, before = terminal_completion_token(line, cursor)
+    tokens = terminal_completion_tokens_before(before)
+    quoted = raw_current.startswith(('"', "'"))
+    current = raw_current[1:] if quoted else raw_current
+    current_lower = current.lower()
+
+    if not tokens:
+        values = TERMINAL_COMPLETION_COMMANDS
+    else:
+        command = normalize_terminal_argv([tokens[0]])[0]
+        argument_index = len(tokens) - 1
+        previous = tokens[-1] if tokens else ""
+        if previous == "--mode":
+            values = ("smart", "full")
+        elif previous == "--package-type":
+            values = ("jdk", "jre")
+        elif previous == "--major":
+            values = core.JAVA_MAJOR_OPTIONS
+        elif command == "download" and argument_index == 0:
+            values = core.JAVA_VENDOR_OPTIONS
+        elif command == "download" and argument_index == 1:
+            values = core.JAVA_MAJOR_OPTIONS
+        elif command == "language" and argument_index == 0:
+            values = LANGUAGE_CHOICES
+        elif command in ("cancel", "wait") and argument_index == 0:
+            values = terminal_task_id_candidates()
+        elif command in ("repair", "update", "move", "delete", "set-default") and argument_index == 0:
+            values = terminal_registered_name_candidates()
+        elif current.startswith("-"):
+            values = TERMINAL_COMPLETION_OPTIONS.get(command, ())
+        else:
+            values = TERMINAL_COMPLETION_OPTIONS.get(command, ()) if not current else ()
+
+    matches = []
+    for value in values:
+        logical = str(value)
+        if logical.lower().startswith(current_lower):
+            formatted = terminal_completion_format(logical, quoted=quoted)
+            if formatted not in matches:
+                matches.append(formatted)
+    return sorted(matches, key=lambda item: item.lower())
+
+
+def terminal_complete_line(line, cursor=None):
+    text = str(line or "")
+    cursor = len(text) if cursor is None else max(0, min(int(cursor), len(text)))
+    start, raw_current, _before = terminal_completion_token(text, cursor)
+    candidates = terminal_completion_candidates(text, cursor)
+    if not candidates:
+        return text, cursor, []
+    if len(candidates) == 1:
+        replacement = candidates[0] + " "
+    else:
+        replacement = os.path.commonprefix(candidates)
+        if len(replacement) <= len(raw_current):
+            return text, cursor, candidates
+    updated = text[:start] + replacement + text[cursor:]
+    return updated, start + len(replacement), candidates
+
+
+def _readline_terminal_completer(_text, state):
+    global _READLINE_COMPLETION_MATCHES
+    if _readline is None:
+        return None
+    if state == 0:
+        _READLINE_COMPLETION_MATCHES = terminal_completion_candidates(
+            _readline.get_line_buffer(),
+            _readline.get_endidx(),
+        )
+    if state < len(_READLINE_COMPLETION_MATCHES):
+        return _READLINE_COMPLETION_MATCHES[state]
+    return None
+
+
+def configure_terminal_completion():
+    if _readline is None:
+        return False
+    try:
+        _readline.set_completer_delims(" \t\n")
+        _readline.set_completer(_readline_terminal_completer)
+        if "libedit" in str(getattr(_readline, "__doc__", "")).lower():
+            _readline.parse_and_bind("bind ^I rl_complete")
+        else:
+            _readline.parse_and_bind("tab: complete")
+        return True
+    except Exception:
+        return False
+
+
+def windows_console_line_editor_available(stream):
+    if os.name != "nt" or _msvcrt is None or stream is None:
+        return False
+    try:
+        return bool(stream.isatty() and os.isatty(stream.fileno()))
+    except Exception:
+        return False
+
+
+def posix_readline_input_available(stream):
+    if os.name == "nt" or _readline is None or stream is not sys.stdin:
+        return False
+    try:
+        return bool(stream.isatty() and os.isatty(stream.fileno()))
+    except Exception:
+        return False
+
+
+def redraw_windows_console_line(prompt, line, cursor, previous_width=0):
+    display = f"{prompt}{line}"
+    width = max(previous_width, len(display))
+    with TERMINAL_OUTPUT_LOCK:
+        sys.stdout.write("\r" + (" " * width) + "\r" + display)
+        if cursor < len(line):
+            sys.stdout.write("\b" * (len(line) - cursor))
+        sys.stdout.flush()
+    return len(display)
+
+
+def windows_console_readline(prompt):
+    line = ""
+    cursor = 0
+    width = redraw_windows_console_line(prompt, line, cursor)
+    while True:
+        char = _msvcrt.getwch()
+        if char in ("\r", "\n"):
+            safe_print("")
+            return line + "\n"
+        if char == "\x03":
+            safe_print("")
+            raise KeyboardInterrupt()
+        if char == "\x1a" and not line:
+            safe_print("")
+            return ""
+        if char in ("\x00", "\xe0"):
+            key = _msvcrt.getwch()
+            if key == "K" and cursor > 0:
+                cursor -= 1
+            elif key == "M" and cursor < len(line):
+                cursor += 1
+            elif key == "G":
+                cursor = 0
+            elif key == "O":
+                cursor = len(line)
+            elif key == "S" and cursor < len(line):
+                line = line[:cursor] + line[cursor + 1:]
+            width = redraw_windows_console_line(prompt, line, cursor, width)
+            continue
+        if char == "\b":
+            if cursor > 0:
+                line = line[:cursor - 1] + line[cursor:]
+                cursor -= 1
+                width = redraw_windows_console_line(prompt, line, cursor, width)
+            continue
+        if char == "\t":
+            updated, updated_cursor, candidates = terminal_complete_line(line, cursor)
+            if updated != line:
+                line, cursor = updated, updated_cursor
+                width = redraw_windows_console_line(prompt, line, cursor, width)
+            elif candidates:
+                safe_print("")
+                safe_print("  ".join(candidates))
+                width = redraw_windows_console_line(prompt, line, cursor)
+            continue
+        if char.isprintable():
+            line = line[:cursor] + char + line[cursor:]
+            cursor += len(char)
+            width = redraw_windows_console_line(prompt, line, cursor, width)
+
+
 def should_start_terminal(argv):
     return not argv
 
@@ -1168,8 +1451,17 @@ def terminal_text_lines_from_stream(stream, language=None, close_stream=False):
     try:
         while True:
             try:
-                safe_print(terminal_text("prompt", lang), end="")
-                line = stream.readline()
+                prompt = terminal_text("prompt", lang)
+                if windows_console_line_editor_available(stream):
+                    line = windows_console_readline(prompt)
+                elif posix_readline_input_available(stream):
+                    try:
+                        line = input(prompt) + "\n"
+                    except EOFError:
+                        return
+                else:
+                    safe_print(prompt, end="")
+                    line = stream.readline()
             except KeyboardInterrupt:
                 yield TERMINAL_INTERRUPT
                 continue
@@ -1430,6 +1722,7 @@ def execute_parsed_args(args, parser=None, interactive=False):
 
 def run_terminal(parser=None, attach_console=False):
     configure_terminal_environment()
+    configure_terminal_completion()
     parser = parser or build_parser()
     language = terminal_language()
     cancel_selection_pending = False

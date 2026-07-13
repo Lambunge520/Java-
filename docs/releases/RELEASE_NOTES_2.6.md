@@ -19,8 +19,8 @@
 - Windows 用户优先下载 `LJM-Java-Manager-windows.zip`。
 - Linux 用户优先下载 `LJM-Java-Manager-linux.tar.gz`。
 - macOS 用户优先下载 `LJM-Java-Manager-macos.zip`。
-- 无桌面环境或服务器用户可选择 `LJM-Java-Manager-headless-*` 包。
+- 无桌面环境或服务器用户可选择名称带 `nogui` 的 NoGUI 包。
 
 ## 校验
 
-Release 会附带 `SHA256SUMS-gui.txt` 与 `SHA256SUMS-headless.txt`，下载后可用于校验文件完整性。
+Release 会附带 `SHA256SUMS-gui.txt` 与 `SHA256SUMS-nogui.txt`，下载后可用于校验文件完整性。

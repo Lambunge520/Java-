@@ -26,6 +26,6 @@
 ## 验证
 
 - `python -m unittest tests.test_core_features`
-- `python -m py_compile src\LJM.pyw src\LJM_headless.pyw src\LJM_headless_entry.py`
-- `python src\LJM_headless.pyw feedback --stdout --message "OpenJ9 source is slow"`
-- `python src\LJM_headless.pyw delete --help`
+- `python -m py_compile src\LJM.pyw src\LJM_nogui.pyw src\LJM_nogui_entry.py`
+- `python src\LJM_nogui.py feedback --stdout --message "OpenJ9 source is slow"`
+- `python src\LJM_nogui.py delete --help`

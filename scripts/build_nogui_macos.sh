@@ -34,4 +34,7 @@ EOF
 
 chmod +x "$ROOT/dist/LJM-Java-Manager-nogui" "$ROOT/dist/LJM-Java-Manager-nogui.command"
 
+"$ROOT/dist/LJM-Java-Manager-nogui.command" version --stdout
+printf 'status\nexit\n' | "$ROOT/dist/LJM-Java-Manager-nogui.command"
+
 echo "macOS nogui build finished: $ROOT/dist/LJM-Java-Manager-nogui.command"

@@ -42,11 +42,18 @@ import urllib.request
 import webbrowser
 import zipfile
 
+try:
+    import readline
+except Exception:
+    readline = None
+
 if sys.platform.startswith("win"):
+    import msvcrt
     import winreg
 
 
 def main():
+    os.environ["LJM_NOGUI"] = "1"
     if getattr(sys, "frozen", False):
         base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(sys.executable)))
     else:

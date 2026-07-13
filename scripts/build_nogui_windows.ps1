@@ -24,4 +24,14 @@ python -m PyInstaller `
   --add-data "$Deps;deps" `
   "$Src\LJM_nogui_entry.py"
 
+$Exe = Join-Path $Root "dist\LJM-Java-Manager-nogui.exe"
+& $Exe version --stdout
+if ($LASTEXITCODE -ne 0) {
+  throw "Windows NoGUI one-shot smoke test failed with exit code $LASTEXITCODE"
+}
+@("status", "exit") | & $Exe
+if ($LASTEXITCODE -ne 0) {
+  throw "Windows NoGUI terminal smoke test failed with exit code $LASTEXITCODE"
+}
+
 Write-Host "Windows nogui build finished: $Root\dist\LJM-Java-Manager-nogui.exe"

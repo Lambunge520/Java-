@@ -34,4 +34,7 @@ EOF
 
 chmod +x "$ROOT/dist/LJM-Java-Manager-nogui" "$ROOT/dist/LJM-Java-Manager-nogui.run"
 
+"$ROOT/dist/LJM-Java-Manager-nogui.run" version --stdout
+printf 'status\nexit\n' | "$ROOT/dist/LJM-Java-Manager-nogui.run"
+
 echo "Linux nogui build finished: $ROOT/dist/LJM-Java-Manager-nogui.run"

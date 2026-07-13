@@ -4,7 +4,7 @@
 
 NoGUI 是 LJM Java Manager 的命令行版本，不启动桌面窗口和托盘，适合服务器、无桌面环境、脚本批处理、计划任务和 CI 使用。它复用桌面版核心逻辑，支持扫描、注册、下载、修复、更新、移动、删除 Java，并可设置默认 `JAVA_HOME`。
 
-### 3.1.2 重要变化
+### 3.1.3 重要变化
 
 - Java 注册、下载、更新和修复不再自动修改 `JAVA_HOME`。
 - 如需修改系统默认 Java，请使用 `set-default` 命令。
@@ -14,6 +14,10 @@ NoGUI 是 LJM Java Manager 的命令行版本，不启动桌面窗口和托盘�
 - 完整更新工具命名的 Java 文件夹后，目录名会同步到新版本号。
 - NoGUI 新增 `language` 命令，可切换 `auto`、`zh_CN`、`en_US`；默认 `auto` 会跟随 Windows 或当前系统语言。
 - 下载、更新、修复结果仍以 JSON 和日志为准；NoGUI 不显示桌面端的任务管理窗口。
+- Windows NoGUI 会保留当前 cmd、PowerShell 或 Windows Terminal，不再执行桌面版的隐藏控制台和启动时自动提权逻辑。只有确实需要系统权限的命令才可能要求用户使用管理员终端重试。
+- `GraalVM` 与 `GraalVM Community` 下载链已完全分开；选择 `GraalVM` 时只获取非 Community 的 Oracle GraalVM 包。
+- Java 发行商信息会给出更明确的 Minecraft 版本范围、兼容性和性能差异，GUI 下载页会随发行商与 Java 大版本动态更新建议。
+- NoGUI 交互终端支持 Tab 补全命令和参数，Windows 使用内置控制台补全，Linux/macOS 使用系统 readline，不需要额外安装依赖。
 
 ### 下载哪个包
 
@@ -134,6 +138,8 @@ Linux/macOS 使用对应入口：
 
 终端环境支持短命令：`l`/`ls` 列表，`s` 扫描，`cu` 检查更新，`dl` 下载，`r` 修复，`u` 更新，`mv` 移动，`rm` 删除，`def` 设置默认 Java，`lang` 切换语言，`t`/`tasks` 查看任务，`c`/`cancel` 取消任务，`w`/`wait` 等待任务。
 
+输入残缺命令后按 `Tab` 可以自动补全，例如 `down<Tab>` 补为 `download`、`ver<Tab>` 补为 `version`。下载命令还会补全 Java 发行商和大版本；修复、更新、移动、删除可补全已注册 Java 名称；取消和等待命令可补全任务编号。存在多个候选时，再按一次 `Tab` 会显示候选列表。
+
 在交互终端里执行 `download`/`dl`、`update`/`u`、`repair`/`r` 时会自动作为后台任务运行并显示下载进度条，终端仍可继续输入其他命令。第一个开始的任务标记为 `1`，后续任务依次为 `2`、`3`、`4`。输入 `tasks` 查看进度和任务类型，输入 `c 1`、`cancel 2` 或 `cancel all` 取消任务；按 `Ctrl+C` 后会列出可取消任务，再输入 `1`、`2` 或 `1 3` 即可取消指定任务。
 
 ### 交互终端命令速查
@@ -164,6 +170,7 @@ NoGUI 默认把执行结果写入程序目录下的 `ljm_nogui_result.json`，�
 
 - `--stdout`: 同时把 JSON 结果输出到控制台，适合脚本读取。
 - `--output <path>`: 把 JSON 结果写入指定文件。
+- `status` 输出中的 `nogui_mode: true` 表示共享核心已按 NoGUI 模式加载，当前终端不会被桌面版启动逻辑隐藏。
 
 示例：
 
@@ -276,9 +283,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_nogui_windows.ps1
 
 ## English
 
-NoGUI is the command-line edition of LJM Java Manager. It does not start a desktop window or tray icon, so it is suitable for servers, headless systems, scripts, scheduled tasks, and CI jobs. It reuses the desktop core logic and supports scanning, registering, downloading, repairing, updating, moving, deleting Java runtimes, and setting the default `JAVA_HOME`.
+NoGUI is the command-line edition of LJM Java Manager. It does not start a desktop window or tray icon, so it is suitable for servers, systems without a desktop environment, scripts, scheduled tasks, and CI jobs. It reuses the desktop core logic and supports scanning, registering, downloading, repairing, updating, moving, deleting Java runtimes, and setting the default `JAVA_HOME`.
 
-### Important Changes In 3.1.2
+### Important Changes In 3.1.3
 
 - Java registration, download, update, and repair no longer change `JAVA_HOME` automatically.
 - To change the system default Java, use the `set-default` command.
@@ -288,6 +295,10 @@ NoGUI is the command-line edition of LJM Java Manager. It does not start a deskt
 - After a full update of an LJM-named Java folder, the folder name follows the new Java version.
 - NoGUI adds the `language` command to switch between `auto`, `zh_CN`, and `en_US`; `auto` follows Windows or the current system language.
 - Download, update, and repair results are reported through JSON and logs. NoGUI does not show the desktop task manager window.
+- Windows NoGUI keeps the current cmd, PowerShell, or Windows Terminal session. It no longer runs the desktop edition's console-hiding and startup auto-elevation path. Commands that truly need system privileges may ask the user to retry from an administrator terminal.
+- The `GraalVM` and `GraalVM Community` download chains are now fully separated. Selecting `GraalVM` only resolves non-Community Oracle GraalVM packages.
+- Java vendor information now provides clearer Minecraft version ranges, compatibility notes, and performance differences; the GUI download page updates this advice with the selected vendor and Java major.
+- The NoGUI interactive terminal supports Tab completion for commands and arguments. Windows uses the built-in console editor, while Linux/macOS use the system readline module with no extra dependency.
 
 ### Which Package To Download
 
@@ -408,6 +419,8 @@ After connecting, NoGUI prints `Successfully connected to the LJM Java Manager N
 
 The terminal supports short commands: `l`/`ls` for list, `s` for scan, `cu` for check updates, `dl` for download, `r` for repair, `u` for update, `mv` for move, `rm` for delete, `def` for default Java, `lang` for language, `t`/`tasks` for task status, `c`/`cancel` for cancellation, and `w`/`wait` for waiting.
 
+Press `Tab` after a partial command to complete it, for example `down<Tab>` becomes `download` and `ver<Tab>` becomes `version`. Completion also covers Java vendors and majors for downloads, registered Java names for management commands, and task IDs for cancel/wait. Press `Tab` again when several candidates are available to list them.
+
 Inside the interactive terminal, `download`/`dl`, `update`/`u`, and `repair`/`r` run as background tasks and show a download progress bar while the prompt keeps accepting other commands. The first started task is marked `1`, then `2`, `3`, `4`, and so on. Use `tasks` to view progress and task type, `c 1`, `cancel 2`, or `cancel all` to cancel. Pressing `Ctrl+C` lists cancellable tasks; then enter `1`, `2`, or `1 3` to cancel selected tasks.
 
 ### Interactive Command Cheat Sheet
@@ -438,6 +451,7 @@ NoGUI writes the result JSON to `ljm_nogui_result.json` and errors to `ljm_nogui
 
 - `--stdout`: also prints JSON to the console for scripts.
 - `--output <path>`: writes JSON to a custom output file.
+- `nogui_mode: true` in the `status` output confirms that the shared core was loaded in NoGUI mode and will not hide the current terminal.
 
 Example:
 
