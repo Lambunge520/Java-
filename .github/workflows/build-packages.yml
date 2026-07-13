@@ -108,3 +108,11 @@ jobs:
             release-assets/LJM-Java-Manager-macos/LJM-Java-Manager-macos.zip \
             SHA256SUMS-gui.txt \
             --clobber
+      - name: Verify release notes UTF-8
+        run: |
+          RELEASE_BODY="$(gh release view "$RELEASE_TAG" --json body --jq .body)"
+          printf '%s\n' "$RELEASE_BODY" | grep -F "## 更新内容"
+          if printf '%s\n' "$RELEASE_BODY" | grep -F "## ????"; then
+            echo "Release notes contain corrupted Chinese text."
+            exit 1
+          fi

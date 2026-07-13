@@ -21,6 +21,12 @@
 
 GitHub Actions 中的 GUI 和 nogui 工作流都会在 `v*` 标签发布时运行，并把产物上传到同一个 Release。
 
+## Release 编码检查
+
+- Release Notes 源文件统一保存为 UTF-8，并通过 `gh release --notes-file` 写入线上 Release。
+- 不使用 Windows PowerShell 默认字符串编码直接提交包含中文的 JSON；必须显式使用 UTF-8。
+- GUI 与 NoGUI 工作流在上传资产后都会读取线上 Release 正文，确认包含 `## 更新内容`，并拒绝带 `## ????` 的乱码说明。
+
 ## 收尾清理
 
 提交或发布前应清理本地临时产物，避免把无用文件推到 GitHub：
