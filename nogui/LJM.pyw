@@ -29,12 +29,17 @@ import urllib.error
 import concurrent.futures
 
 
-logging.basicConfig(
-    filename="javamanager.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    encoding="utf-8",
-)
+_LOGGING_CONFIG = {
+    "filename": "javamanager.log",
+    "level": logging.INFO,
+    "format": "%(asctime)s - %(levelname)s - %(message)s",
+}
+try:
+    logging.basicConfig(**_LOGGING_CONFIG, encoding="utf-8")
+except (TypeError, ValueError):
+    # Python 3.8 (used by the Ubuntu 20.04 compatibility build) does not
+    # support the encoding argument on logging.basicConfig.
+    logging.basicConfig(**_LOGGING_CONFIG)
 
 
 def global_exception_handler(exc_type, exc_value, exc_tb):

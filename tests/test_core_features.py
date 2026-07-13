@@ -42,6 +42,12 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertEqual(self.core.VERSION, "3.1.3")
         self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1.3")
 
+    def test_logging_setup_keeps_python38_compatibility(self):
+        source = inspect.getsource(self.core)
+        self.assertIn("logging.basicConfig(**_LOGGING_CONFIG, encoding=\"utf-8\")", source)
+        self.assertIn("except (TypeError, ValueError):", source)
+        self.assertIn("logging.basicConfig(**_LOGGING_CONFIG)", source)
+
     def test_github_feedback_url_prefills_issue_context(self):
         url = self.core.build_github_feedback_url("下载 OpenJ9 时速度很慢")
         parsed = urlparse(url)
