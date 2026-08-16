@@ -148,8 +148,8 @@ Linux/macOS 使用对应入口：
 | --- | --- |
 | 查看帮助 | `help` 或 `帮助` |
 | 查看 Java 列表 | `list`、`l`、`ls` |
-| 扫描并注册 Java | `scan "D:\Java" --max-depth 6` 或 `s "D:\Java"` |
-| 检查更新 | `check-updates`、`cu`、`检查更新` |
+| 扫描并注册 Java | `scan "D:\Java" --max-depth 6`、`s "D:\Java"`；不带参数时扫描常见安装根目录 |
+| 检查更新 | `check-updates`、`cu`、`检查更新`；已是最新版本时 `update` 会直接跳过下载 |
 | 下载 Java | `download "Eclipse Temurin" 21 "D:\Java" --package-type jdk` 或 `dl "Eclipse Temurin" 21 "D:\Java"` |
 | 修复 Java | `repair "Java 21" --mode smart` 或 `r "Java 21"` |
 | 更新 Java | `update "Java 21"` 或 `u "Java 21"` |
@@ -259,7 +259,7 @@ wait all
 .\LJM-Java-Manager-nogui.exe set-default "Temurin_21" --stdout
 ```
 
-这适合 IDE、命令行脚本或其他依赖 `JAVA_HOME` 的工具。Minecraft 启动器通常有自己的 Java 选择逻辑，是否使用系统默认 Java 取决于启动器设置。
+这适合 IDE、命令行脚本或其他依赖 `JAVA_HOME` 的工具。Windows 上优先写入系统级 `JAVA_HOME`，没有管理员权限时自动回退写入当前用户环境变量。Minecraft 启动器通常有自己的 Java 选择逻辑，是否使用系统默认 Java 取决于启动器设置。
 
 ### 权限提示
 
@@ -429,7 +429,7 @@ Inside the interactive terminal, `download`/`dl`, `update`/`u`, and `repair`/`r`
 | --- | --- |
 | Show help | `help` |
 | List Java runtimes | `list`, `l`, `ls` |
-| Scan and register Java | `scan "D:\Java" --max-depth 6` or `s "D:\Java"` |
+| Scan and register Java | `scan "D:\Java" --max-depth 6` or `s "D:\Java"`; bare `scan` checks common install roots |
 | Check updates | `check-updates`, `cu` |
 | Download Java | `download "Eclipse Temurin" 21 "D:\Java" --package-type jdk` or `dl "Eclipse Temurin" 21 "D:\Java"` |
 | Repair Java | `repair "Java 21" --mode smart` or `r "Java 21"` |
@@ -540,7 +540,7 @@ Only `set-default` sets a target Java as the default `JAVA_HOME`:
 .\LJM-Java-Manager-nogui.exe set-default "Temurin_21" --stdout
 ```
 
-This is useful for IDEs, command-line scripts, and tools that rely on `JAVA_HOME`. Minecraft launchers usually have their own Java selection logic, so whether they use the system default Java depends on launcher settings.
+This is useful for IDEs, command-line scripts, and tools that rely on `JAVA_HOME`. On Windows the machine-level `JAVA_HOME` is written first; without administrator rights it falls back to the current user's environment variables. Minecraft launchers usually have their own Java selection logic, so whether they use the system default Java depends on launcher settings.
 
 ### Permission Notes
 

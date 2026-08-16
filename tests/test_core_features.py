@@ -38,9 +38,9 @@ class CoreFeatureTests(unittest.TestCase):
     def setUpClass(cls):
         cls.core = load_core()
 
-    def test_version_and_user_agent_are_313(self):
-        self.assertEqual(self.core.VERSION, "3.1.3")
-        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1.3")
+    def test_version_and_user_agent_are_314(self):
+        self.assertEqual(self.core.VERSION, "3.1.4")
+        self.assertEqual(self.core.default_headers()["User-Agent"], "JavaManager/3.1.4")
 
     def test_logging_setup_keeps_python38_compatibility(self):
         source = inspect.getsource(self.core)
@@ -55,7 +55,7 @@ class CoreFeatureTests(unittest.TestCase):
 
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://github.com/Lambunge520/Java-/issues/new")
         self.assertEqual(query["template"][0], "bug_report.md")
-        self.assertIn("3.1.3", query["body"][0])
+        self.assertIn("3.1.4", query["body"][0])
         self.assertIn("Tool version", query["body"][0])
         self.assertIn("Download platform", query["body"][0])
         self.assertIn("下载 OpenJ9 时速度很慢", query["body"][0])
@@ -798,6 +798,80 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("MC selection: Eclipse Temurin JDK 22", experimental)
         self.assertIn("MC recommendation: Experimental", experimental)
 
+    def test_update_detection_ignores_vendor_version_text_asymmetry(self):
+        # Corretto latest versions look like 21.0.8.9.1 while the installed
+        # release file reports 21.0.8+9-LTS; both describe the same build.
+        self.assertFalse(self.core.is_update_available("21.0.8+9-LTS", "21.0.8.9.1", "21"))
+        # Foojay java_version texts carry no build number; comparing them
+        # against an installed build must not flag a phantom update.
+        self.assertFalse(self.core.is_update_available("21.0.8+12-LTS", "21.0.8", "21"))
+        self.assertFalse(self.core.is_update_available("1.8.0_452", "8u452", "8"))
+        # Genuine updates must still be detected.
+        self.assertTrue(self.core.is_update_available("21.0.7+11", "21.0.8", "21"))
+        self.assertTrue(self.core.is_update_available("21.0.8+9", "21.0.8+12", "21"))
+        self.assertTrue(self.core.is_update_available("1.8.0_312", "1.8.0_452", "8"))
+        # A different major on the remote side is not an update for this row.
+        self.assertFalse(self.core.is_update_available("21.0.8+9", "22.0.1+8", "21"))
+
+    def test_recommended_java_majors_for_minecraft_bands(self):
+        self.assertEqual(self.core.recommended_java_majors_for_minecraft("1.21.1"), ["21"])
+        self.assertEqual(self.core.recommended_java_majors_for_minecraft("1.20.5"), ["21"])
+        self.assertEqual(self.core.recommended_java_majors_for_minecraft("1.20.4"), ["17"])
+        self.assertEqual(self.core.recommended_java_majors_for_minecraft("1.18"), ["17"])
+        self.assertEqual(self.core.recommended_java_majors_for_minecraft("1.16.5"), ["8"])
+        self.assertEqual(self.core.recommended_java_majors_for_minecraft("26.2"), ["25", "26"])
+        self.assertEqual(self.core.recommended_java_majors_for_minecraft("not-a-version"), [])
+
+    def test_minecraft_advice_includes_quick_reference_and_compatibility(self):
+        zh = self.core.minecraft_download_advice("Eclipse Temurin", "21", language="zh_CN")
+        en = self.core.minecraft_download_advice("Eclipse Temurin", "21", language="en_US")
+
+        self.assertIn("MC 兼容判定:", zh)
+        self.assertIn("MC 快速对照:", zh)
+        self.assertIn("Java 21 →", zh)
+        self.assertIn("Java 8 →", zh)
+        self.assertIn("MC compatibility:", en)
+        self.assertIn("MC quick reference:", en)
+
+    def test_github_mirror_prefix_list_is_wellformed(self):
+        prefixes = self.core.GITHUB_MIRROR_PREFIXES
+        self.assertTrue(prefixes)
+        for prefix in prefixes:
+            self.assertTrue(prefix.startswith("https://"), prefix)
+            self.assertTrue(prefix.endswith("/"), prefix)
+        self.assertIn("https://ghproxy.link/", prefixes)
+        self.assertIn("https://ghfast.top/", prefixes)
+
+    def test_gui_build_scripts_stage_platform_deps_only(self):
+        root = Path(__file__).resolve().parents[1]
+        scripts = {
+            "windows": (root / "scripts" / "build_windows.ps1").read_text(encoding="utf-8-sig"),
+            "linux": (root / "scripts" / "build_linux.sh").read_text(encoding="utf-8"),
+            "macos": (root / "scripts" / "build_macos.sh").read_text(encoding="utf-8"),
+        }
+
+        # Every GUI build must stage only its own platform's vendored wheels
+        # instead of embedding vendor/deps wholesale (all three platforms).
+        for name, script in scripts.items():
+            self.assertIn("deps-stage", script, name)
+            self.assertNotIn('"$Deps;deps"', script, name)
+            self.assertNotIn('"$DEPS:deps"', script, name)
+        self.assertIn("windows-", scripts["windows"])
+        self.assertIn("linux-x86_64", scripts["linux"])
+        self.assertIn("linux-aarch64", scripts["linux"])
+        self.assertIn("macos-arm64", scripts["macos"])
+        self.assertIn("macos-x86_64", scripts["macos"])
+
+    def test_nogui_build_scripts_skip_tray_dependencies(self):
+        root = Path(__file__).resolve().parents[1]
+        for name in ("build_nogui_windows.ps1", "build_nogui_linux.sh", "build_nogui_macos.sh"):
+            script = (root / "scripts" / name).read_text(encoding="utf-8-sig" if name.endswith(".ps1") else "utf-8")
+            # NoGUI never starts the tray, so the vendored wheels must not be
+            # referenced at all in its build scripts.
+            self.assertNotIn("vendor", script, name)
+            self.assertNotIn(":deps", script, name)
+            self.assertNotIn(";deps", script, name)
+
     def test_minecraft_jvm_profile_splits_launcher_argument_fields(self):
         pclce = self.core.build_minecraft_jvm_profile(
             launcher="PCLCE",
@@ -1201,7 +1275,7 @@ class CoreFeatureTests(unittest.TestCase):
 
     def test_release_notes_and_workflows_are_bilingual(self):
         root = Path(__file__).resolve().parents[1]
-        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.3.md").read_text(encoding="utf-8")
+        notes = (root / "docs" / "releases" / "RELEASE_NOTES_3.1.4.md").read_text(encoding="utf-8")
         template = (root / "docs" / "releases" / "RELEASE_NOTES_TEMPLATE_BILINGUAL.md").read_text(encoding="utf-8")
         gui_workflow = (root / ".github" / "workflows" / "build-packages.yml").read_text(encoding="utf-8")
         nogui_workflow = (root / ".github" / "workflows" / "build-nogui-packages.yml").read_text(encoding="utf-8")
@@ -1216,7 +1290,7 @@ class CoreFeatureTests(unittest.TestCase):
         for workflow in (gui_workflow, nogui_workflow):
             self.assertIn("RELEASE_NOTES_FILE", workflow)
             self.assertIn('RELEASE_VERSION="${RELEASE_TAG#v}"', workflow)
-            self.assertIn('default: "v3.1.3"', workflow)
+            self.assertIn('default: "v3.1.4"', workflow)
             self.assertIn("RELEASE_NOTES_TEMPLATE_BILINGUAL.md", workflow)
             self.assertIn('--notes-file "$RELEASE_NOTES_FILE"', workflow)
             self.assertIn("group: ljm-release-", workflow)
@@ -1247,7 +1321,7 @@ class CoreFeatureTests(unittest.TestCase):
         ):
             self.assertIn(marker, docs)
         self.assertIn("docs/NOGUI_USAGE.md", readme)
-        self.assertIn("3.1.3", readme)
+        self.assertIn("3.1.4", readme)
         self.assertIn("python .\\src\\LJM_nogui.py", readme)
         self.assertIn("./src/LJM_nogui", readme)
         self.assertNotIn("Current version:", readme)
@@ -2663,7 +2737,7 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("_animate_selected_tab_motion_header()", match.group("body"))
         self.assertNotIn("_fade_in_window(self.root", match.group("body"))
 
-    def test_main_ui_has_home_changelog_and_fade_navigation_without_extra_menu_bar(self):
+    def test_main_ui_has_home_fade_navigation_without_extra_menu_bar(self):
         source = Path("src/LJM.pyw").read_text(encoding="utf-8")
 
         self.assertIn("PAGE_FADE_STEPS = 12", source)
@@ -2680,9 +2754,12 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertNotIn("self.root.config(menu=self.menubar)", source)
         self.assertNotIn('widget_class == "Menubutton"', source)
         self.assertIn("self.notebook.add(self.tab_home, text=tr(\"tab_home\"))", source)
-        self.assertIn("self.notebook.add(self.tab_changelog, text=tr(\"tab_changelog\"))", source)
+        # The standalone changelog page was removed in 3.1.4.
+        self.assertNotIn("tab_changelog", source)
+        self.assertNotIn("def load_changelog_text", source)
+        self.assertNotIn("def setup_changelog_tab", source)
+        self.assertNotIn("home_changelog", source)
         self.assertIn("def setup_home_tab", source)
-        self.assertIn("def setup_changelog_tab", source)
         self.assertIn("def open_default_java_panel", source)
         self.assertIn("def read_current_default_java_home", source)
         self.assertIn("def open_task_progress_panel", source)
@@ -2691,8 +2768,6 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("command=self.open_feedback", source)
         self.assertIn("command=self.open_settings", source)
         self.assertIn("command=self.open_about", source)
-        self.assertIn("command=self.show_changelog_tab", source)
-        self.assertIn("def load_changelog_text", source)
         self.assertIn('"home_about": "关于"', source)
         self.assertIn('"home_about": "About"', source)
         self.assertNotIn('tk.Button(toolbar, text=tr("toolbar_settings")', source)
@@ -2708,7 +2783,7 @@ class CoreFeatureTests(unittest.TestCase):
         self.assertIn("fg=self.current_fg", source)
         self.assertIn("insertbackground=self.current_fg", source)
         self.assertIn("selectbackground=self.current_btn", source)
-        self.assertIn("self.changelog_text = text", source)
+        self.assertNotIn("changelog", source)
 
     def test_notebook_fade_navigation_does_not_use_blocking_overlay(self):
         source = Path("src/LJM.pyw").read_text(encoding="utf-8")
@@ -2995,6 +3070,47 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertEqual(language_args.command, "language")
         self.assertEqual(language_args.value, "en")
         self.assertIs(language_args.func, self.nogui.command_language)
+
+    def test_nogui_scan_accepts_optional_paths(self):
+        parser = self.nogui.build_parser()
+
+        bare_scan = parser.parse_args(["scan"])
+        path_scan = parser.parse_args(["scan", r"D:\Java", "--max-depth", "3"])
+
+        self.assertEqual(bare_scan.command, "scan")
+        self.assertIs(bare_scan.func, self.nogui.command_scan)
+        self.assertEqual(bare_scan.paths, [])
+        self.assertEqual(path_scan.paths, [r"D:\Java"])
+        self.assertEqual(path_scan.max_depth, 3)
+
+        source = inspect.getsource(self.nogui.command_scan)
+        self.assertIn("args.paths or None", source)
+
+    def test_nogui_update_skips_download_when_already_current(self):
+        parser = self.nogui.build_parser()
+        update_args = parser.parse_args(["u", "Temurin_21"])
+
+        self.assertIs(update_args.func, self.nogui.command_update)
+        source = inspect.getsource(self.nogui.command_update)
+        self.assertIn("skip_when_current=True", source)
+        worker_source = inspect.getsource(self.nogui.repair_or_update_target)
+        self.assertIn("skip_when_current", worker_source)
+        self.assertIn("up_to_date", worker_source)
+
+    def test_gui_already_latest_dialog_shows_formatted_message(self):
+        source = inspect.getsource(self.nogui.core)
+        self.assertIn("already_latest_text = tr(", source)
+        self.assertIn("text=already_latest_text", source)
+
+    def test_nogui_registry_name_is_rebuilt_after_versioned_folder_rename(self):
+        source = inspect.getsource(self.nogui.repair_or_update_target)
+        self.assertIn("build_registry_name", source)
+
+    def test_nogui_set_default_falls_back_to_hkcu_environment(self):
+        source = inspect.getsource(self.nogui.set_default_java)
+        self.assertIn("HKEY_LOCAL_MACHINE", source)
+        self.assertIn("HKEY_CURRENT_USER", source)
+        self.assertIn("HKCU\\\\Environment", source)
 
     def test_nogui_terminal_environment_helpers(self):
         argv = self.nogui.terminal_split(r'download "Eclipse Temurin" 21 D:\Java --package-type jdk', platform_name="nt")
@@ -3387,7 +3503,7 @@ class NoguiFeatureTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["action"], "feedback")
         self.assertIn("https://github.com/Lambunge520/Java-/issues/new", payload["url"])
-        self.assertIn("3.1.3", payload["body"])
+        self.assertIn("3.1.4", payload["body"])
         self.assertIn("Java update list is blocked", payload["body"])
 
     def test_nogui_full_update_uses_versioned_target_rename(self):

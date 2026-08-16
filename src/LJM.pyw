@@ -105,7 +105,7 @@ except Exception as exc:
     messagebox = _UnavailableMessageBox()
 
 
-VERSION = "3.1.3"
+VERSION = "3.1.4"
 GITHUB_REPO = "https://github.com/Lambunge520/Java-"
 API_TOOL_UPDATE = "https://api.github.com/repos/Lambunge520/Java-/releases/latest"
 TOOL_UPDATE_MIRROR = "https://ghfast.top/https://api.github.com/repos/Lambunge520/Java-/releases/latest"
@@ -116,6 +116,7 @@ GITHUB_MIRROR_PREFIXES = (
     "https://gh.llkk.cc/",
     "https://gh-proxy.com/",
     "https://ghproxy.cc/",
+    "https://ghproxy.link/",
     "https://mirror.ghproxy.com/",
     "https://ghproxy.net/",
     "https://gh.ddlc.top/",
@@ -2967,22 +2968,6 @@ PYPI_MIRRORS = (
 )
 
 
-def load_changelog_text():
-    candidates = [
-        os.path.join(APP_SOURCE_ROOT, "docs", "releases", f"RELEASE_NOTES_{VERSION}.md"),
-        os.path.join(APP_RESOURCE_DIR, "docs", "releases", f"RELEASE_NOTES_{VERSION}.md"),
-        os.path.join(APP_DIR, "docs", "releases", f"RELEASE_NOTES_{VERSION}.md"),
-    ]
-    for path in unique_sequence(candidates):
-        try:
-            if os.path.exists(path):
-                with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                    return f.read().strip()
-        except Exception as exc:
-            logging.debug("读取更新日志失败: %s - %s", path, exc)
-    return f"LJM Java Manager {VERSION}\n\n{tr('changelog_empty')}"
-
-
 def _dependency_platform_dirs():
     machine = platform.machine().lower()
     if IS_WIN:
@@ -3316,15 +3301,12 @@ I18N_ZH_CN = {
     "tab_move": "Java 移动",
     "tab_delete": "Java 卸载/删除",
     "tab_backup": "备份管理",
-    "tab_changelog": "更新日志",
     "menu_pages": "界面",
     "home_title": "LJM Java Manager",
     "home_subtitle": "Java 管理、下载、更新、修复和 Minecraft 玩家工具入口。",
     "home_feedback": "反馈",
     "home_settings": "设置",
     "home_about": "关于",
-    "home_changelog": "更新日志",
-    "changelog_empty": "当前版本暂未随包提供更新日志。",
     "toolbar_search_label": "搜索/筛选 Java:",
     "toolbar_clear_filter": "清空筛选",
     "task_progress_button": "下载任务",
@@ -3614,6 +3596,7 @@ I18N_ZH_CN = {
     "smart_repair_done": "智能修复完成。",
     "full_repair_done": "完整修复完成。",
     "update_done": "Java 更新覆盖完成。",
+    "update_already_latest": "当前 Java 已是最新版本（{current}），云端最新为 {latest}，无需更新。",
     "task_cancelled_title": "已取消",
     "task_cancelled_text": "当前更新/修复任务已取消。",
     "task_interrupted_title": "任务中断",
@@ -3644,15 +3627,12 @@ I18N_EN_US = {
     "tab_move": "Java Move",
     "tab_delete": "Java Uninstall/Delete",
     "tab_backup": "Backup Manager",
-    "tab_changelog": "Changelog",
     "menu_pages": "Pages",
     "home_title": "LJM Java Manager",
     "home_subtitle": "Java management, downloads, updates, repair, and Minecraft player tools.",
     "home_feedback": "Feedback",
     "home_settings": "Settings",
     "home_about": "About",
-    "home_changelog": "Changelog",
-    "changelog_empty": "No changelog was bundled for this version.",
     "toolbar_search_label": "Search/Filter Java:",
     "toolbar_clear_filter": "Clear",
     "task_progress_button": "Download Tasks",
@@ -3942,6 +3922,7 @@ I18N_EN_US = {
     "smart_repair_done": "Smart repair complete.",
     "full_repair_done": "Full repair complete.",
     "update_done": "Java replacement update complete.",
+    "update_already_latest": "The installed Java is already the latest build ({current}); the cloud reports {latest}, so no update is needed.",
     "task_cancelled_title": "Canceled",
     "task_cancelled_text": "The current update/repair task was canceled.",
     "task_interrupted_title": "Task Interrupted",
@@ -4838,6 +4819,47 @@ def normalize_java_package_type(package_type):
     return "jre" if value == "jre" else "jdk"
 
 
+def java_version_update_key(version_text, fallback_major=None):
+    """Return ((major, minor, security), build) for update comparison.
+
+    ``build`` stays ``None`` when the text carries no explicit build marker
+    (`+N` / `-bN` / `_bN`) so that vendor texts with and without build numbers
+    can be compared without phantom updates. A vendor-specific fourth version
+    component (for example Corretto ``21.0.8.9.1``) is folded into the build
+    slot because it encodes the same OpenJDK build number.
+    """
+    text = normalize_text(version_text).lower()
+    if not text:
+        return (int(fallback_major or 0), 0, 0), None
+
+    build = None
+    build_match = re.search(r"(?:\+|[-_]b)(\d+)", text)
+    if build_match:
+        build = int(build_match.group(1))
+
+    legacy_8_match = re.search(r"(?<!\d)(?:1\.8\.0[_\.\-]?(\d+)|8u(\d+)|jdk8u(\d+)|jre8u(\d+))", text)
+    if legacy_8_match:
+        update = 0
+        for group in legacy_8_match.groups():
+            if group:
+                update = int(group)
+                break
+        return (8, 0, update), build
+
+    version_match = re.search(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?", text)
+    if version_match:
+        triple = (
+            int(version_match.group(1)),
+            int(version_match.group(2) or 0),
+            int(version_match.group(3) or 0),
+        )
+        if build is None and version_match.group(4):
+            build = int(version_match.group(4))
+        return triple, build
+
+    return (int(fallback_major or 0), 0, 0), build
+
+
 def is_update_available(current_version, latest_version, major_version):
     current_major = extract_major_from_version(current_version, fallback=str(major_version))
     latest_major = extract_major_from_version(latest_version, fallback=str(major_version))
@@ -4845,9 +4867,14 @@ def is_update_available(current_version, latest_version, major_version):
         current_major = str(major_version)
     if str(latest_major) != str(major_version):
         return False
-    current_key = build_java_version_key(current_version, fallback_major=current_major)
-    latest_key = build_java_version_key(latest_version, fallback_major=latest_major)
-    return latest_key > current_key
+    current_triple, current_build = java_version_update_key(current_version, fallback_major=current_major)
+    latest_triple, latest_build = java_version_update_key(latest_version, fallback_major=latest_major)
+    if latest_triple != current_triple:
+        return latest_triple > current_triple
+    # Same major.minor.security: only report an update when both sides carry an
+    # explicit build number and the latest one is newer. Otherwise vendor texts
+    # such as "21.0.8" vs "21.0.8+9-LTS" would keep flagging phantom updates.
+    return current_build is not None and latest_build is not None and latest_build > current_build
 
 
 def parse_app_version(version_text):
@@ -6074,6 +6101,38 @@ MINECRAFT_COMPAT_TEST_VENDORS = {
 }
 
 
+def recommended_java_majors_for_minecraft(mc_version):
+    """Map a Minecraft version string to the recommended Java majors."""
+    text = normalize_text(mc_version).lower().strip()
+    match = re.search(r"(\d+(?:\.\d+)*)", text)
+    if not match:
+        return []
+    parts = [int(part) for part in match.group(1).split(".")]
+    if parts[0] >= 26:
+        return ["25", "26"]
+    if parts[0] == 1:
+        minor = parts[1] if len(parts) > 1 else 0
+        patch = parts[2] if len(parts) > 2 else 0
+        if (minor, patch) >= (20, 5):
+            return ["21"]
+        if (minor, patch) >= (18, 0):
+            return ["17"]
+        return ["8"]
+    return []
+
+
+def minecraft_quick_reference(language=None):
+    lang = language or active_language()
+    suffix = "zh" if str(lang).lower().startswith("zh") else "en"
+    entries = []
+    for major in ("8", "17", "21", "25"):
+        match = MINECRAFT_MAJOR_MATCH.get(major)
+        if match and match.get("tier") == "recommended":
+            entries.append(f"Java {major} → {match.get(suffix, '')}")
+    separator = "；" if suffix == "zh" else "; "
+    return separator.join(entries)
+
+
 def minecraft_download_advice(vendor, major_version, language=None):
     lang = language or active_language()
     is_zh = str(lang).lower().startswith("zh")
@@ -6103,6 +6162,8 @@ def minecraft_download_advice(vendor, major_version, language=None):
             f"MC 当前选择: {vendor} JDK {major}\n"
             f"MC 版本匹配: {match_text}\n"
             f"MC 建议等级: {level}\n"
+            f"MC 兼容判定: {'可直接用于匹配范围内的 MC 版本' if tier == 'recommended' else '按需/实验，建议先小范围实测再固定使用'}\n"
+            f"MC 快速对照: {minecraft_quick_reference(lang)}\n"
             f"MC 发行商判断: {profile.get('minecraft', '')}\n"
             f"MC 性能判断: {profile.get('minecraft_perf', '')}\n"
             f"MC 大版本说明: {minecraft_java_guidance(major, language=lang)}"
@@ -6111,6 +6172,8 @@ def minecraft_download_advice(vendor, major_version, language=None):
         f"MC selection: {vendor} JDK {major}\n"
         f"MC version match: {match_text}\n"
         f"MC recommendation: {level}\n"
+        f"MC compatibility: {'safe for MC versions inside the matched range' if tier == 'recommended' else 'conditional/experimental; test before committing to it'}\n"
+        f"MC quick reference: {minecraft_quick_reference(lang)}\n"
         f"MC vendor note: {profile.get('minecraft', '')}\n"
         f"MC performance note: {profile.get('minecraft_perf', '')}\n"
         f"MC major-version note: {minecraft_java_guidance(major, language=lang)}"
@@ -11543,9 +11606,6 @@ class JavaManagerApp:
     def show_backup_tab(self):
         self.show_tab(self.tab_backup)
 
-    def show_changelog_tab(self):
-        self.show_tab(self.tab_changelog)
-
     def open_settings_from_tray(self):
         self.show_from_tray()
         self.open_settings()
@@ -11636,7 +11696,6 @@ class JavaManagerApp:
         self.tab_move = ttk.Frame(self.notebook)
         self.tab_delete = ttk.Frame(self.notebook)
         self.tab_backup = ttk.Frame(self.notebook)
-        self.tab_changelog = ttk.Frame(self.notebook)
         self.tab_home_body, self.tab_home_canvas = self._create_scrollable_area(self.tab_home)
         self.tab_reg_body, self.tab_reg_canvas = self._create_scrollable_area(self.tab_reg)
         self.tab_fix_body, self.tab_fix_canvas = self._create_scrollable_area(self.tab_fix)
@@ -11646,7 +11705,6 @@ class JavaManagerApp:
         self.tab_move_body, self.tab_move_canvas = self._create_scrollable_area(self.tab_move)
         self.tab_delete_body, self.tab_delete_canvas = self._create_scrollable_area(self.tab_delete)
         self.tab_backup_body, self.tab_backup_canvas = self._create_scrollable_area(self.tab_backup)
-        self.tab_changelog_body, self.tab_changelog_canvas = self._create_scrollable_area(self.tab_changelog)
 
         self.notebook.add(self.tab_home, text=tr("tab_home"))
         self.notebook.add(self.tab_reg, text=tr("tab_registration"))
@@ -11657,7 +11715,6 @@ class JavaManagerApp:
         self.notebook.add(self.tab_move, text=tr("tab_move"))
         self.notebook.add(self.tab_delete, text=tr("tab_delete"))
         self.notebook.add(self.tab_backup, text=tr("tab_backup"))
-        self.notebook.add(self.tab_changelog, text=tr("tab_changelog"))
 
         self.setup_home_tab()
         self.setup_reg_tab()
@@ -11668,7 +11725,6 @@ class JavaManagerApp:
         self.setup_move_tab()
         self.setup_delete_tab()
         self.setup_backup_tab()
-        self.setup_changelog_tab()
         for scope, canvas in (
             (self.tab_home_body, self.tab_home_canvas),
             (self.tab_reg_body, self.tab_reg_canvas),
@@ -11679,7 +11735,6 @@ class JavaManagerApp:
             (self.tab_move_body, self.tab_move_canvas),
             (self.tab_delete_body, self.tab_delete_canvas),
             (self.tab_backup_body, self.tab_backup_canvas),
-            (self.tab_changelog_body, self.tab_changelog_canvas),
         ):
             self._install_mousewheel_scroll(scope, canvas)
 
@@ -11733,8 +11788,7 @@ class JavaManagerApp:
         actions.pack(fill=tk.X, padx=14, pady=(4, 14))
         tk.Button(actions, text=tr("home_feedback"), command=self.open_feedback, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(0, 6))
         tk.Button(actions, text=tr("home_settings"), command=self.open_settings, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=6)
-        tk.Button(actions, text=tr("home_about"), command=self.open_about, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=6)
-        tk.Button(actions, text=tr("home_changelog"), command=self.show_changelog_tab, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(6, 0))
+        tk.Button(actions, text=tr("home_about"), command=self.open_about, height=2).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(6, 0))
 
         quick = ttk.LabelFrame(parent, text=tr("menu_pages"))
         quick.pack(fill=tk.X, padx=14, pady=(0, 14))
@@ -11747,22 +11801,6 @@ class JavaManagerApp:
         for index, (text, command) in enumerate(quick_buttons):
             tk.Button(quick, text=text, command=command, height=2).grid(row=0, column=index, sticky="ew", padx=6, pady=10)
             quick.columnconfigure(index, weight=1)
-
-    def setup_changelog_tab(self):
-        parent = getattr(self, "tab_changelog_body", self.tab_changelog)
-        self._create_tab_motion_header(self.tab_changelog, parent, "tab_changelog")
-        frame = tk.Frame(parent)
-        frame.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
-        text = tk.Text(frame, wrap=tk.WORD, height=22, font=("Consolas", 10), relief="flat", bd=0)
-        y_scroll = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=text.yview)
-        text.configure(yscrollcommand=y_scroll.set)
-        text.grid(row=0, column=0, sticky="nsew")
-        y_scroll.grid(row=0, column=1, sticky="ns")
-        frame.grid_rowconfigure(0, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
-        text.insert("1.0", load_changelog_text())
-        text.configure(state=tk.DISABLED)
-        self.changelog_text = text
 
     def setup_reg_tab(self):
         parent = getattr(self, "tab_reg_body", self.tab_reg)
@@ -14041,7 +14079,7 @@ class JavaManagerApp:
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def download_and_extract(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None, package_type="jdk", repair_mode_override=None):
+    def download_and_extract(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None, package_type="jdk", repair_mode_override=None, current_version=None):
         package_type = normalize_java_package_type(package_type)
         return self.download_and_extract_popup_v2(
             vendor,
@@ -14051,6 +14089,7 @@ class JavaManagerApp:
             preferred_registry_name=preferred_registry_name,
             package_type=package_type,
             repair_mode_override=repair_mode_override,
+            current_version=current_version,
         )
         top = tk.Toplevel(self.root)
         top.title("正在进行底层通信...")
@@ -14248,7 +14287,7 @@ class JavaManagerApp:
 
         threading.Thread(target=task, daemon=True).start()
 
-    def download_and_extract_popup_v2(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None, package_type="jdk", repair_mode_override=None):
+    def download_and_extract_popup_v2(self, vendor, major_version, target_path, is_repair=False, preferred_registry_name=None, package_type="jdk", repair_mode_override=None, current_version=None):
         if not self._guard_java_transfer_start():
             return
         target_path = os.path.abspath(os.path.expanduser(normalize_text(target_path)))
@@ -14296,6 +14335,18 @@ class JavaManagerApp:
                 info = JavaDownloadEngine.get_latest_download_info(vendor, major_version, package_type=package_type)
                 if not info:
                     raise Exception(tr("metadata_missing"))
+                if not is_repair and normalize_text(current_version):
+                    latest_version = version_display_text(info["version"])
+                    if not is_update_available(current_version, latest_version, major_version):
+                        already_latest_text = tr(
+                            "update_already_latest",
+                            current=version_display_text(current_version),
+                            latest=latest_version,
+                        )
+                        mark_finished("completed", already_latest_text)
+                        self.root.after(0, lambda text=already_latest_text: self._show_task_message("showinfo", tr("task_done_title"), text))
+                        self.root.after(0, self.refresh_all_data)
+                        return
 
                 suffix = download_info_archive_suffix(info)
                 expected_sha256 = resolve_download_sha256(info)
@@ -14384,8 +14435,10 @@ class JavaManagerApp:
                             force_remove_tree(target_path)
                         for name in old_names:
                             unregister_java_registry_name(name, java_home=target_path)
-                        if not final_preferred_name and old_names:
-                            final_preferred_name = old_names[0]
+                        # The folder now carries the new version, so rebuild the
+                        # registry name from the replaced runtime instead of
+                        # reusing the stale pre-update registration name.
+                        final_preferred_name = build_registry_name(read_java_runtime_info(final_target_path))
                     else:
                         replace_java_home_atomically(source_jdk_dir, final_target_path, cancel_event=cancel_event)
                 ensure_not_cancelled(cancel_event)
@@ -14552,6 +14605,7 @@ class JavaManagerApp:
                 is_repair=False,
                 preferred_registry_name=runtime.get("registry_name"),
                 package_type=runtime_update_package_type(runtime),
+                current_version=runtime.get("version"),
             )
         if len(targets) > 1:
             self.clear_checked_tree_selection("tree_up", "update_items", "update_checked_items")

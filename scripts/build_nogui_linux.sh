@@ -5,8 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SRC="$ROOT/src"
 ASSETS="$ROOT/assets"
-DEPS="$ROOT/vendor/deps"
 cd "$ROOT"
+
+# NoGUI never starts the desktop tray, so the pystray/Pillow wheels are
+# intentionally not bundled; the shared desktop core only loads them lazily
+# for the tray icon.
 
 python3 -m PyInstaller \
   --noconfirm \
@@ -22,7 +25,6 @@ python3 -m PyInstaller \
   --add-data "$SRC/LJM_nogui.pyw:." \
   --add-data "$SRC/LJM.pyw:." \
   --add-data "$ASSETS/java.ico:." \
-  --add-data "$DEPS:deps" \
   "$SRC/LJM_nogui_entry.py"
 
 cat > "$ROOT/dist/LJM-Java-Manager-nogui.run" <<'EOF'

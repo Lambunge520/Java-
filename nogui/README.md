@@ -2,7 +2,7 @@
 
 ## 中文
 
-这是 LJM Java Manager 3.1.3 的无桌面版目录。终端入口文件为 `LJM_nogui.py`，会复用 `LJM.pyw` 的核心逻辑，不启动桌面窗口和托盘，适合命令行、服务器、脚本和计划任务。
+这是 LJM Java Manager 3.1.4 的无桌面版目录。终端入口文件为 `LJM_nogui.py`，会复用 `LJM.pyw` 的核心逻辑，不启动桌面窗口和托盘，适合命令行、服务器、脚本和计划任务。
 
 从 Release 下载成品时请选择名称带 `nogui` 的资产。Windows 使用 `.exe`，Linux 优先使用 `.run`，macOS 优先使用 `.command`。
 
@@ -39,7 +39,7 @@ python .\LJM_nogui.py
 
 ## English
 
-This directory contains the NoGUI edition of LJM Java Manager 3.1.3. The terminal entry file is `LJM_nogui.py`; it reuses the core logic from `LJM.pyw` and does not start a desktop window or tray icon. It is intended for command-line usage, servers, scripts, and scheduled tasks.
+This directory contains the NoGUI edition of LJM Java Manager 3.1.4. The terminal entry file is `LJM_nogui.py`; it reuses the core logic from `LJM.pyw` and does not start a desktop window or tray icon. It is intended for command-line usage, servers, scripts, and scheduled tasks.
 
 When downloading release builds, choose assets with `nogui` in the name. Use `.exe` on Windows, `.run` on Linux, and `.command` on macOS.
 

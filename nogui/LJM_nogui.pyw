@@ -190,7 +190,7 @@ TERMINAL_TEXT = {
         "prompt": "ljm无桌面> ",
         "commands_title": "可用命令:",
         "cmd_list": "  list / l / ls / 列表",
-        "cmd_scan": "  scan / s <文件夹> / 扫描 <文件夹>",
+        "cmd_scan": "  scan / s [文件夹] / 扫描 [文件夹]  (不带参数时扫描常见安装根目录)",
         "cmd_vendors": "  vendors / ven / 发行商",
         "cmd_check": "  check-updates / cu / 检查更新",
         "cmd_download": "  download / dl \"Eclipse Temurin\" 21 <安装父目录> --package-type jdk",
@@ -244,7 +244,7 @@ TERMINAL_TEXT = {
         "prompt": "ljm-nogui> ",
         "commands_title": "Available commands:",
         "cmd_list": "  list / l / ls",
-        "cmd_scan": "  scan / s <folder>",
+        "cmd_scan": "  scan / s [folder]  (no argument scans common install roots)",
         "cmd_vendors": "  vendors / ven",
         "cmd_check": "  check-updates / cu",
         "cmd_download": "  download / dl \"Eclipse Temurin\" 21 <parent-folder> --package-type jdk",
@@ -790,7 +790,7 @@ def extract_archive(info):
     return extract_dir
 
 
-def repair_or_update_target(target, mode="smart", vendor=None, major=None, progress_callback=None, status_callback=None, cancel_event=None):
+def repair_or_update_target(target, mode="smart", vendor=None, major=None, progress_callback=None, status_callback=None, cancel_event=None, skip_when_current=False):
     java_home, registry_name = resolve_target(target)
     runtime = core.read_java_runtime_info(java_home)
     update_java_home = core.runtime_update_java_home(runtime)
@@ -801,6 +801,24 @@ def repair_or_update_target(target, mode="smart", vendor=None, major=None, progr
     extract_dir = ""
     try:
         core.ensure_not_cancelled(cancel_event)
+        if skip_when_current:
+            current_info = core.JavaDownloadEngine.get_latest_download_info(vendor, major, package_type=package_type)
+            if current_info and not core.is_update_available(runtime["version"], core.version_display_text(current_info["version"]), major):
+                return {
+                    "requested_java_home": java_home,
+                    "java_home": update_java_home,
+                    "nested_jre_home": runtime.get("nested_jre_home", ""),
+                    "registry_name": registry_name,
+                    "vendor": vendor,
+                    "major": major,
+                    "package_type": package_type,
+                    "mode": mode,
+                    "up_to_date": True,
+                    "current_version": core.version_display_text(runtime["version"]),
+                    "latest_version": core.version_display_text(current_info["version"]),
+                    "source": current_info.get("source"),
+                    "synced_registry_names": [],
+                }
         info = download_latest_jdk(
             vendor,
             major,
@@ -826,8 +844,9 @@ def repair_or_update_target(target, mode="smart", vendor=None, major=None, progr
                     core.force_remove_tree(update_java_home)
                 for name in old_names:
                     core.unregister_java_registry_name(name, java_home=update_java_home)
-                if not registry_name and old_names:
-                    registry_name = old_names[0]
+                # The folder now carries the new version; rebuild the registry
+                # name from the replaced runtime instead of reusing the stale one.
+                registry_name = core.build_registry_name(core.read_java_runtime_info(final_java_home))
             else:
                 core.replace_java_home_atomically(source_jdk, final_java_home, cancel_event=cancel_event)
         else:
@@ -843,6 +862,8 @@ def repair_or_update_target(target, mode="smart", vendor=None, major=None, progr
             "major": major,
             "package_type": package_type,
             "mode": mode,
+            "up_to_date": False,
+            "current_version": core.version_display_text(runtime["version"]),
             "latest_version": core.version_display_text(info["version"]),
             "source": info.get("source"),
             "used_url": info.get("used_url"),
@@ -861,18 +882,35 @@ def set_default_java(target):
         import ctypes
         import winreg
 
-        key = winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-            0,
-            winreg.KEY_WRITE,
-        )
+        written = []
+        last_error = None
         try:
-            winreg.SetValueEx(key, "JAVA_HOME", 0, winreg.REG_SZ, java_home)
-        finally:
-            winreg.CloseKey(key)
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
+                0,
+                winreg.KEY_WRITE,
+            )
+            try:
+                winreg.SetValueEx(key, "JAVA_HOME", 0, winreg.REG_SZ, java_home)
+            finally:
+                winreg.CloseKey(key)
+            written.append("HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment")
+        except OSError as exc:
+            last_error = exc
+        if not written:
+            try:
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_WRITE)
+                try:
+                    winreg.SetValueEx(key, "JAVA_HOME", 0, winreg.REG_SZ, java_home)
+                finally:
+                    winreg.CloseKey(key)
+                written.append("HKCU\\Environment")
+            except OSError:
+                if last_error:
+                    raise last_error
+                raise
         ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001A, 0, "Environment", 0, 1000, None)
-        written = ["HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"]
     else:
         written = core.write_unix_java_environment(java_home)
     return {"java_home": java_home, "registry_name": registry_name, "written": written}
@@ -883,7 +921,7 @@ def command_list(_args):
 
 
 def command_scan(args):
-    homes = core.discover_java_homes(args.paths, max_depth=args.max_depth)
+    homes = core.discover_java_homes(args.paths or None, max_depth=args.max_depth)
     registered = []
     for java_home in homes:
         runtime = core.read_java_runtime_info(java_home)
@@ -948,6 +986,7 @@ def command_update(args):
         progress_callback=progress_cb,
         status_callback=status_cb,
         cancel_event=getattr(args, "cancel_event", None),
+        skip_when_current=True,
     )
     return {"ok": True, "action": "update", "result": result}
 
@@ -1075,8 +1114,8 @@ def build_parser():
     p_list = sub.add_parser("list", aliases=["l", "ls"], parents=[common], help="list registered/discovered Java runtimes")
     p_list.set_defaults(func=command_list)
 
-    p_scan = sub.add_parser("scan", aliases=["s"], parents=[common], help="scan directories and register Java runtimes")
-    p_scan.add_argument("paths", nargs="+", help="directories to scan")
+    p_scan = sub.add_parser("scan", aliases=["s"], parents=[common], help="scan directories and register Java runtimes (default: common install roots)")
+    p_scan.add_argument("paths", nargs="*", help="optional directories to scan; defaults to common Java install roots")
     p_scan.add_argument("--max-depth", type=int, default=6)
     p_scan.set_defaults(func=command_scan)
 
