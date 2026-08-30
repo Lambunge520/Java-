@@ -7,7 +7,7 @@ LJM 是一个跨平台 Java 运行时管理工具，用来扫描、注册、下�
 ## 注意事项<img width="40" height="40" alt="!" src="https://github.com/user-attachments/assets/74de8620-5ded-4377-9b9e-ce621cd39b32" />
 
 
-本工具使用3.14的python构建，经亲测，3.13的python启动本工具(.py文件或.pyw文件)会出现任务栏没有托盘，且工具只能用任务管理器或第三方工具来强制关闭！！！
+本工具使用3.14的python构建，经亲测，3.13的python启动本工具(.py文件或.pyw文件)会出现任务栏没有托盘，且工具只能用任务管理器或第三方工具来强制关闭！！！（该情况仅限python程序，Windows，macos和Linux端适配的由pyinstaller打包后的程序无此问题）
 
 ## 下载
 
