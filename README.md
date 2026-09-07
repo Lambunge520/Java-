@@ -1,4 +1,4 @@
-# LJM Java Manager
+# LJM  Local  Java Manager
 
 LJM 是一个跨平台 Java 运行时管理工具，用来扫描、注册、下载、修复、更新、移动和删除本机 Java，适合 Minecraft 玩家、启动器、IDE、服务端、脚本任务和无桌面环境使用。
 
